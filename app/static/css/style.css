@@ -1,0 +1,205 @@
+/* 全局样式 */
+body {
+    font-family: 'Microsoft YaHei', Arial, sans-serif;
+}
+
+/* 导航栏样式 */
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+/* 卡片样式 */
+.card {
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 1rem;
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    font-weight: 500;
+}
+
+/* 统计卡片样式 */
+.card.bg-info,
+.card.bg-warning,
+.card.bg-secondary,
+.card.bg-success {
+    transition: transform 0.2s;
+}
+
+.card.bg-info:hover,
+.card.bg-warning:hover,
+.card.bg-secondary:hover,
+.card.bg-success:hover {
+    transform: translateY(-2px);
+}
+
+/* 表格样式 */
+.table {
+    margin-bottom: 0;
+}
+
+.table th {
+    background-color: #f8f9fa;
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+}
+
+.table-striped > tbody > tr:nth-of-type(odd) > td {
+    background-color: rgba(0,0,0,.02);
+}
+
+/* 按钮样式 */
+.btn {
+    border-radius: 6px;
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+/* 状态标签样式 */
+.status-在用 {
+    background-color: #28a745;
+    color: white;
+}
+
+.status-停用 {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.status-报废 {
+    background-color: #dc3545;
+    color: white;
+}
+
+/* 表单样式 */
+.form-control,
+.form-select {
+    border-radius: 6px;
+    border: 1px solid #ced4da;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+}
+
+/* 模态框样式 */
+.modal-content {
+    border-radius: 8px;
+    border: none;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.modal-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    border-radius: 8px 8px 0 0;
+}
+
+/* 登录表单样式 */
+#login-section .card {
+    margin-top: 5rem;
+}
+
+/* 加载动画 */
+.loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255,255,255,.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* 响应式样式 */
+@media (max-width: 768px) {
+    .navbar-brand {
+        font-size: 1rem;
+    }
+    
+    .card-body h3 {
+        font-size: 1.5rem;
+    }
+    
+    .table-responsive {
+        font-size: 0.9rem;
+    }
+}
+
+/* 自定义工具提示 */
+.tooltip-inner {
+    background-color: #333;
+    color: #fff;
+    border-radius: 4px;
+}
+
+/* 操作按钮组 */
+.btn-group-sm > .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    border-radius: 0.2rem;
+}
+
+/* 过期设备高亮 */
+.equipment-overdue {
+    background-color: #f8d7da !important;
+}
+
+.equipment-due-soon {
+    background-color: #fff3cd !important;
+}
+
+/* 文件上传区域 */
+.file-upload-area {
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    background-color: #f9f9f9;
+    transition: all 0.3s ease;
+}
+
+.file-upload-area:hover,
+.file-upload-area.dragover {
+    border-color: #007bff;
+    background-color: #e3f2fd;
+}
+
+/* 进度条样式 */
+.progress {
+    height: 1rem;
+    border-radius: 0.5rem;
+}
+
+/* 警告信息样式 */
+.alert {
+    border-radius: 6px;
+    border: none;
+}
+
+.alert-dismissible .btn-close {
+    padding: 0.75rem 1rem;
+}
+
+/* 图标样式 */
+.bi {
+    vertical-align: -0.125em;
+}

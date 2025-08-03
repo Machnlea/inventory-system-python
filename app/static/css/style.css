@@ -309,3 +309,18 @@ body {
         opacity: 0;
     }
 }
+
+/* 庆祝效果动画 */
+@keyframes celebrationBounce {
+    0% {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 0;
+    }
+    50% {
+        transform: translate(-50%, -50%) scale(1.1);
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+}

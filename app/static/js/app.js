@@ -50,6 +50,48 @@ function showAlert(message, type = 'info') {
     }, 5000);
 }
 
+// 庆祝效果函数
+function showCelebration() {
+    const container = document.getElementById('celebration-container');
+    if (!container) return;
+    
+    // 显示庆祝效果
+    container.style.display = 'block';
+    
+    // 触发五彩纸屑效果
+    fireCannonAtElement(container);
+    
+    // 1.5秒后自动隐藏
+    setTimeout(() => {
+        container.style.display = 'none';
+    }, 1500);
+}
+
+// 五彩纸屑大炮效果
+function fireCannonAtElement(element) {
+    var rect = element.getBoundingClientRect();
+    var btnCenterX = rect.left + rect.width / 2;
+    var btnCenterY = rect.top + rect.height / 2;
+    var originX = btnCenterX / window.innerWidth;
+    var originY = btnCenterY / window.innerHeight;
+
+    var ribbonColors = [
+        '#e67e22', '#e74c3c', '#f1c40f', '#2ecc71', '#3498db', '#9b59b6', '#1abc9c'
+    ];
+
+    confetti({
+        particleCount: 80,
+        angle: 90,
+        spread: 180,
+        startVelocity: 70,
+        origin: { x: originX, y: originY },
+        colors: ribbonColors,
+        shapes: ['square', 'circle'],
+        scalar: 1.4,
+        ticks: 240
+    });
+}
+
 function formatDate(dateString) {
     if (!dateString) return '';
     const date = new Date(dateString);
@@ -272,6 +314,9 @@ function renderMonthlyDueTable(equipments) {
             </td>
         `;
         tbody.appendChild(row);
+        
+        // 触发庆祝效果
+        showCelebration();
         return;
     }
     
@@ -1888,6 +1933,12 @@ async function downloadImportTemplate() {
 // 系统管理页面加载函数
 async function loadUsersSection() {
     showSection('users-section');
+    // 移除所有管理菜单项的active类
+    document.getElementById('users-link').classList.remove('active');
+    document.getElementById('categories-link').classList.remove('active');
+    document.getElementById('departments-link').classList.remove('active');
+    document.getElementById('audit-link').classList.remove('active');
+    // 为当前项添加active类
     document.getElementById('users-link').classList.add('active');
     await loadUsersList();
 }
@@ -2195,6 +2246,12 @@ async function submitUserPermissions(userId) {
 
 async function loadCategoriesSection() {
     showSection('categories-section');
+    // 移除所有管理菜单项的active类
+    document.getElementById('users-link').classList.remove('active');
+    document.getElementById('categories-link').classList.remove('active');
+    document.getElementById('departments-link').classList.remove('active');
+    document.getElementById('audit-link').classList.remove('active');
+    // 为当前项添加active类
     document.getElementById('categories-link').classList.add('active');
     await loadCategoriesList();
 }
@@ -2398,6 +2455,12 @@ async function deleteCategory(categoryId, equipmentCount) {
 
 async function loadDepartmentsSection() {
     showSection('departments-section');
+    // 移除所有管理菜单项的active类
+    document.getElementById('users-link').classList.remove('active');
+    document.getElementById('categories-link').classList.remove('active');
+    document.getElementById('departments-link').classList.remove('active');
+    document.getElementById('audit-link').classList.remove('active');
+    // 为当前项添加active类
     document.getElementById('departments-link').classList.add('active');
     await loadDepartmentsList();
 }
@@ -2602,6 +2665,12 @@ async function deleteDepartment(departmentId, equipmentCount) {
 
 async function loadAuditSection() {
     showSection('audit-section');
+    // 移除所有管理菜单项的active类
+    document.getElementById('users-link').classList.remove('active');
+    document.getElementById('categories-link').classList.remove('active');
+    document.getElementById('departments-link').classList.remove('active');
+    document.getElementById('audit-link').classList.remove('active');
+    // 为当前项添加active类
     document.getElementById('audit-link').classList.add('active');
     await loadAuditUsers();
     await loadAuditLogs({}, 1);

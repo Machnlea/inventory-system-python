@@ -109,12 +109,17 @@ cd inventory-system-python
 
 # 2. 安装依赖
 uv install
+uv sync -i https://mirrors.aliyun.com/pypi/simple/
+uv sync -i https://pypi.tuna.tsinghua.edu.cn/simple/
+
 
 # 3. 初始化数据库
 uv run python init_db.py
 
 # 4. 启动服务
 uv run python main.py
+
+uv run python -m uvicorn main:app --workers 4 --host 0.0.0.0 --port 8080
 ```
 
 ### 🌐 访问地址

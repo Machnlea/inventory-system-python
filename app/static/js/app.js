@@ -14,14 +14,33 @@ function showAlert(message, type = 'info') {
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     `;
-    const container = document.querySelector('.container-fluid');
-    container.insertAdjacentHTML('afterbegin', alertHtml);
+    
+    // 检查通知容器是否存在，不存在则创建
+    let container = document.getElementById('notification-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'notification-container';
+        container.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
+        document.body.appendChild(container);
+    }
+    
+    // 添加通知到容器
+    container.insertAdjacentHTML('beforeend', alertHtml);
+    
+    // 限制同时显示的通知数量（最多3个）
+    const alerts = container.querySelectorAll('.alert');
+    if (alerts.length > 3) {
+        alerts[0].remove();
+    }
     
     // 自动关闭
     setTimeout(() => {
-        const alert = document.querySelector('.alert');
-        if (alert) {
-            alert.remove();
+        const alertElement = container.querySelector('.alert:last-child');
+        if (alertElement) {
+            alertElement.classList.add('fade-out');
+            setTimeout(() => {
+                alertElement.remove();
+            }, 300);
         }
     }, 5000);
 }

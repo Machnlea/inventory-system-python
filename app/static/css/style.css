@@ -203,3 +203,42 @@ body {
 .bi {
     vertical-align: -0.125em;
 }
+
+/* 通知容器样式 */
+#notification-container {
+    pointer-events: none;
+}
+
+#notification-container .alert {
+    pointer-events: auto;
+    margin-bottom: 0.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border-radius: 8px;
+    animation: slideInRight 0.3s ease-out;
+}
+
+#notification-container .alert.fade-out {
+    animation: slideOutRight 0.3s ease-in;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}

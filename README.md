@@ -1,96 +1,180 @@
 # 设备台账管理系统
 
-基于 FastAPI + SQLite 的综合设备台账管理系统，实现设备信息管理、检定计划制定、权限控制等功能。
+<div align="center">
+
+![设备台账管理系统](https://img.shields.io/badge/设备台账管理系统-v1.0-blue)
+![技术栈](https://img.shields.io/badge/技术栈-FastAPI%20%7C%20SQLite%20%7C%20Bootstrap-green)
+![许可证](https://img.shields.io/badge/许可证-MIT-yellow)
+
+**基于 FastAPI + SQLite 的综合设备台账管理系统**
+
+[功能特性](#-功能特性) • [快速开始](#-快速开始) • [API文档](#-api文档) • [部署指南](#-生产部署)
+
+</div>
+
+基于 FastAPI + SQLite 的现代化设备台账管理系统，提供完整的设备信息管理、智能检定计划、权限控制和全文本搜索功能。
 
 ## 🚀 功能特性
 
+### 🔐 安全与权限
 - ✅ **用户认证和权限管理**：支持管理员/普通用户两种角色
-- ✅ **设备台账管理**：完整的设备信息CRUD操作
-- ✅ **自动计算检定日期**：根据检定周期自动计算下次检定时间
+- ✅ **JWT Token认证**：安全的无状态认证机制
+- ✅ **细粒度权限控制**：基于设备类别的权限分配
+- ✅ **操作审计日志**：完整的用户操作追踪
+
+### 📋 设备管理
+- ✅ **完整的设备台账管理**：支持CRUD操作和全字段管理
+- ✅ **全文本搜索功能**：支持设备名称、型号、编号等多字段搜索
+- ✅ **智能检定日期计算**：根据检定周期自动计算下次检定时间
+- ✅ **设备状态管理**：在用/停用/报废状态跟踪
+- ✅ **批量操作**：支持批量更新检定日期和状态变更
+
+### 📊 数据处理
 - ✅ **多条件筛选导出**：支持Excel格式的月度/年度计划导出
-- ✅ **仪表盘统计**：直观展示关键指标和设备分布
-- ✅ **操作日志记录**：完整的审计追踪功能
 - ✅ **Excel批量导入**：支持模板下载和数据批量导入
-- ✅ **响应式界面**：Bootstrap构建的现代化Web界面
+- ✅ **数据可视化**：Chart.js驱动的仪表盘统计图表
+- ✅ **实时统计**：关键指标和设备分布实时更新
+
+### 🎨 用户体验
+- ✅ **响应式界面**：Bootstrap 5构建的现代化Web界面
+- ✅ **分页浏览**：大数据量的友好分页展示
+- ✅ **交互式API文档**：Swagger UI和ReDoc双重文档支持
+- ✅ **快捷操作**：便捷的启动脚本和配置管理
 
 ## 🛠 技术栈
 
-**后端**
-- FastAPI - 高性能异步Web框架
-- SQLAlchemy - Python ORM框架
-- SQLite - 轻量级数据库
-- Pydantic - 数据验证和序列化
-- JWT - 安全的用户认证
-- Redoc - API文档生成
+<div align="center">
 
-**前端**
-- Bootstrap 5 - 响应式UI框架
-- Chart.js - 数据可视化图表
-- JavaScript ES6+ - 现代前端逻辑
+**后端技术栈**
+
+| 技术 | 用途 | 版本 |
+|------|------|------|
+| ![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi) | Web框架 | 0.104+ |
+| ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-D71F26?style=for-the-badge&logo=sqlalchemy) | ORM框架 | 2.0+ |
+| ![SQLite](https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&logo=sqlite) | 数据库 | 3.35+ |
+| ![Pydantic](https://img.shields.io/badge/Pydantic-E92063?style=for-the-badge&logo=pydantic) | 数据验证 | 2.0+ |
+| ![JWT](https://img.shields.io/badge/JWT-000000?style=for-the-badge) | 用户认证 | - |
+| ![uv](https://img.shields.io/badge/uv-0B57D0?style=for-the-badge) | 包管理器 | 0.1+ |
+
+**前端技术栈**
+
+| 技术 | 用途 | 版本 |
+|------|------|------|
+| ![Bootstrap](https://img.shields.io/badge/Bootstrap-7952B3?style=for-the-badge&logo=bootstrap) | UI框架 | 5.1+ |
+| ![Chart.js](https://img.shields.io/badge/Chart.js-FF6384?style=for-the-badge&logo=chart.js) | 图表库 | 3.9+ |
+| ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript) | 前端逻辑 | ES6+ |
+
+</div>
 
 ## 📦 快速开始
 
-### 环境要求
-- Python 3.12+
-- uv包管理器
+<div align="center">
 
-### 安装步骤
+![安装步骤](https://img.shields.io/badge/安装步骤-5%20步-green)
+![部署时间](https://img.shields.io/badge/部署时间-<3%20分钟-blue)
+![兼容性](https://img.shields.io/badge/兼容性-Windows%20%7C%20Linux%20%7C%20macOS-purple)
 
-1. **安装依赖**
+</div>
+
+### 📋 环境要求
+
+- **Python**: 3.12+
+- **包管理器**: uv (推荐) 或 pip
+- **操作系统**: Windows / Linux / macOS
+- **内存**: 最少 512MB RAM
+- **存储**: 最少 100MB 可用空间
+
+### 🚀 安装步骤
+
+#### 方法一：使用启动脚本（推荐）
+
 ```bash
-uv install
-```
+# 克隆项目
+git clone https://github.com/Machnlea/inventory-system-python.git
+cd inventory-system-python
 
-2. **初始化数据库**
-```bash
-uv run python init_db.py
-```
-
-3. **启动服务**
-```bash
-uv run python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
-```
-
-或者使用便捷启动脚本：
-```bash
+# 赋予执行权限
 chmod +x start.sh
+
+# 一键启动
 ./start.sh
 ```
 
-4. **访问系统**
-- 主页面：http://localhost:8000
-- Swagger UI文档：http://localhost:8000/docs
-- ReDoc文档：http://localhost:8000/redoc
-- API文档重定向：http://localhost:8000/api
-- OpenAPI JSON：http://localhost:8000/openapi.json
+#### 方法二：手动安装
 
-### 默认登录
-- 用户名：`admin`
-- 密码：`admin123`
+```bash
+# 1. 克隆项目
+git clone https://github.com/Machnlea/inventory-system-python.git
+cd inventory-system-python
+
+# 2. 安装依赖
+uv install
+
+# 3. 初始化数据库
+uv run python init_db.py
+
+# 4. 启动服务
+uv run python main.py
+```
+
+### 🌐 访问地址
+
+| 服务 | 地址 | 说明 |
+|------|------|------|
+| **主页面** | http://localhost:8000 | 系统主界面 |
+| **Swagger UI** | http://localhost:8000/docs | 交互式API文档 |
+| **ReDoc** | http://localhost:8000/redoc | 专业API文档 |
+| **API重定向** | http://localhost:8000/api | 重定向到文档 |
+| **OpenAPI JSON** | http://localhost:8000/openapi.json | API规范文件 |
+
+### 🔑 默认账户
+
+| 角色 | 用户名 | 密码 | 权限 |
+|------|--------|------|------|
+| **管理员** | `admin` | `admin123` | 全系统管理权限 |
+| **普通用户** | `user` | `user123` | 基础操作权限 |
+
+> 💡 **提示**: 首次启动后，建议立即修改默认密码以提高安全性。
 
 ## 📋 主要功能
 
-### 1. 设备台账管理
+### 🔍 1. 全文本搜索功能
+- **多字段搜索**：支持设备名称、型号、计量编号、制造厂家、安装地点、备注等
+- **智能搜索**：支持部门名称和设备类别名称搜索
+- **组合筛选**：可结合部门、类别、状态进行筛选
+- **分页支持**：搜索结果支持分页浏览
+- **实时反馈**：搜索结果数量提示和清除搜索功能
+
+### 📊 2. 设备台账管理
 - **完整字段支持**：部门、计量器具名称、型号规格、准确度等级、测量范围等
 - **检定周期管理**：支持1年/2年检定周期设置
-- **自动日期计算**：下次检定日期 = 检定日期 + 检定周期 - 1天
+- **智能日期计算**：下次检定日期 = 检定日期 + 检定周期 - 1天
 - **设备状态跟踪**：在用/停用/报废状态管理
+- **批量操作**：支持批量更新检定日期和状态变更
 
-### 2. 权限控制系统
+### 🔐 3. 权限控制系统
 - **管理员权限**：全系统管理，包括用户、设备类别、部门管理
 - **普通用户权限**：仅能管理被授权的设备类别
 - **细粒度控制**：基于设备类别的权限分配
+- **操作审计**：完整记录所有关键操作
 
-### 3. 数据导入导出
+### 📤 4. 数据导入导出
 - **Excel模板下载**：提供标准数据导入模板
 - **批量数据导入**：支持Excel文件批量导入设备信息
 - **多种导出格式**：月度计划、年度计划、筛选结果导出
 - **数据验证**：导入时进行完整性和格式验证
 
-### 4. 统计分析
-- **关键指标监控**：下月待检、超期未检、停用设备统计
+### 📈 5. 统计分析
+- **关键指标监控**：本月待检、超期未检、停用设备统计
 - **可视化图表**：设备类别分布图表
 - **实时更新**：数据变更后实时更新统计信息
+- **庆祝效果**：完成目标时的动画庆祝效果
+
+### 🎨 6. 用户界面
+- **响应式设计**：适配桌面和移动设备
+- **现代化UI**：Bootstrap 5构建的专业界面
+- **交互体验**：直观的操作流程和用户反馈
+- **多语言支持**：中文界面，符合国内使用习惯
 
 ## 🗄️ 数据库设计
 
@@ -147,17 +231,38 @@ chmod +x start.sh
 - `PUT /{id}/categories` - 批量更新权限（管理员）
 
 #### 3. 设备管理 (`/api/equipment`)
-- `GET /` - 获取设备列表
+- `GET /` - 获取设备列表（支持分页）
 - `POST /` - 创建设备
 - `GET /{id}` - 获取设备详情
 - `PUT /{id}` - 更新设备信息
 - `DELETE /{id}` - 删除设备
 - `POST /filter` - 多条件筛选设备
+- `POST /search` - **全文本搜索设备** 🔥
 - `GET /export/monthly-plan` - 导出月度检定计划
 - `GET /export/yearly-plan` - 导出年度检定计划
 - `POST /export/filtered` - 导出筛选结果
 - `POST /batch/update-calibration` - 批量更新检定日期
 - `POST /batch/change-status` - 批量变更设备状态
+
+#### 🔍 全文本搜索API详情
+```bash
+POST /api/equipment/search
+Content-Type: application/json
+Authorization: Bearer <token>
+
+{
+  "query": "压力表",
+  "department_id": 1,
+  "category_id": 2,
+  "status": "在用"
+}
+```
+
+**搜索范围**：
+- 设备名称、型号、计量编号
+- 制造厂家、安装地点、备注
+- 准确度等级、测量范围、检定方式
+- 部门名称、设备类别名称
 
 #### 4. 部门管理 (`/api/departments`)
 - `GET /` - 获取部门列表
@@ -272,28 +377,135 @@ export ADMIN_PASSWORD="your-admin-password"
 3. **范围限制**：用户只能操作授权类别下的设备
 4. **审计监控**：管理员可查看所有操作日志
 
-## ✅ 系统验证
+## 🔧 使用说明
 
-系统已完全按照需求分析文档实现：
+### 📝 设备管理流程
 
-- ✅ 用户角色和权限系统
-- ✅ 设备分类和部门管理  
-- ✅ 完整的设备台账字段
-- ✅ 自动化检定日期计算
-- ✅ 多条件筛选和导出
-- ✅ 仪表盘统计展示
-- ✅ 操作日志记录
-- ✅ Excel导入导出功能
-- ✅ 响应式Web界面
+#### 1. 设备录入
+1. 登录系统 → 进入"设备管理"页面
+2. 点击"添加设备"按钮
+3. 填写设备信息（带*为必填项）
+4. 系统自动计算下次检定日期
+5. 保存设备信息
 
-**系统现已完成并可投入使用！**
+#### 2. 设备搜索
+1. 在"设备管理"页面顶部的搜索区域
+2. 输入搜索关键词（支持模糊搜索）
+3. 可选择部门、类别、状态进行筛选
+4. 点击"搜索"或按回车键执行搜索
+5. 搜索结果支持分页浏览
+
+#### 3. 检定管理
+1. **月度计划**：仪表盘查看本月待检设备
+2. **批量更新**：选择多个设备，点击"批量更新检定日期"
+3. **状态变更**：设备停用或报废时，记录状态变更时间
+4. **导出计划**：导出月度/年度检定计划Excel文件
+
+### 👥 权限管理
+
+#### 管理员操作
+- 创建用户账户
+- 分配设备类别权限
+- 管理部门和设备类别
+- 查看操作日志
+
+#### 普通用户操作
+- 管理授权设备类别的设备
+- 查看相关统计数据
+- 导出数据报表
+
+## 🚨 故障排除
+
+### 常见问题
+
+#### 1. 数据库连接失败
+```bash
+# 检查数据库文件是否存在
+ls -la inventory.db
+
+# 重新初始化数据库
+uv run python init_db.py
+```
+
+#### 2. 端口被占用
+```bash
+# 查找占用端口的进程
+lsof -i :8000
+
+# 终止进程
+kill -9 <PID>
+```
+
+#### 3. 依赖包问题
+```bash
+# 重新安装依赖
+uv install
+
+# 更新依赖包
+uv sync
+```
+
+#### 4. 搜索功能异常
+- 检查搜索关键词是否为空
+- 确认网络连接正常
+- 刷新页面重试
+
+### 日志查看
+```bash
+# 查看系统日志
+tail -f app.log
+
+# 查看错误日志
+grep ERROR app.log
+```
+
+## 📈 性能优化
+
+### 数据库优化
+- 定期清理过期日志
+- 创建数据库索引
+- 优化查询语句
+
+### 系统优化
+- 启用缓存机制
+- 优化静态资源
+- 监控系统资源
+
+## 🔄 版本更新
+
+### v1.0.0 (2024-08-03)
+- ✅ 实现全文本搜索功能
+- ✅ 完善用户权限控制
+- ✅ 优化用户界面体验
+- ✅ 添加数据导入导出
+- ✅ 实现操作日志记录
+- ✅ 支持批量操作功能
 
 ## 📞 技术支持
 
-如有问题或需要技术支持，请：
-1. 查看API文档：http://localhost:8000/docs
-2. 检查操作日志排查问题
-3. 联系开发团队获取支持
+### 获取帮助
+1. **API文档**: http://localhost:8000/docs
+2. **系统日志**: 检查操作日志排查问题
+3. **GitHub Issues**: 提交问题反馈
+4. **邮件支持**: 联系开发团队
+
+### 贡献指南
+1. Fork 项目
+2. 创建功能分支
+3. 提交更改
+4. 发起 Pull Request
+
+### 许可证
+本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情
 
 ---
-*基于FastAPI构建的现代化设备台账管理系统 v1.0*
+
+<div align="center">
+
+**基于FastAPI构建的现代化设备台账管理系统**
+
+[⭐ Star](https://github.com/Machnlea/inventory-system-python) | [🐛 报告问题](https://github.com/Machnlea/inventory-system-python/issues) | [📖 文档](https://github.com/Machnlea/inventory-system-python/wiki)
+
+Made with ❤️ by 设备台账管理团队
+
+</div>

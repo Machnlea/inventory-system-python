@@ -8,7 +8,7 @@ import pandas as pd
 from urllib.parse import quote
 from app.db.database import get_db
 from app.crud import equipment
-from app.schemas.schemas import Equipment, EquipmentCreate, EquipmentUpdate, EquipmentFilter, PaginatedEquipment
+from app.schemas.schemas import Equipment, EquipmentCreate, EquipmentUpdate, EquipmentFilter, EquipmentSearch, PaginatedEquipment
 from app.api.audit_logs import create_audit_log
 from app.api.auth import get_current_user, get_current_admin_user
 
@@ -424,3 +424,13 @@ def batch_change_status(
         "success_count": success_count,
         "error_count": error_count
     }
+
+@router.post("/search", response_model=PaginatedEquipment)
+def search_equipments(search_params: EquipmentSearch, skip: int = 0, limit: int = 100,
+                     db: Session = Depends(get_db),
+                     current_user = Depends(get_current_user)):
+    """全文本搜索设备"""
+    return equipment.search_equipments_paginated(
+        db, search=search_params, skip=skip, limit=limit,
+        user_id=current_user.id, is_admin=current_user.is_admin
+    )

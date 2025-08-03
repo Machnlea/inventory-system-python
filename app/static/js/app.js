@@ -429,19 +429,25 @@ async function loadFilterOptions() {
     try {
         // 加载部门选项
         const departments = await apiCall('/departments/');
-        const departmentSelect = document.getElementById('filter-department');
-        departmentSelect.innerHTML = '<option value="">全部部门</option>';
-        departments.forEach(dept => {
-            departmentSelect.innerHTML += `<option value="${dept.id}">${dept.name}</option>`;
-        });
+        const filterDepartmentSelect = document.getElementById('filter-department');
+        const searchDepartmentSelect = document.getElementById('search-department');
+        
+        const departmentOptions = '<option value="">全部部门</option>' + 
+            departments.map(dept => `<option value="${dept.id}">${dept.name}</option>`).join('');
+        
+        filterDepartmentSelect.innerHTML = departmentOptions;
+        searchDepartmentSelect.innerHTML = departmentOptions;
         
         // 加载设备类别选项
         const categories = await apiCall('/categories/');
-        const categorySelect = document.getElementById('filter-category');
-        categorySelect.innerHTML = '<option value="">全部类别</option>';
-        categories.forEach(cat => {
-            categorySelect.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
-        });
+        const filterCategorySelect = document.getElementById('filter-category');
+        const searchCategorySelect = document.getElementById('search-category');
+        
+        const categoryOptions = '<option value="">全部类别</option>' + 
+            categories.map(cat => `<option value="${cat.id}">${cat.name}</option>`).join('');
+        
+        filterCategorySelect.innerHTML = categoryOptions;
+        searchCategorySelect.innerHTML = categoryOptions;
     } catch (error) {
         console.error('加载筛选选项失败:', error);
     }
@@ -470,6 +476,7 @@ async function loadEquipmentList(filters = {}, page = 1) {
         if (response) {
             currentEquipments = response.items; // 保存当前设备列表用于排序
             currentPagination = {
+                type: 'filter',
                 total: response.total,
                 skip: response.skip,
                 limit: response.limit,
@@ -686,8 +693,13 @@ function renderPagination(type, pagination) {
 
 function changePage(type, page) {
     if (type === 'equipment') {
-        // 不传递空对象，让loadEquipmentList使用当前的筛选器值
-        loadEquipmentList(undefined, page);
+        if (currentPagination && currentPagination.type === 'search') {
+            // 如果是搜索结果分页，调用搜索函数
+            searchEquipment(page);
+        } else {
+            // 普通设备列表分页
+            loadEquipmentList(undefined, page);
+        }
     } else if (type === 'audit') {
         loadAuditLogs({}, page);
     }
@@ -991,6 +1003,72 @@ function getFilterValues() {
     return filters;
 }
 
+function getSearchValues() {
+    const search = {};
+    
+    const query = document.getElementById('search-query').value.trim();
+    if (query) search.query = query;
+    
+    const departmentId = document.getElementById('search-department').value;
+    if (departmentId) search.department_id = parseInt(departmentId);
+    
+    const categoryId = document.getElementById('search-category').value;
+    if (categoryId) search.category_id = parseInt(categoryId);
+    
+    const status = document.getElementById('search-status').value;
+    if (status) search.status = status;
+    
+    return search;
+}
+
+async function searchEquipment(page = 1) {
+    try {
+        const searchParams = getSearchValues();
+        
+        // 如果没有搜索关键词，返回空结果
+        if (!searchParams.query) {
+            showAlert('请输入搜索关键词', 'warning');
+            return;
+        }
+        
+        const skip = (page - 1) * ITEMS_PER_PAGE;
+        const params = new URLSearchParams({
+            skip: skip,
+            limit: ITEMS_PER_PAGE
+        });
+        
+        const response = await apiCall(`/equipment/search?${params.toString()}`, 'POST', searchParams);
+        renderEquipmentTable(response.items);
+        renderPagination('equipment', {
+            ...response,
+            page: page
+        });
+        
+        currentPagination = {
+            type: 'search',
+            params: searchParams
+        };
+        
+        // 显示搜索结果信息
+        showAlert(`找到 ${response.total} 条相关记录`, 'success');
+        
+    } catch (error) {
+        console.error('搜索设备失败:', error);
+        showAlert('搜索设备失败', 'danger');
+    }
+}
+
+function clearSearch() {
+    document.getElementById('search-query').value = '';
+    document.getElementById('search-department').value = '';
+    document.getElementById('search-category').value = '';
+    document.getElementById('search-status').value = '';
+    
+    // 清除搜索后重新加载默认列表
+    currentPagination = null; // 重置分页状态
+    loadEquipmentList();
+}
+
 // 事件监听器
 document.addEventListener('DOMContentLoaded', function() {
     // 检查认证状态
@@ -1021,6 +1099,25 @@ document.addEventListener('DOMContentLoaded', function() {
         logout();
     });
     
+    // 搜索表单
+    document.getElementById('search-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        searchEquipment();
+    });
+    
+    // 清除搜索
+    document.getElementById('clear-search').addEventListener('click', function() {
+        clearSearch();
+    });
+    
+    // 搜索框回车事件
+    document.getElementById('search-query').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            searchEquipment();
+        }
+    });
+    
     // 筛选表单
     document.getElementById('filter-form').addEventListener('submit', function(e) {
         e.preventDefault();
@@ -1031,6 +1128,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 清除筛选
     document.getElementById('clear-filter').addEventListener('click', function() {
         document.getElementById('filter-form').reset();
+        currentPagination = null; // 重置分页状态
         loadEquipmentList();
     });
     

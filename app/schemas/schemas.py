@@ -164,6 +164,12 @@ class EquipmentFilter(BaseModel):
     next_calibration_start: Optional[date] = None
     next_calibration_end: Optional[date] = None
 
+class EquipmentSearch(BaseModel):
+    query: str
+    department_id: Optional[int] = None
+    category_id: Optional[int] = None
+    status: Optional[str] = None
+
 class DashboardStats(BaseModel):
     monthly_due_count: int
     overdue_count: int

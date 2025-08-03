@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_, or_, func, select
-from app.models.models import Equipment, UserCategory
-from app.schemas.schemas import EquipmentCreate, EquipmentUpdate, EquipmentFilter
+from app.models.models import Equipment, UserCategory, Department, EquipmentCategory
+from app.schemas.schemas import EquipmentCreate, EquipmentUpdate, EquipmentFilter, EquipmentSearch
 from datetime import date, timedelta, datetime
 from typing import List, Optional
 
@@ -269,3 +269,136 @@ def get_overdue_equipments(db: Session, user_id: Optional[int] = None, is_admin:
         query = query.filter(Equipment.category_id.in_(authorized_categories))
     
     return query.all()
+
+def search_equipments_count(db: Session, search: EquipmentSearch, user_id: Optional[int] = None, 
+                           is_admin: bool = False):
+    """获取搜索结果总数"""
+    query = db.query(Equipment).options(
+        joinedload(Equipment.department),
+        joinedload(Equipment.category)
+    )
+    
+    # 权限控制
+    if not is_admin and user_id:
+        authorized_categories = select(UserCategory.category_id).filter(
+            UserCategory.user_id == user_id
+        )
+        query = query.filter(Equipment.category_id.in_(authorized_categories))
+    
+    # 构建搜索条件
+    search_conditions = []
+    if search.query:
+        search_term = f"%{search.query}%"
+        search_conditions.extend([
+            Equipment.name.ilike(search_term),
+            Equipment.model.ilike(search_term),
+            Equipment.serial_number.ilike(search_term),
+            Equipment.manufacturer.ilike(search_term),
+            Equipment.installation_location.ilike(search_term),
+            Equipment.notes.ilike(search_term),
+            Equipment.accuracy_level.ilike(search_term),
+            Equipment.measurement_range.ilike(search_term),
+            Equipment.calibration_method.ilike(search_term)
+        ])
+    
+    # 添加部门名称搜索
+    if search.query:
+        department_subquery = db.query(Department.id).filter(
+            Department.name.ilike(f"%{search.query}%")
+        )
+        search_conditions.append(Equipment.department_id.in_(department_subquery))
+    
+    # 添加类别名称搜索
+    if search.query:
+        category_subquery = db.query(EquipmentCategory.id).filter(
+            EquipmentCategory.name.ilike(f"%{search.query}%")
+        )
+        search_conditions.append(Equipment.category_id.in_(category_subquery))
+    
+    if search_conditions:
+        query = query.filter(or_(*search_conditions))
+    
+    # 添加其他筛选条件
+    if search.department_id:
+        query = query.filter(Equipment.department_id == search.department_id)
+    
+    if search.category_id:
+        query = query.filter(Equipment.category_id == search.category_id)
+    
+    if search.status:
+        query = query.filter(Equipment.status == search.status)
+    
+    return query.count()
+
+def search_equipments(db: Session, search: EquipmentSearch, user_id: Optional[int] = None, 
+                     is_admin: bool = False, skip: int = 0, limit: int = 100):
+    """全文本搜索设备"""
+    query = db.query(Equipment).options(
+        joinedload(Equipment.department),
+        joinedload(Equipment.category)
+    )
+    
+    # 权限控制
+    if not is_admin and user_id:
+        authorized_categories = select(UserCategory.category_id).filter(
+            UserCategory.user_id == user_id
+        )
+        query = query.filter(Equipment.category_id.in_(authorized_categories))
+    
+    # 构建搜索条件
+    search_conditions = []
+    if search.query:
+        search_term = f"%{search.query}%"
+        search_conditions.extend([
+            Equipment.name.ilike(search_term),
+            Equipment.model.ilike(search_term),
+            Equipment.serial_number.ilike(search_term),
+            Equipment.manufacturer.ilike(search_term),
+            Equipment.installation_location.ilike(search_term),
+            Equipment.notes.ilike(search_term),
+            Equipment.accuracy_level.ilike(search_term),
+            Equipment.measurement_range.ilike(search_term),
+            Equipment.calibration_method.ilike(search_term)
+        ])
+    
+    # 添加部门名称搜索
+    if search.query:
+        department_subquery = db.query(Department.id).filter(
+            Department.name.ilike(f"%{search.query}%")
+        )
+        search_conditions.append(Equipment.department_id.in_(department_subquery))
+    
+    # 添加类别名称搜索
+    if search.query:
+        category_subquery = db.query(EquipmentCategory.id).filter(
+            EquipmentCategory.name.ilike(f"%{search.query}%")
+        )
+        search_conditions.append(Equipment.category_id.in_(category_subquery))
+    
+    if search_conditions:
+        query = query.filter(or_(*search_conditions))
+    
+    # 添加其他筛选条件
+    if search.department_id:
+        query = query.filter(Equipment.department_id == search.department_id)
+    
+    if search.category_id:
+        query = query.filter(Equipment.category_id == search.category_id)
+    
+    if search.status:
+        query = query.filter(Equipment.status == search.status)
+    
+    return query.offset(skip).limit(limit).all()
+
+def search_equipments_paginated(db: Session, search: EquipmentSearch, user_id: Optional[int] = None, 
+                               is_admin: bool = False, skip: int = 0, limit: int = 100):
+    """获取分页搜索结果"""
+    items = search_equipments(db, search, user_id, is_admin, skip, limit)
+    total = search_equipments_count(db, search, user_id, is_admin)
+    
+    return {
+        "items": items,
+        "total": total,
+        "skip": skip,
+        "limit": limit
+    }

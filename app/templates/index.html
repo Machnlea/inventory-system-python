@@ -235,6 +235,52 @@
                     </button>
                 </div>
                 
+                <!-- 搜索表单 -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5>全文本搜索</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="search-form" class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">搜索关键词</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                    <input type="text" class="form-control" id="search-query" 
+                                           placeholder="搜索设备名称、型号、计量编号、厂家、地点等...">
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">部门</label>
+                                <select class="form-select" id="search-department">
+                                    <option value="">全部部门</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">设备类别</label>
+                                <select class="form-select" id="search-category">
+                                    <option value="">全部类别</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">设备状态</label>
+                                <select class="form-select" id="search-status">
+                                    <option value="">全部状态</option>
+                                    <option value="在用">在用</option>
+                                    <option value="停用">停用</option>
+                                    <option value="报废">报废</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-search"></i> 搜索
+                                </button>
+                                <button type="button" class="btn btn-secondary" id="clear-search">清除搜索</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
                 <!-- 筛选表单 -->
                 <div class="card mb-3">
                     <div class="card-header">

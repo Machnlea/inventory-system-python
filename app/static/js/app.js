@@ -278,12 +278,8 @@ function renderMonthlyDueTable(equipments) {
     equipments.forEach(equipment => {
         const row = document.createElement('tr');
         
-        // 根据检定日期添加样式
-        if (isDateOverdue(equipment.next_calibration_date)) {
-            row.classList.add('equipment-overdue');
-        } else if (isDateDueSoon(equipment.next_calibration_date, 7)) {
-            row.classList.add('equipment-due-soon');
-        }
+        // 本月待检设备统一使用黄色背景
+        row.classList.add('equipment-due-soon');
         
         row.innerHTML = `
             <td>${equipment.serial_number}</td>

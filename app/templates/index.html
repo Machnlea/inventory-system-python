@@ -64,27 +64,37 @@
     <!-- 主内容区 -->
     <div class="container-fluid mt-3">
         <!-- 登录表单 -->
-        <div id="login-section" class="row justify-content-center" style="display: none;">
-            <div class="col-md-6 col-lg-4">
-                <div class="card">
-                    <div class="card-header">
-                        <h4 class="mb-0 text-center">
-                            <i class="bi bi-box-arrow-in-right"></i>
-                            用户登录
-                        </h4>
-                    </div>
-                    <div class="card-body">
-                        <form id="login-form">
-                            <div class="mb-3">
-                                <label for="username" class="form-label">用户名</label>
-                                <input type="text" class="form-control" id="username" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="password" class="form-label">密码</label>
-                                <input type="password" class="form-control" id="password" required>
-                            </div>
-                            <button type="submit" class="btn btn-primary w-100">登录</button>
-                        </form>
+        <div id="login-section" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 9998;">
+            <div class="row justify-content-center align-items-center h-100">
+                <div class="col-md-6 col-lg-4">
+                    <div class="card shadow-lg">
+                        <div class="card-header bg-primary text-white">
+                            <h4 class="mb-0 text-center">
+                                <i class="bi bi-box-arrow-in-right"></i>
+                                用户登录
+                            </h4>
+                        </div>
+                        <div class="card-body">
+                            <form id="login-form">
+                                <div class="mb-3">
+                                    <label for="username" class="form-label">用户名</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-person"></i></span>
+                                        <input type="text" class="form-control" id="username" required placeholder="请输入用户名">
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="password" class="form-label">密码</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                                        <input type="password" class="form-control" id="password" required placeholder="请输入密码">
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="bi bi-box-arrow-in-right"></i> 登录
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>

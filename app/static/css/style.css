@@ -110,7 +110,67 @@ body {
 
 /* 登录表单样式 */
 #login-section .card {
-    margin-top: 5rem;
+    border: none;
+    border-radius: 12px;
+    animation: fadeInUp 0.3s ease-out;
+}
+
+#login-section .card-header {
+    border-radius: 12px 12px 0 0;
+    padding: 1.5rem;
+}
+
+#login-section .card-body {
+    padding: 2rem;
+}
+
+#login-section .form-control {
+    border-radius: 8px;
+    border: 1px solid #ced4da;
+    padding: 0.75rem;
+    transition: border-color 0.3s ease;
+}
+
+#login-section .form-control:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+#login-section .input-group-text {
+    border-radius: 8px 0 0 8px;
+    background-color: #f8f9fa;
+    border: 1px solid #ced4da;
+    border-right: none;
+}
+
+#login-section .input-group .form-control {
+    border-radius: 0 8px 8px 0;
+    border-left: none;
+}
+
+#login-section .btn-primary {
+    padding: 0.75rem;
+    border-radius: 8px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+}
+
+#login-section .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* 加载动画 */

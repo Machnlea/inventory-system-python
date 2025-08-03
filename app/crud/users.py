@@ -41,12 +41,21 @@ def update_user(db: Session, user_id: int, user_update: UserUpdate):
     return db_user
 
 def delete_user(db: Session, user_id: int):
+    # 检查用户是否存在
     db_user = db.query(User).filter(User.id == user_id).first()
-    if db_user:
-        db.delete(db_user)
-        db.commit()
-        return True
-    return False
+    if not db_user:
+        return False
+    
+    # 检查用户是否有关联的设备类别权限
+    user_categories = db.query(UserCategory).filter(UserCategory.user_id == user_id).all()
+    if user_categories:
+        # 如果有关联的权限，不能删除用户
+        return False
+    
+    # 如果没有关联权限，可以删除用户
+    db.delete(db_user)
+    db.commit()
+    return True
 
 def authenticate_user(db: Session, username: str, password: str):
     user = get_user_by_username(db, username)

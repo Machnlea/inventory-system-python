@@ -45,9 +45,24 @@ def update_user(user_id: int, user_update: UserUpdate,
 def delete_user(user_id: int,
                 db: Session = Depends(get_db),
                 current_user: User = Depends(get_current_admin_user)):
+    # 检查用户是否存在
+    db_user = users.get_user(db, user_id=user_id)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # 检查用户是否有关联的设备类别权限
+    user_categories = users.get_user_categories(db, user_id)
+    if user_categories:
+        raise HTTPException(
+            status_code=400, 
+            detail="无法删除该用户，因为该用户还管理着设备类别。请先移除该用户的设备类别权限后再删除。"
+        )
+    
+    # 删除用户
     success = users.delete_user(db, user_id=user_id)
     if not success:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=400, detail="Failed to delete user")
+    
     return {"message": "User deleted successfully"}
 
 @router.get("/{user_id}/categories", response_model=List[UserCategory])

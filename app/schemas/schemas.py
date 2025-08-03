@@ -143,6 +143,19 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     username: Optional[str] = None
 
+# 分页响应
+class PaginatedEquipment(BaseModel):
+    items: List[Equipment]
+    total: int
+    skip: int
+    limit: int
+
+class PaginatedAuditLog(BaseModel):
+    items: List[AuditLog]
+    total: int
+    skip: int
+    limit: int
+
 # 筛选和统计相关
 class EquipmentFilter(BaseModel):
     department_id: Optional[int] = None

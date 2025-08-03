@@ -3,13 +3,13 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import date
 from app.db.database import get_db
-from app.schemas.schemas import AuditLog
+from app.schemas.schemas import AuditLog, PaginatedAuditLog
 from app.api.auth import get_current_admin_user
 from app.models.models import AuditLog as AuditLogModel, User, Equipment
 
 router = APIRouter()
 
-@router.get("/", response_model=List[AuditLog])
+@router.get("/", response_model=PaginatedAuditLog)
 def get_audit_logs(skip: int = 0, limit: int = 100,
                   user_id: Optional[int] = Query(None),
                   action: Optional[str] = Query(None),
@@ -33,7 +33,18 @@ def get_audit_logs(skip: int = 0, limit: int = 100,
     if end_date:
         query = query.filter(AuditLogModel.created_at <= end_date)
     
-    return query.order_by(AuditLogModel.created_at.desc()).offset(skip).limit(limit).all()
+    # 获取总数
+    total = query.count()
+    
+    # 获取分页数据
+    items = query.order_by(AuditLogModel.created_at.desc()).offset(skip).limit(limit).all()
+    
+    return {
+        "items": items,
+        "total": total,
+        "skip": skip,
+        "limit": limit
+    }
 
 @router.get("/equipment/{equipment_id}", response_model=List[AuditLog])
 def get_equipment_audit_logs(equipment_id: int,

@@ -2,6 +2,11 @@
 let currentUser = null;
 let authToken = null;
 let categoryChart = null;
+let currentPagination = null;
+let currentEquipments = null;
+
+// 分页配置
+const ITEMS_PER_PAGE = 50;
 
 // API基础URL
 const API_BASE = '/api';
@@ -367,7 +372,6 @@ function drawCategoryChart(data) {
 }
 
 // 设备管理相关函数
-let currentEquipments = []; // 存储当前设备列表用于排序
 let sortDirection = {}; // 存储各列的排序方向
 
 async function loadEquipmentSection() {
@@ -402,24 +406,36 @@ async function loadFilterOptions() {
     }
 }
 
-async function loadEquipmentList(filters = {}) {
+async function loadEquipmentList(filters = {}, page = 1) {
     try {
-        let equipments;
+        let response;
+        const skip = (page - 1) * ITEMS_PER_PAGE;
         
-        // 获取筛选器的值，如果没有提供filters，则使用当前筛选器的值
-        if (Object.keys(filters).length === 0) {
+        // 获取筛选器的值，如果没有提供filters或filters为undefined，则使用当前筛选器的值
+        if (!filters || Object.keys(filters).length === 0) {
             filters = getFilterValues();
         }
         
         if (Object.keys(filters).length > 0) {
-            equipments = await apiCall('/equipment/filter', 'POST', filters);
+            const params = new URLSearchParams({
+                skip: skip,
+                limit: ITEMS_PER_PAGE
+            });
+            response = await apiCall(`/equipment/filter?${params.toString()}`, 'POST', filters);
         } else {
-            equipments = await apiCall('/equipment/');
+            response = await apiCall(`/equipment/?skip=${skip}&limit=${ITEMS_PER_PAGE}`);
         }
         
-        if (equipments) {
-            currentEquipments = equipments; // 保存当前设备列表用于排序
-            renderEquipmentTable(equipments);
+        if (response) {
+            currentEquipments = response.items; // 保存当前设备列表用于排序
+            currentPagination = {
+                total: response.total,
+                skip: response.skip,
+                limit: response.limit,
+                page: page
+            };
+            renderEquipmentTable(response.items);
+            renderPagination('equipment', currentPagination);
         }
     } catch (error) {
         console.error('加载设备列表失败:', error);
@@ -577,6 +593,62 @@ function updateSelectedCount() {
             selectAllCheckbox.indeterminate = true;
             selectAllCheckbox.checked = false;
         }
+    }
+}
+
+// 分页功能
+function renderPagination(type, pagination) {
+    const totalPages = Math.ceil(pagination.total / pagination.limit);
+    const container = document.getElementById(`${type}-pagination`);
+    
+    if (!container || pagination.total === 0) {
+        if (container) container.style.display = 'none';
+        return;
+    }
+    
+    container.className = 'd-flex justify-content-between align-items-center mt-3';
+    container.style.display = 'flex';
+    
+    let paginationHtml = `
+        <div class="text-muted">
+            显示 ${pagination.skip + 1}-${Math.min(pagination.skip + pagination.limit, pagination.total)} 条，共 ${pagination.total} 条
+        </div>
+        <nav>
+            <ul class="pagination mb-0">
+                <li class="page-item ${pagination.page === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="changePage('${type}', ${pagination.page - 1}); return false;">上一页</a>
+                </li>
+    `;
+    
+    // 显示页码
+    const startPage = Math.max(1, pagination.page - 2);
+    const endPage = Math.min(totalPages, pagination.page + 2);
+    
+    for (let i = startPage; i <= endPage; i++) {
+        paginationHtml += `
+            <li class="page-item ${i === pagination.page ? 'active' : ''}">
+                <a class="page-link" href="#" onclick="changePage('${type}', ${i}); return false;">${i}</a>
+            </li>
+        `;
+    }
+    
+    paginationHtml += `
+                <li class="page-item ${pagination.page === totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="changePage('${type}', ${pagination.page + 1}); return false;">下一页</a>
+                </li>
+            </ul>
+        </nav>
+    `;
+    
+    container.innerHTML = paginationHtml;
+}
+
+function changePage(type, page) {
+    if (type === 'equipment') {
+        // 不传递空对象，让loadEquipmentList使用当前的筛选器值
+        loadEquipmentList(undefined, page);
+    } else if (type === 'audit') {
+        loadAuditLogs({}, page);
     }
 }
 
@@ -997,7 +1069,7 @@ document.addEventListener('DOMContentLoaded', function() {
         auditFilterForm.addEventListener('submit', function(e) {
             e.preventDefault();
             const filters = getAuditFilterValues();
-            loadAuditLogs(filters);
+            loadAuditLogs(filters, 1);
         });
     }
     
@@ -1006,7 +1078,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (clearAuditFilter) {
         clearAuditFilter.addEventListener('click', function() {
             document.getElementById('audit-filter-form').reset();
-            loadAuditLogs();
+            loadAuditLogs({}, 1);
         });
     }
     
@@ -2536,7 +2608,7 @@ async function loadAuditSection() {
     showSection('audit-section');
     document.getElementById('audit-link').classList.add('active');
     await loadAuditUsers();
-    await loadAuditLogs();
+    await loadAuditLogs({}, 1);
 }
 
 async function loadAuditUsers() {
@@ -2554,18 +2626,30 @@ async function loadAuditUsers() {
     }
 }
 
-async function loadAuditLogs(filters = {}) {
+async function loadAuditLogs(filters = {}, page = 1) {
     try {
         const params = new URLSearchParams();
+        const skip = (page - 1) * ITEMS_PER_PAGE;
+        
+        params.append('skip', skip);
+        params.append('limit', ITEMS_PER_PAGE);
+        
         if (filters.user_id) params.append('user_id', filters.user_id);
         if (filters.action) params.append('action', filters.action);
         if (filters.start_date) params.append('start_date', filters.start_date);
         if (filters.end_date) params.append('end_date', filters.end_date);
         
-        const url = `/audit/${params.toString() ? '?' + params.toString() : ''}`;
-        const logs = await apiCall(url);
-        if (logs) {
-            renderAuditTable(logs);
+        const url = `/audit/?${params.toString()}`;
+        const response = await apiCall(url);
+        if (response) {
+            renderAuditTable(response.items);
+            currentPagination = {
+                total: response.total,
+                skip: response.skip,
+                limit: response.limit,
+                page: page
+            };
+            renderPagination('audit', currentPagination);
         }
     } catch (error) {
         console.error('加载操作日志失败:', error);

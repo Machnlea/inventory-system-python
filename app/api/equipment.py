@@ -8,17 +8,17 @@ import pandas as pd
 from urllib.parse import quote
 from app.db.database import get_db
 from app.crud import equipment
-from app.schemas.schemas import Equipment, EquipmentCreate, EquipmentUpdate, EquipmentFilter
+from app.schemas.schemas import Equipment, EquipmentCreate, EquipmentUpdate, EquipmentFilter, PaginatedEquipment
 from app.api.audit_logs import create_audit_log
 from app.api.auth import get_current_user, get_current_admin_user
 
 router = APIRouter()
 
-@router.get("/", response_model=List[Equipment])
+@router.get("/", response_model=PaginatedEquipment)
 def read_equipments(skip: int = 0, limit: int = 100,
                    db: Session = Depends(get_db),
                    current_user = Depends(get_current_user)):
-    return equipment.get_equipments(
+    return equipment.get_equipments_paginated(
         db, skip=skip, limit=limit, 
         user_id=current_user.id, is_admin=current_user.is_admin
     )
@@ -125,11 +125,11 @@ def delete_equipment(equipment_id: int,
         raise HTTPException(status_code=404, detail="Equipment not found")
     return {"message": "Equipment deleted successfully"}
 
-@router.post("/filter", response_model=List[Equipment])
+@router.post("/filter", response_model=PaginatedEquipment)
 def filter_equipments(filters: EquipmentFilter, skip: int = 0, limit: int = 100,
                      db: Session = Depends(get_db),
                      current_user = Depends(get_current_user)):
-    return equipment.filter_equipments(
+    return equipment.filter_equipments_paginated(
         db, filters=filters, skip=skip, limit=limit,
         user_id=current_user.id, is_admin=current_user.is_admin
     )

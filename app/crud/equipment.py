@@ -17,6 +17,19 @@ def calculate_next_calibration_date(calibration_date: date, calibration_cycle: s
     # 减去1天
     return next_date - timedelta(days=1)
 
+def get_equipments_count(db: Session, user_id: Optional[int] = None, is_admin: bool = False):
+    """获取设备总数"""
+    query = db.query(Equipment)
+    
+    # 如果不是管理员，只能看到被授权的设备类别
+    if not is_admin and user_id:
+        authorized_categories = select(UserCategory.category_id).filter(
+            UserCategory.user_id == user_id
+        )
+        query = query.filter(Equipment.category_id.in_(authorized_categories))
+    
+    return query.count()
+
 def get_equipments(db: Session, skip: int = 0, limit: int = 100, 
                   user_id: Optional[int] = None, is_admin: bool = False):
     query = db.query(Equipment).options(
@@ -32,6 +45,19 @@ def get_equipments(db: Session, skip: int = 0, limit: int = 100,
         query = query.filter(Equipment.category_id.in_(authorized_categories))
     
     return query.offset(skip).limit(limit).all()
+
+def get_equipments_paginated(db: Session, skip: int = 0, limit: int = 100, 
+                           user_id: Optional[int] = None, is_admin: bool = False):
+    """获取分页设备数据"""
+    items = get_equipments(db, skip=skip, limit=limit, user_id=user_id, is_admin=is_admin)
+    total = get_equipments_count(db, user_id=user_id, is_admin=is_admin)
+    
+    return {
+        "items": items,
+        "total": total,
+        "skip": skip,
+        "limit": limit
+    }
 
 def get_equipment(db: Session, equipment_id: int, user_id: Optional[int] = None, 
                  is_admin: bool = False):
@@ -129,8 +155,9 @@ def delete_equipment(db: Session, equipment_id: int):
         return True
     return False
 
-def filter_equipments(db: Session, filters: EquipmentFilter, user_id: Optional[int] = None, 
-                     is_admin: bool = False, skip: int = 0, limit: int = 100):
+def filter_equipments_count(db: Session, filters: EquipmentFilter, user_id: Optional[int] = None, 
+                           is_admin: bool = False):
+    """获取筛选后的设备总数"""
     query = db.query(Equipment)
     
     # 权限控制
@@ -156,7 +183,52 @@ def filter_equipments(db: Session, filters: EquipmentFilter, user_id: Optional[i
     if filters.next_calibration_end:
         query = query.filter(Equipment.next_calibration_date <= filters.next_calibration_end)
     
+    return query.count()
+
+def filter_equipments(db: Session, filters: EquipmentFilter, user_id: Optional[int] = None, 
+                     is_admin: bool = False, skip: int = 0, limit: int = 100):
+    query = db.query(Equipment).options(
+        joinedload(Equipment.department),
+        joinedload(Equipment.category)
+    )
+    
+    # 权限控制
+    if not is_admin and user_id:
+        authorized_categories = select(UserCategory.category_id).filter(
+            UserCategory.user_id == user_id
+        )
+        query = query.filter(Equipment.category_id.in_(authorized_categories))
+    
+    # 应用筛选条件
+    if filters.department_id:
+        query = query.filter(Equipment.department_id == filters.department_id)
+    
+    if filters.category_id:
+        query = query.filter(Equipment.category_id == filters.category_id)
+    
+    if filters.status:
+        query = query.filter(Equipment.status == filters.status)
+    
+    if filters.next_calibration_start:
+        query = query.filter(Equipment.next_calibration_date >= filters.next_calibration_start)
+    
+    if filters.next_calibration_end:
+        query = query.filter(Equipment.next_calibration_date <= filters.next_calibration_end)
+    
     return query.offset(skip).limit(limit).all()
+
+def filter_equipments_paginated(db: Session, filters: EquipmentFilter, user_id: Optional[int] = None, 
+                               is_admin: bool = False, skip: int = 0, limit: int = 100):
+    """获取分页筛选设备数据"""
+    items = filter_equipments(db, filters, user_id, is_admin, skip, limit)
+    total = filter_equipments_count(db, filters, user_id, is_admin)
+    
+    return {
+        "items": items,
+        "total": total,
+        "skip": skip,
+        "limit": limit
+    }
 
 def get_equipments_due_for_calibration(db: Session, start_date: date, end_date: date,
                                      user_id: Optional[int] = None, is_admin: bool = False):

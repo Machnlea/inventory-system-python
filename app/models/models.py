@@ -63,7 +63,7 @@ class Equipment(Base):
     measurement_range = Column(String(100))  # 测量范围
     
     # 检定信息
-    calibration_cycle = Column(String(10), nullable=False)  # 检定周期(1年/2年)
+    calibration_cycle = Column(String(10), nullable=False)  # 检定周期(半年/1年/2年)
     calibration_date = Column(Date, nullable=False)  # 检定日期
     next_calibration_date = Column(Date, nullable=False)  # 下次检定日期
     calibration_method = Column(String(50))  # 检定方式

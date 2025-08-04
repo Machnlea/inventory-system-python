@@ -60,7 +60,7 @@ class EquipmentBase(BaseModel):
     model: str
     accuracy_level: str
     measurement_range: Optional[str] = None
-    calibration_cycle: str  # "1年" 或 "2年"
+    calibration_cycle: str  # "半年", "1年" 或 "2年"
     calibration_date: date
     calibration_method: Optional[str] = None
     serial_number: str

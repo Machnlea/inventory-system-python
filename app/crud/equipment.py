@@ -11,8 +11,14 @@ def calculate_next_calibration_date(calibration_date: date, calibration_cycle: s
         next_date = calibration_date.replace(year=calibration_date.year + 1)
     elif calibration_cycle == "2年":
         next_date = calibration_date.replace(year=calibration_date.year + 2)
+    elif calibration_cycle == "半年":
+        # 增加6个月
+        if calibration_date.month + 6 > 12:
+            next_date = calibration_date.replace(year=calibration_date.year + 1, month=calibration_date.month + 6 - 12)
+        else:
+            next_date = calibration_date.replace(month=calibration_date.month + 6)
     else:
-        raise ValueError("检定周期必须是'1年'或'2年'")
+        raise ValueError("检定周期必须是'1年'、'2年'或'半年'")
     
     # 减去1天
     return next_date - timedelta(days=1)

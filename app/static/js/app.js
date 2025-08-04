@@ -251,6 +251,9 @@ async function refreshDashboardData() {
     try {
         const stats = await apiCall('/dashboard/stats');
         if (stats) {
+            // 更新所有统计数据
+            document.getElementById('total-equipment-count').textContent = stats.total_equipment_count;
+            document.getElementById('active-equipment-count').textContent = stats.active_equipment_count;
             document.getElementById('monthly-due-count').textContent = stats.monthly_due_count;
             document.getElementById('overdue-count').textContent = stats.overdue_count;
             document.getElementById('inactive-count').textContent = stats.inactive_count;
@@ -258,6 +261,11 @@ async function refreshDashboardData() {
             
             // 绘制图表
             drawCategoryChart(stats.category_distribution);
+            
+            // 检查是否显示庆祝效果
+            if (stats.monthly_due_count === 0 && stats.overdue_count === 0) {
+                showCelebration();
+            }
         }
         
         // 加载当月待检设备列表

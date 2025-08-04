@@ -171,6 +171,8 @@ class EquipmentSearch(BaseModel):
     status: Optional[str] = None
 
 class DashboardStats(BaseModel):
+    total_equipment_count: int
+    active_equipment_count: int
     monthly_due_count: int
     overdue_count: int
     inactive_count: int

@@ -121,7 +121,15 @@
             <div id="dashboard-section">
                 <h2><i class="bi bi-speedometer2"></i> 仪表盘</h2>
                 <div class="row">
-                    <div class="col-md-3">
+                    <div class="col-md-4">
+                        <div class="card text-white bg-primary">
+                            <div class="card-body">
+                                <h5 class="card-title">设备总数</h5>
+                                <h3 id="total-equipment-count">-</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
                         <div class="card text-white bg-info">
                             <div class="card-body">
                                 <h5 class="card-title">本月待检设备</h5>
@@ -129,7 +137,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <div class="card text-white bg-warning">
                             <div class="card-body">
                                 <h5 class="card-title">超期未检设备</h5>
@@ -137,7 +145,9 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                </div>
+                <div class="row mt-4">
+                    <div class="col-md-4">
                         <div class="card text-white bg-secondary">
                             <div class="card-body">
                                 <h5 class="card-title">停用设备</h5>
@@ -145,11 +155,19 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <div class="card text-white bg-success">
                             <div class="card-body">
                                 <h5 class="card-title">设备类别</h5>
                                 <h3 id="category-count">-</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">在用设备</h5>
+                                <h3 id="active-equipment-count">-</h3>
                             </div>
                         </div>
                     </div>

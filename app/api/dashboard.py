@@ -16,6 +16,23 @@ def get_dashboard_stats(db: Session = Depends(get_db),
                        current_user = Depends(get_current_user)):
     """获取仪表盘统计数据"""
     
+    # 设备总数
+    total_equipment_count = equipment.get_equipments_count(
+        db, user_id=current_user.id, is_admin=current_user.is_admin
+    )
+    
+    # 在用设备数量
+    active_query = db.query(Equipment).filter(Equipment.status == "在用")
+    if not current_user.is_admin:
+        from app.crud import users
+        from app.models.models import UserCategory
+        authorized_categories = select(UserCategory.category_id).filter(
+            UserCategory.user_id == current_user.id
+        )
+        active_query = active_query.filter(Equipment.category_id.in_(authorized_categories))
+    
+    active_equipment_count = active_query.count()
+    
     # 计算本月的日期范围
     today = date.today()
     current_month_start = date(today.year, today.month, 1)
@@ -38,7 +55,6 @@ def get_dashboard_stats(db: Session = Depends(get_db),
     # 停用状态设备总数
     inactive_query = db.query(Equipment).filter(Equipment.status.in_(["停用", "报废"]))
     if not current_user.is_admin:
-        from app.crud import users
         from app.models.models import UserCategory
         authorized_categories = select(UserCategory.category_id).filter(
             UserCategory.user_id == current_user.id
@@ -66,6 +82,8 @@ def get_dashboard_stats(db: Session = Depends(get_db),
     ]
     
     return DashboardStats(
+        total_equipment_count=total_equipment_count,
+        active_equipment_count=active_equipment_count,
         monthly_due_count=monthly_due_count,
         overdue_count=overdue_count,
         inactive_count=inactive_count,

@@ -15,11 +15,14 @@ from app.api.auth import get_current_user, get_current_admin_user
 router = APIRouter()
 
 @router.get("/", response_model=PaginatedEquipment)
-def read_equipments(skip: int = 0, limit: int = 100,
+def read_equipments(skip: int = 0, limit: int = 999999,
+                   sort_field: str = "next_calibration_date", 
+                   sort_order: str = "asc",
                    db: Session = Depends(get_db),
                    current_user = Depends(get_current_user)):
     return equipment.get_equipments_paginated(
         db, skip=skip, limit=limit, 
+        sort_field=sort_field, sort_order=sort_order,
         user_id=current_user.id, is_admin=current_user.is_admin
     )
 
@@ -126,11 +129,14 @@ def delete_equipment(equipment_id: int,
     return {"message": "Equipment deleted successfully"}
 
 @router.post("/filter", response_model=PaginatedEquipment)
-def filter_equipments(filters: EquipmentFilter, skip: int = 0, limit: int = 100,
+def filter_equipments(filters: EquipmentFilter, skip: int = 0, limit: int = 999999,
+                     sort_field: str = "next_calibration_date", 
+                     sort_order: str = "asc",
                      db: Session = Depends(get_db),
                      current_user = Depends(get_current_user)):
     return equipment.filter_equipments_paginated(
         db, filters=filters, skip=skip, limit=limit,
+        sort_field=sort_field, sort_order=sort_order,
         user_id=current_user.id, is_admin=current_user.is_admin
     )
 
@@ -426,7 +432,7 @@ def batch_change_status(
     }
 
 @router.post("/search", response_model=PaginatedEquipment)
-def search_equipments(search_params: EquipmentSearch, skip: int = 0, limit: int = 100,
+def search_equipments(search_params: EquipmentSearch, skip: int = 0, limit: int = 999999,
                      db: Session = Depends(get_db),
                      current_user = Depends(get_current_user)):
     """全文本搜索设备"""

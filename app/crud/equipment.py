@@ -36,7 +36,9 @@ def get_equipments_count(db: Session, user_id: Optional[int] = None, is_admin: b
     
     return query.count()
 
-def get_equipments(db: Session, skip: int = 0, limit: int = 100, 
+def get_equipments(db: Session, skip: int = 0, limit: int = 100,
+                  sort_field: str = "next_calibration_date", 
+                  sort_order: str = "asc",
                   user_id: Optional[int] = None, is_admin: bool = False):
     query = db.query(Equipment).options(
         joinedload(Equipment.department),
@@ -50,12 +52,35 @@ def get_equipments(db: Session, skip: int = 0, limit: int = 100,
         )
         query = query.filter(Equipment.category_id.in_(authorized_categories))
     
+    # 添加排序
+    if sort_field == "name":
+        query = query.order_by(Equipment.name.asc() if sort_order == "asc" else Equipment.name.desc())
+    elif sort_field == "department":
+        query = query.join(Equipment.department).order_by(
+            Department.name.asc() if sort_order == "asc" else Department.name.desc()
+        )
+    elif sort_field == "category":
+        query = query.join(Equipment.category).order_by(
+            EquipmentCategory.name.asc() if sort_order == "asc" else EquipmentCategory.name.desc()
+        )
+    elif sort_field == "next_calibration_date":
+        query = query.order_by(
+            Equipment.next_calibration_date.asc() if sort_order == "asc" else Equipment.next_calibration_date.desc()
+        )
+    else:
+        # 默认按下次检定日期排序
+        query = query.order_by(Equipment.next_calibration_date.asc())
+    
     return query.offset(skip).limit(limit).all()
 
-def get_equipments_paginated(db: Session, skip: int = 0, limit: int = 100, 
+def get_equipments_paginated(db: Session, skip: int = 0, limit: int = 100,
+                           sort_field: str = "next_calibration_date", 
+                           sort_order: str = "asc",
                            user_id: Optional[int] = None, is_admin: bool = False):
     """获取分页设备数据"""
-    items = get_equipments(db, skip=skip, limit=limit, user_id=user_id, is_admin=is_admin)
+    items = get_equipments(db, skip=skip, limit=limit, 
+                          sort_field=sort_field, sort_order=sort_order,
+                          user_id=user_id, is_admin=is_admin)
     total = get_equipments_count(db, user_id=user_id, is_admin=is_admin)
     
     return {
@@ -192,7 +217,9 @@ def filter_equipments_count(db: Session, filters: EquipmentFilter, user_id: Opti
     return query.count()
 
 def filter_equipments(db: Session, filters: EquipmentFilter, user_id: Optional[int] = None, 
-                     is_admin: bool = False, skip: int = 0, limit: int = 100):
+                     is_admin: bool = False, skip: int = 0, limit: int = 100,
+                     sort_field: str = "next_calibration_date", 
+                     sort_order: str = "asc"):
     query = db.query(Equipment).options(
         joinedload(Equipment.department),
         joinedload(Equipment.category)
@@ -221,12 +248,34 @@ def filter_equipments(db: Session, filters: EquipmentFilter, user_id: Optional[i
     if filters.next_calibration_end:
         query = query.filter(Equipment.next_calibration_date <= filters.next_calibration_end)
     
+    # 添加排序
+    if sort_field == "name":
+        query = query.order_by(Equipment.name.asc() if sort_order == "asc" else Equipment.name.desc())
+    elif sort_field == "department":
+        query = query.join(Equipment.department).order_by(
+            Department.name.asc() if sort_order == "asc" else Department.name.desc()
+        )
+    elif sort_field == "category":
+        query = query.join(Equipment.category).order_by(
+            EquipmentCategory.name.asc() if sort_order == "asc" else EquipmentCategory.name.desc()
+        )
+    elif sort_field == "next_calibration_date":
+        query = query.order_by(
+            Equipment.next_calibration_date.asc() if sort_order == "asc" else Equipment.next_calibration_date.desc()
+        )
+    else:
+        # 默认按下次检定日期排序
+        query = query.order_by(Equipment.next_calibration_date.asc())
+    
     return query.offset(skip).limit(limit).all()
 
 def filter_equipments_paginated(db: Session, filters: EquipmentFilter, user_id: Optional[int] = None, 
-                               is_admin: bool = False, skip: int = 0, limit: int = 100):
+                               is_admin: bool = False, skip: int = 0, limit: int = 100,
+                               sort_field: str = "next_calibration_date", 
+                               sort_order: str = "asc"):
     """获取分页筛选设备数据"""
-    items = filter_equipments(db, filters, user_id, is_admin, skip, limit)
+    items = filter_equipments(db, filters, user_id, is_admin, skip, limit,
+                             sort_field=sort_field, sort_order=sort_order)
     total = filter_equipments_count(db, filters, user_id, is_admin)
     
     return {

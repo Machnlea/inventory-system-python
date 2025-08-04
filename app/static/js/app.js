@@ -453,10 +453,9 @@ async function loadFilterOptions() {
     }
 }
 
-async function loadEquipmentList(filters = {}, page = 1) {
+async function loadEquipmentList(filters = {}) {
     try {
         let response;
-        const skip = (page - 1) * ITEMS_PER_PAGE;
         
         // 获取筛选器的值，如果没有提供filters或filters为undefined，则使用当前筛选器的值
         if (!filters || Object.keys(filters).length === 0) {
@@ -464,26 +463,25 @@ async function loadEquipmentList(filters = {}, page = 1) {
         }
         
         if (Object.keys(filters).length > 0) {
+            // 使用filter API，不传skip和limit参数获取全部数据
             const params = new URLSearchParams({
-                skip: skip,
-                limit: ITEMS_PER_PAGE
+                sort_field: "next_calibration_date",
+                sort_order: "asc"
             });
             response = await apiCall(`/equipment/filter?${params.toString()}`, 'POST', filters);
         } else {
-            response = await apiCall(`/equipment/?skip=${skip}&limit=${ITEMS_PER_PAGE}`);
+            // 使用普通API，不传skip和limit参数获取全部数据
+            response = await apiCall(`/equipment/?sort_field=next_calibration_date&sort_order=asc`);
         }
         
         if (response) {
             currentEquipments = response.items; // 保存当前设备列表用于排序
-            currentPagination = {
-                type: 'filter',
-                total: response.total,
-                skip: response.skip,
-                limit: response.limit,
-                page: page
-            };
             renderEquipmentTable(response.items);
-            renderPagination('equipment', currentPagination);
+            // 移除分页显示
+            const paginationContainer = document.getElementById('equipment-pagination');
+            if (paginationContainer) {
+                paginationContainer.style.display = 'none';
+            }
         }
     } catch (error) {
         console.error('加载设备列表失败:', error);
@@ -694,11 +692,11 @@ function renderPagination(type, pagination) {
 function changePage(type, page) {
     if (type === 'equipment') {
         if (currentPagination && currentPagination.type === 'search') {
-            // 如果是搜索结果分页，调用搜索函数
-            searchEquipment(page);
+            // 搜索结果 - 不再分页，重新搜索全部数据
+            searchEquipment();
         } else {
-            // 普通设备列表分页
-            loadEquipmentList(undefined, page);
+            // 普通设备列表 - 不再分页，重新加载全部数据
+            loadEquipmentList();
         }
     } else if (type === 'audit') {
         loadAuditLogs({}, page);
@@ -1021,7 +1019,7 @@ function getSearchValues() {
     return search;
 }
 
-async function searchEquipment(page = 1) {
+async function searchEquipment() {
     try {
         const searchParams = getSearchValues();
         
@@ -1031,18 +1029,9 @@ async function searchEquipment(page = 1) {
             return;
         }
         
-        const skip = (page - 1) * ITEMS_PER_PAGE;
-        const params = new URLSearchParams({
-            skip: skip,
-            limit: ITEMS_PER_PAGE
-        });
-        
-        const response = await apiCall(`/equipment/search?${params.toString()}`, 'POST', searchParams);
+        // 不传skip和limit参数获取全部搜索结果
+        const response = await apiCall(`/equipment/search`, 'POST', searchParams);
         renderEquipmentTable(response.items);
-        renderPagination('equipment', {
-            ...response,
-            page: page
-        });
         
         currentPagination = {
             type: 'search',

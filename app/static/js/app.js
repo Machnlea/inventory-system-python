@@ -1311,6 +1311,7 @@ function showEditEquipmentModal(equipment) {
                                     <label class="form-label">检定周期 *</label>
                                     <select class="form-select" name="calibration_cycle" required>
                                         <option value="">请选择检定周期</option>
+                                        <option value="半年" ${equipment.calibration_cycle === '半年' ? 'selected' : ''}>半年</option>
                                         <option value="1年" ${equipment.calibration_cycle === '1年' ? 'selected' : ''}>1年</option>
                                         <option value="2年" ${equipment.calibration_cycle === '2年' ? 'selected' : ''}>2年</option>
                                     </select>
@@ -1609,6 +1610,7 @@ function showAddEquipmentModal() {
                                     <label class="form-label">检定周期 *</label>
                                     <select class="form-select" name="calibration_cycle" required>
                                         <option value="">请选择检定周期</option>
+                                        <option value="半年">半年</option>
                                         <option value="1年">1年</option>
                                         <option value="2年">2年</option>
                                     </select>

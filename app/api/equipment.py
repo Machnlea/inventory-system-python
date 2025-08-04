@@ -440,3 +440,54 @@ def search_equipments(search_params: EquipmentSearch, skip: int = 0, limit: int 
         db, search=search_params, skip=skip, limit=limit,
         user_id=current_user.id, is_admin=current_user.is_admin
     )
+
+@router.post("/export/search")
+def export_search_equipments(search_params: EquipmentSearch,
+                            db: Session = Depends(get_db),
+                            current_user = Depends(get_current_user)):
+    """导出全文本搜索结果"""
+    equipments = equipment.search_equipments(
+        db, search=search_params, skip=0, limit=10000,  # 导出时不限制数量
+        user_id=current_user.id, is_admin=current_user.is_admin
+    )
+    
+    # 转换为DataFrame
+    data = []
+    for eq in equipments:
+        data.append({
+            '部门': eq.department.name,
+            '设备类别': eq.category.name,
+            '计量器具名称': eq.name,
+            '型号/规格': eq.model,
+            '准确度等级': eq.accuracy_level,
+            '测量范围': eq.measurement_range,
+            '检定周期': eq.calibration_cycle,
+            '检定日期': eq.calibration_date.strftime('%Y-%m-%d'),
+            '下次检定日期': eq.next_calibration_date.strftime('%Y-%m-%d'),
+            '计量编号': eq.serial_number,
+            '安装地点': eq.installation_location,
+            '制造厂家': eq.manufacturer,
+            '出厂日期': eq.manufacture_date.strftime('%Y-%m-%d') if eq.manufacture_date else '',
+            '检定方式': eq.calibration_method,
+            '设备状态': eq.status,
+            '状态变更时间': eq.status_change_date.strftime('%Y-%m-%d') if eq.status_change_date else '',
+            '备注': eq.notes,
+            '创建时间': eq.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            '更新时间': eq.updated_at.strftime('%Y-%m-%d %H:%M:%S') if eq.updated_at else ''
+        })
+    
+    df = pd.DataFrame(data)
+    
+    # 创建Excel文件
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, sheet_name='搜索结果', index=False)
+    output.seek(0)
+    
+    filename = f"设备搜索结果_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    encoded_filename = quote(filename, safe='')
+    return Response(
+        content=output.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"}
+    )

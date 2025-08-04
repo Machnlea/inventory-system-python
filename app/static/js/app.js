@@ -951,6 +951,14 @@ async function exportMonthlyPlan() {
 }
 
 async function exportFiltered() {
+    // 检查当前是否为搜索状态
+    if (currentPagination && currentPagination.type === 'search') {
+        // 如果是搜索状态，导出搜索结果
+        await exportSearchResults();
+        return;
+    }
+    
+    // 否则导出筛选结果
     const filters = getFilterValues();
     
     try {
@@ -972,6 +980,37 @@ async function exportFiltered() {
             a.click();
             window.URL.revokeObjectURL(url);
             showAlert('导出成功！', 'success');
+        }
+    } catch (error) {
+        showAlert('导出失败：' + error.message, 'danger');
+    }
+}
+
+async function exportSearchResults() {
+    if (!currentPagination || currentPagination.type !== 'search' || !currentPagination.params) {
+        showAlert('没有搜索结果可导出', 'warning');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/equipment/export/search`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(currentPagination.params)
+        });
+        
+        if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `设备搜索结果_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+            showAlert('搜索结果导出成功！', 'success');
         }
     } catch (error) {
         showAlert('导出失败：' + error.message, 'danger');
@@ -1041,6 +1080,12 @@ async function searchEquipment() {
         // 显示搜索结果信息
         showAlert(`找到 ${response.total} 条相关记录`, 'success');
         
+        // 显示导出搜索结果按钮
+        const exportSearchBtn = document.getElementById('export-search');
+        if (exportSearchBtn) {
+            exportSearchBtn.style.display = 'inline-block';
+        }
+        
     } catch (error) {
         console.error('搜索设备失败:', error);
         showAlert('搜索设备失败', 'danger');
@@ -1052,6 +1097,12 @@ function clearSearch() {
     document.getElementById('search-department').value = '';
     document.getElementById('search-category').value = '';
     document.getElementById('search-status').value = '';
+    
+    // 隐藏导出搜索结果按钮
+    const exportSearchBtn = document.getElementById('export-search');
+    if (exportSearchBtn) {
+        exportSearchBtn.style.display = 'none';
+    }
     
     // 清除搜索后重新加载默认列表
     currentPagination = null; // 重置分页状态
@@ -1110,6 +1161,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // 筛选表单
     document.getElementById('filter-form').addEventListener('submit', function(e) {
         e.preventDefault();
+        // 筛选时隐藏导出搜索结果按钮，因为筛选不是搜索
+        const exportSearchBtn = document.getElementById('export-search');
+        if (exportSearchBtn) {
+            exportSearchBtn.style.display = 'none';
+        }
         const filters = getFilterValues();
         loadEquipmentList(filters);
     });
@@ -1117,6 +1173,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // 清除筛选
     document.getElementById('clear-filter').addEventListener('click', function() {
         document.getElementById('filter-form').reset();
+        // 隐藏导出搜索结果按钮，因为筛选不是搜索
+        const exportSearchBtn = document.getElementById('export-search');
+        if (exportSearchBtn) {
+            exportSearchBtn.style.display = 'none';
+        }
         currentPagination = null; // 重置分页状态
         loadEquipmentList();
     });
@@ -1124,6 +1185,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // 导出按钮
     document.getElementById('export-monthly-btn').addEventListener('click', exportMonthlyPlan);
     document.getElementById('export-filtered').addEventListener('click', exportFiltered);
+    
+    // 导出搜索结果按钮
+    const exportSearchBtn = document.getElementById('export-search');
+    if (exportSearchBtn) {
+        exportSearchBtn.addEventListener('click', exportSearchResults);
+    }
     
     // 添加设备按钮
     document.getElementById('add-equipment-btn').addEventListener('click', function() {

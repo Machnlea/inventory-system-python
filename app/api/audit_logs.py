@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from datetime import date
+from datetime import date, datetime, timedelta
 from app.db.database import get_db
 from app.schemas.schemas import AuditLog, PaginatedAuditLog
 from app.api.auth import get_current_admin_user
@@ -62,10 +62,59 @@ def get_audit_users(db: Session = Depends(get_db),
     users = db.query(User).join(AuditLogModel, User.id == AuditLogModel.user_id).distinct().all()
     return [{"id": user.id, "username": user.username} for user in users]
 
+@router.post("/cleanup")
+def cleanup_audit_logs(db: Session = Depends(get_db),
+                      current_user = Depends(get_current_admin_user)):
+    """手动清理超过一年的操作日志"""
+    one_year_ago = datetime.now() - timedelta(days=365)
+    
+    # 查询超过一年的日志数量
+    old_logs_count = db.query(AuditLogModel).filter(
+        AuditLogModel.created_at < one_year_ago
+    ).count()
+    
+    if old_logs_count > 0:
+        # 删除超过一年的日志
+        db.query(AuditLogModel).filter(
+            AuditLogModel.created_at < one_year_ago
+        ).delete(synchronize_session=False)
+        db.commit()
+        
+        return {
+            "message": f"已清理 {old_logs_count} 条超过一年的操作日志",
+            "cleaned_count": old_logs_count
+        }
+    else:
+        return {
+            "message": "没有需要清理的操作日志",
+            "cleaned_count": 0
+        }
+
+def cleanup_old_audit_logs(db: Session):
+    """清理超过一年的操作日志"""
+    one_year_ago = datetime.now() - timedelta(days=365)
+    
+    # 查询超过一年的日志
+    old_logs = db.query(AuditLogModel).filter(
+        AuditLogModel.created_at < one_year_ago
+    ).all()
+    
+    if old_logs:
+        # 删除超过一年的日志
+        count = len(old_logs)
+        db.query(AuditLogModel).filter(
+            AuditLogModel.created_at < one_year_ago
+        ).delete(synchronize_session=False)
+        db.commit()
+        print(f"已清理 {count} 条超过一年的操作日志")
+
 def create_audit_log(db: Session, user_id: int, equipment_id: int = None,
                     action: str = "", description: str = "",
                     old_value: str = None, new_value: str = None):
     """创建操作日志的辅助函数"""
+    # 先清理超过一年的日志
+    cleanup_old_audit_logs(db)
+    
     audit_log = AuditLogModel(
         user_id=user_id,
         equipment_id=equipment_id,

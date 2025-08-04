@@ -24,17 +24,21 @@ body {
 }
 
 /* 统计卡片样式 */
+.card.bg-primary,
 .card.bg-info,
 .card.bg-warning,
 .card.bg-secondary,
-.card.bg-success {
+.card.bg-success,
+.card.bg-danger {
     transition: transform 0.2s;
 }
 
+.card.bg-primary:hover,
 .card.bg-info:hover,
 .card.bg-warning:hover,
 .card.bg-secondary:hover,
-.card.bg-success:hover {
+.card.bg-success:hover,
+.card.bg-danger:hover {
     transform: translateY(-2px);
 }
 

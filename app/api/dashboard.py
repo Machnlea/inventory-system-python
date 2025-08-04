@@ -63,11 +63,11 @@ def get_dashboard_stats(db: Session = Depends(get_db),
     
     inactive_count = inactive_query.count()
     
-    # 设备类别分布
+    # 设备类别分布（只统计在用设备）
     category_query = db.query(
         EquipmentCategory.name,
         func.count(Equipment.id).label('count')
-    ).join(Equipment).group_by(EquipmentCategory.id, EquipmentCategory.name)
+    ).join(Equipment).filter(Equipment.status == "在用").group_by(EquipmentCategory.id, EquipmentCategory.name)
     
     if not current_user.is_admin:
         from app.models.models import UserCategory

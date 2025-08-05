@@ -141,14 +141,18 @@ def filter_equipments(filters: EquipmentFilter, skip: int = 0, limit: int = 9999
     )
 
 @router.get("/export/monthly-plan")
-def export_monthly_plan(year: int, month: int,
-                       db: Session = Depends(get_db),
+def export_monthly_plan(db: Session = Depends(get_db),
                        current_user = Depends(get_current_user)):
-    """导出月度检定计划"""
-    # 计算月份的开始和结束日期
-    start_date = date(year, month, 1)
-    _, last_day = monthrange(year, month)
-    end_date = date(year, month, last_day)
+    """导出本月待检设备计划"""
+    from datetime import datetime
+    
+    # 获取当前日期
+    today = datetime.now().date()
+    
+    # 计算本月的开始和结束日期
+    start_date = date(today.year, today.month, 1)
+    _, last_day = monthrange(today.year, today.month)
+    end_date = date(today.year, today.month, last_day)
     
     equipments = equipment.get_equipments_due_for_calibration(
         db, start_date=start_date, end_date=end_date,
@@ -188,10 +192,10 @@ def export_monthly_plan(year: int, month: int,
     # 创建Excel文件
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, sheet_name=f'{year}年{month}月检定计划', index=False)
+        df.to_excel(writer, sheet_name=f'{today.year}年{today.month}月待检设备计划', index=False)
     output.seek(0)
     
-    filename = f"{year}年{month}月检定计划.xlsx"
+    filename = f"{today.year}年{today.month}月待检设备计划.xlsx"
     encoded_filename = quote(filename)
     return Response(
         content=output.getvalue(),
@@ -199,62 +203,6 @@ def export_monthly_plan(year: int, month: int,
         headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"}
     )
 
-@router.get("/export/yearly-plan")
-def export_yearly_plan(year: int,
-                      db: Session = Depends(get_db),
-                      current_user = Depends(get_current_user)):
-    """导出年度检定计划"""
-    start_date = date(year, 1, 1)
-    end_date = date(year, 12, 31)
-    
-    equipments = equipment.get_equipments_due_for_calibration(
-        db, start_date=start_date, end_date=end_date,
-        user_id=current_user.id, is_admin=current_user.is_admin
-    )
-    
-    # 转换为DataFrame
-    data = []
-    for i, eq in enumerate(equipments, 1):
-        data.append({
-            '序号': i,
-            '部门': eq.department.name,
-            '计量器具名称': eq.name,
-            '型号/规格': eq.model,
-            '准确度等级': eq.accuracy_level,
-            '测量范围': eq.measurement_range,
-            '检定周期': eq.calibration_cycle,
-            '检定日期': eq.calibration_date.strftime('%Y-%m-%d'),
-            '下次检定日期': eq.next_calibration_date.strftime('%Y-%m-%d'),
-            '计量编号': eq.serial_number,
-            '安装地点': eq.installation_location,
-            '制造厂家': eq.manufacturer,
-            '出厂日期': eq.manufacture_date.strftime('%Y-%m-%d') if eq.manufacture_date else '',
-            '分度值': eq.scale_value or '',
-            '检定方式': eq.calibration_method,
-            '设备状态': eq.status,
-            '状态变更时间': eq.status_change_date.strftime('%Y-%m-%d') if eq.status_change_date else '',
-            '备注': eq.notes
-        })
-    
-    df = pd.DataFrame(data)
-    
-    # 重新排列列顺序，确保序号在第一列
-    columns = ['序号'] + [col for col in df.columns if col != '序号']
-    df = df[columns]
-    
-    # 创建Excel文件
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, sheet_name=f'{year}年检定计划', index=False)
-    output.seek(0)
-    
-    filename = f"{year}年检定计划.xlsx"
-    encoded_filename = quote(filename)
-    return Response(
-        content=output.getvalue(),
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"}
-    )
 
 @router.post("/export/filtered")
 def export_filtered_equipments(filters: EquipmentFilter,

@@ -1008,12 +1008,8 @@ async function submitBatchChangeStatus() {
 
 // 导出功能
 async function exportMonthlyPlan() {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth() + 2; // 下个月
-    
     try {
-        const response = await fetch(`${API_BASE}/equipment/export/monthly-plan?year=${year}&month=${month}`, {
+        const response = await fetch(`${API_BASE}/equipment/export/monthly-plan`, {
             headers: {
                 'Authorization': `Bearer ${authToken}`
             }
@@ -1022,7 +1018,7 @@ async function exportMonthlyPlan() {
         if (response.ok) {
             // 从Content-Disposition头部获取文件名
             const contentDisposition = response.headers.get('Content-Disposition');
-            let filename = parseFilenameFromContentDisposition(contentDisposition) || `${year}年${month}月检定计划.xlsx`;
+            let filename = parseFilenameFromContentDisposition(contentDisposition) || '本月待检设备计划.xlsx';
             
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);

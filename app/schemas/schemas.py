@@ -177,6 +177,7 @@ class DashboardStats(BaseModel):
     overdue_count: int
     inactive_count: int
     category_distribution: List[dict]
+    department_distribution: List[dict]
 
 # 数据导入/导出
 class ImportTemplate(BaseModel):

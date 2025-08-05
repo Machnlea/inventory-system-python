@@ -7,7 +7,7 @@ from app.db.database import get_db
 from app.crud import equipment
 from app.schemas.schemas import DashboardStats
 from app.api.auth import get_current_user
-from app.models.models import Equipment, EquipmentCategory
+from app.models.models import Equipment, EquipmentCategory, Department
 
 router = APIRouter()
 
@@ -81,13 +81,32 @@ def get_dashboard_stats(db: Session = Depends(get_db),
         for name, count in category_query.all()
     ]
     
+    # 部门分布（只统计在用设备）
+    department_query = db.query(
+        Department.name,
+        func.count(Equipment.id).label('count')
+    ).join(Equipment).filter(Equipment.status == "在用").group_by(Department.id, Department.name)
+    
+    if not current_user.is_admin:
+        from app.models.models import UserCategory
+        authorized_categories = select(UserCategory.category_id).filter(
+            UserCategory.user_id == current_user.id
+        )
+        department_query = department_query.filter(Equipment.category_id.in_(authorized_categories))
+    
+    department_distribution = [
+        {"name": name, "count": count} 
+        for name, count in department_query.all()
+    ]
+    
     return DashboardStats(
         total_equipment_count=total_equipment_count,
         active_equipment_count=active_equipment_count,
         monthly_due_count=monthly_due_count,
         overdue_count=overdue_count,
         inactive_count=inactive_count,
-        category_distribution=category_distribution
+        category_distribution=category_distribution,
+        department_distribution=department_distribution
     )
 
 @router.get("/monthly-due-equipments")

@@ -187,22 +187,43 @@
                     <div class="col-md-6">
                         <div class="card h-100">
                             <div class="card-header py-1">
+                                <h6 class="mb-0">在用设备部门分布</h6>
+                            </div>
+                            <div class="card-body py-1 px-2">
+                                <canvas id="departmentChart" style="max-height: 200px;"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-md-12">
+                        <div class="card h-100">
+                            <div class="card-header py-1">
                                 <h6 class="mb-0">快速操作</h6>
                             </div>
                             <div class="card-body">
-                                <div class="d-grid gap-2">
-                                    <button class="btn btn-primary" id="add-equipment-btn">
-                                        <i class="bi bi-plus-circle"></i> 添加设备
-                                    </button>
-                                    <button class="btn btn-success" id="export-monthly-btn">
-                                        <i class="bi bi-download"></i> 导出月度计划
-                                    </button>
-                                    <button class="btn btn-info" id="import-data-btn">
-                                        <i class="bi bi-upload"></i> 导入数据
-                                    </button>
-                                    <button class="btn btn-outline-secondary" id="download-template-btn">
-                                        <i class="bi bi-file-earmark-excel"></i> 下载导入模板
-                                    </button>
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <button class="btn btn-primary w-100" id="add-equipment-btn">
+                                            <i class="bi bi-plus-circle"></i> 添加设备
+                                        </button>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <button class="btn btn-success w-100" id="export-monthly-btn">
+                                            <i class="bi bi-download"></i> 导出月度计划
+                                        </button>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <button class="btn btn-info w-100" id="import-data-btn">
+                                            <i class="bi bi-upload"></i> 导入数据
+                                        </button>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <button class="btn btn-outline-secondary w-100" id="download-template-btn">
+                                            <i class="bi bi-file-earmark-excel"></i> 下载导入模板
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>

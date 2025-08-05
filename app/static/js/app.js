@@ -2,6 +2,7 @@
 let currentUser = null;
 let authToken = null;
 let categoryChart = null;
+let departmentChart = null;
 let currentPagination = null;
 let currentEquipments = null;
 
@@ -261,6 +262,7 @@ async function refreshDashboardData() {
             
             // 绘制图表
             drawCategoryChart(stats.category_distribution);
+            drawDepartmentChart(stats.department_distribution);
             
             // 检查是否显示庆祝效果
             if (stats.monthly_due_count === 0 && stats.overdue_count === 0) {
@@ -416,6 +418,61 @@ function drawCategoryChart(data) {
                 }
             },
             // cutout: '20%'  // 调整内圈大小，让圆环更粗，视觉上更大
+        }
+    });
+}
+
+function drawDepartmentChart(data) {
+    const ctx = document.getElementById('departmentChart').getContext('2d');
+    
+    if (departmentChart) {
+        departmentChart.destroy();
+    }
+    
+    departmentChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: data.map(item => item.name),
+            datasets: [{
+                data: data.map(item => item.count),
+                backgroundColor: [
+                    '#1f77b4', // 蓝色
+                    '#ff7f0e', // 橙色
+                    '#2ca02c', // 绿色
+                    '#d62728', // 红色
+                    '#9467bd', // 紫色
+                    '#8c564b', // 棕色
+                    '#e377c2', // 粉色
+                    '#7f7f7f', // 灰色
+                    '#bcbd22', // 黄绿色
+                    '#17becf', // 青色
+                    '#aec7e8', // 浅蓝色
+                    '#ffbb78', // 浅橙色
+                    '#98df8a', // 浅绿色
+                    '#ff9896', // 浅红色
+                    '#c5b0d5', // 浅紫色
+                    '#c49c94', // 浅棕色
+                    '#f7b6d2', // 浅粉色
+                    '#c7c7c7', // 浅灰色
+                    '#dbdb8d', // 浅黄绿色
+                    '#9edae5'  // 浅青色
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: {
+                padding: 0
+            },
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        boxWidth: 10
+                    }
+                }
+            }
         }
     });
 }

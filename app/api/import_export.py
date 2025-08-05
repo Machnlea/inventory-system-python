@@ -38,6 +38,7 @@ def download_import_template():
         '安装地点': ['1号反应釜', '质检室', '实验室'],
         '制造厂家': ['上海仪表厂', '北京玻璃厂', '深圳仪表厂'],
         '出厂日期': ['2023-12-01', '2023-11-15', '2023-10-20'],
+        '分度值': ['0.1℃', '1ml', '0.01MPa'],
         '检定方式': ['送检', '现场检定', '送检'],
         '设备状态': ['在用', '在用', '在用'],
         '备注': ['正常使用', '新购设备', '半年检定周期示例']
@@ -55,12 +56,12 @@ def download_import_template():
             '字段名': [
                 '部门', '设备类别', '计量器具名称', '型号/规格', '准确度等级',
                 '测量范围', '检定周期', '检定日期', '计量编号', '安装地点',
-                '制造厂家', '出厂日期', '检定方式', '设备状态', '备注'
+                '制造厂家', '出厂日期', '分度值', '检定方式', '设备状态', '备注'
             ],
             '是否必填': [
                 '是', '是', '是', '是', '是',
                 '否', '是', '是', '是', '否',
-                '否', '否', '否', '否', '否'
+                '否', '否', '否', '否', '否', '否'
             ],
             '说明': [
                 '必须是系统中已存在的部门名称',
@@ -75,6 +76,7 @@ def download_import_template():
                 '设备的安装位置',
                 '设备制造商名称',
                 '格式：YYYY-MM-DD',
+                '设备的分度值，如0.01mm',
                 '检定方式说明',
                 '设备状态：在用/停用/报废',
                 '备注信息'
@@ -203,6 +205,7 @@ async def import_equipment_data(
                     installation_location=str(row.get('安装地点', '')),
                     manufacturer=str(row.get('制造厂家', '')),
                     manufacture_date=manufacture_date,
+                    scale_value=str(row.get('分度值', '')),
                     status=str(row.get('设备状态', '在用')),
                     notes=str(row.get('备注', ''))
                 )
@@ -229,6 +232,7 @@ async def import_equipment_data(
                             installation_location=equipment_data.installation_location,
                             manufacturer=equipment_data.manufacturer,
                             manufacture_date=equipment_data.manufacture_date,
+                            scale_value=equipment_data.scale_value,
                             status=equipment_data.status,
                             notes=equipment_data.notes
                         )

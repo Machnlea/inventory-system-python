@@ -67,6 +67,7 @@ class EquipmentBase(BaseModel):
     installation_location: Optional[str] = None
     manufacturer: Optional[str] = None
     manufacture_date: Optional[date] = None
+    scale_value: Optional[str] = None
     status: str = "在用"
     status_change_date: Optional[str] = None  # 添加状态变更时间字段
     notes: Optional[str] = None
@@ -88,6 +89,7 @@ class EquipmentUpdate(BaseModel):
     installation_location: Optional[str] = None
     manufacturer: Optional[str] = None
     manufacture_date: Optional[date] = None
+    scale_value: Optional[str] = None
     status: Optional[str] = None
     status_change_date: Optional[str] = None  # 添加状态变更时间字段
     notes: Optional[str] = None

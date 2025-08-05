@@ -71,8 +71,11 @@ class Equipment(Base):
     # 设备信息
     serial_number = Column(String(100), unique=True, nullable=False)  # 计量编号
     installation_location = Column(String(100))  # 安装地点
-    manufacturer = Column(String(100))  # 制造�家
+    manufacturer = Column(String(100))  # 制造厂家
     manufacture_date = Column(Date)  # 出厂日期
+    
+    # 扩展字段
+    scale_value = Column(String(50))  # 分度值
     
     # 状态信息
     status = Column(String(20), default="在用")  # 设备状态：在用/停用/报废

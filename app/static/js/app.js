@@ -1428,6 +1428,13 @@ function showEditEquipmentModal(equipment) {
                                 </div>
                             </div>
                             <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">分度值</label>
+                                    <input type="text" class="form-control" name="scale_value" value="${equipment.scale_value || ''}" placeholder="例如：0.01mm">
+                                    <div class="form-text">可选，用于记录设备的分度值信息</div>
+                                </div>
+                            </div>
+                            <div class="row">
                                 <div class="col-md-4 mb-3">
                                     <label class="form-label">检定周期 *</label>
                                     <select class="form-select" name="calibration_cycle" required>
@@ -1724,6 +1731,13 @@ function showAddEquipmentModal() {
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">制造厂家</label>
                                     <input type="text" class="form-control" name="manufacturer">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">分度值</label>
+                                    <input type="text" class="form-control" name="scale_value" placeholder="例如：0.01mm">
+                                    <div class="form-text">可选，用于记录设备的分度值信息</div>
                                 </div>
                             </div>
                             <div class="row">

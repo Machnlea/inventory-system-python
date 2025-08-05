@@ -25,8 +25,7 @@ def init_db():
         
         # 创建默认部门
         default_departments = [
-            {"name": "树脂车间（高温）", "description": "高温树脂生产车间"},
-            {"name": "树脂车间（低温）", "description": "低温树脂生产车间"},
+            {"name": "树脂车间", "description": "树脂生产车间"},
             {"name": "工业漆车间", "description": "工业漆生产车间"},
             {"name": "防腐车间", "description": "防腐产品生产车间"},
             {"name": "汽摩车间", "description": "汽摩产品生产车间"},

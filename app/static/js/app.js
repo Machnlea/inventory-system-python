@@ -1009,7 +1009,7 @@ async function submitBatchChangeStatus() {
 // 导出功能
 async function exportMonthlyPlan() {
     try {
-        const response = await fetch(`${API_BASE}/equipment/export/monthly-plan`, {
+        const response = await fetch(`${API_BASE}/equipment/export/monthly-plan?v=${Date.now()}`, {
             headers: {
                 'Authorization': `Bearer ${authToken}`
             }

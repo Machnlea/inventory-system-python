@@ -32,6 +32,11 @@ app.include_router(dashboard.router, prefix="/api/dashboard", tags=["仪表盘"]
 app.include_router(audit_logs.router, prefix="/api/audit", tags=["操作日志"])
 app.include_router(import_export.router, prefix="/api/import", tags=["数据导入导出"])
 
+@app.get("/favicon.ico")
+async def favicon():
+    from fastapi.responses import FileResponse
+    return FileResponse("app/static/images/favicon.svg", media_type="image/svg+xml")
+
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})

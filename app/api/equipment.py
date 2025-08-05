@@ -157,8 +157,9 @@ def export_monthly_plan(year: int, month: int,
     
     # 转换为DataFrame
     data = []
-    for eq in equipments:
+    for i, eq in enumerate(equipments, 1):
         data.append({
+            '序号': i,
             '部门': eq.department.name,
             '计量器具名称': eq.name,
             '型号/规格': eq.model,
@@ -180,6 +181,10 @@ def export_monthly_plan(year: int, month: int,
     
     df = pd.DataFrame(data)
     
+    # 重新排列列顺序，确保序号在第一列
+    columns = ['序号'] + [col for col in df.columns if col != '序号']
+    df = df[columns]
+    
     # 创建Excel文件
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
@@ -187,7 +192,7 @@ def export_monthly_plan(year: int, month: int,
     output.seek(0)
     
     filename = f"{year}年{month}月检定计划.xlsx"
-    encoded_filename = quote(filename, safe='')
+    encoded_filename = quote(filename)
     return Response(
         content=output.getvalue(),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -209,8 +214,9 @@ def export_yearly_plan(year: int,
     
     # 转换为DataFrame
     data = []
-    for eq in equipments:
+    for i, eq in enumerate(equipments, 1):
         data.append({
+            '序号': i,
             '部门': eq.department.name,
             '计量器具名称': eq.name,
             '型号/规格': eq.model,
@@ -232,6 +238,10 @@ def export_yearly_plan(year: int,
     
     df = pd.DataFrame(data)
     
+    # 重新排列列顺序，确保序号在第一列
+    columns = ['序号'] + [col for col in df.columns if col != '序号']
+    df = df[columns]
+    
     # 创建Excel文件
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
@@ -239,7 +249,7 @@ def export_yearly_plan(year: int,
     output.seek(0)
     
     filename = f"{year}年检定计划.xlsx"
-    encoded_filename = quote(filename, safe='')
+    encoded_filename = quote(filename)
     return Response(
         content=output.getvalue(),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -258,8 +268,9 @@ def export_filtered_equipments(filters: EquipmentFilter,
     
     # 转换为DataFrame
     data = []
-    for eq in equipments:
+    for i, eq in enumerate(equipments, 1):
         data.append({
+            '序号': i,
             '部门': eq.department.name,
             '设备类别': eq.category.name,
             '计量器具名称': eq.name,
@@ -277,12 +288,14 @@ def export_filtered_equipments(filters: EquipmentFilter,
             '检定方式': eq.calibration_method,
             '设备状态': eq.status,
             '状态变更时间': eq.status_change_date.strftime('%Y-%m-%d') if eq.status_change_date else '',
-            '备注': eq.notes,
-            '创建时间': eq.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-            '更新时间': eq.updated_at.strftime('%Y-%m-%d %H:%M:%S') if eq.updated_at else ''
+            '备注': eq.notes
         })
     
     df = pd.DataFrame(data)
+    
+    # 重新排列列顺序，确保序号在第一列
+    columns = ['序号'] + [col for col in df.columns if col != '序号']
+    df = df[columns]
     
     # 创建Excel文件
     output = io.BytesIO()
@@ -291,7 +304,7 @@ def export_filtered_equipments(filters: EquipmentFilter,
     output.seek(0)
     
     filename = f"设备台账_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-    encoded_filename = quote(filename, safe='')
+    encoded_filename = quote(filename)
     return Response(
         content=output.getvalue(),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -434,6 +447,153 @@ def batch_change_status(
         "error_count": error_count
     }
 
+@router.post("/batch/delete")
+def batch_delete_equipments(
+    request_data: dict,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """批量删除设备"""
+    equipment_ids = request_data.get('equipment_ids', [])
+    
+    if not equipment_ids:
+        raise HTTPException(status_code=400, detail="未选择设备")
+    
+    success_count = 0
+    error_count = 0
+    deleted_equipment_names = []
+    
+    for equipment_id in equipment_ids:
+        try:
+            # 检查设备是否存在且用户有权限
+            db_equipment = equipment.get_equipment(
+                db, equipment_id=equipment_id,
+                user_id=current_user.id, is_admin=current_user.is_admin
+            )
+            if db_equipment is None:
+                error_count += 1
+                continue
+            
+            equipment_name = db_equipment.name
+            equipment_serial = db_equipment.serial_number
+            
+            # 删除设备
+            success = equipment.delete_equipment(db, equipment_id=equipment_id)
+            if success:
+                # 记录操作日志
+                create_audit_log(
+                    db=db,
+                    user_id=current_user.id,
+                    equipment_id=equipment_id,
+                    action="批量删除",
+                    description=f"批量删除设备: {equipment_name} ({equipment_serial})"
+                )
+                deleted_equipment_names.append(f"{equipment_name} ({equipment_serial})")
+                success_count += 1
+            else:
+                error_count += 1
+            
+        except Exception as e:
+            error_count += 1
+            continue
+    
+    # 记录总体操作日志
+    create_audit_log(
+        db=db,
+        user_id=current_user.id,
+        action="批量操作",
+        description=f"批量删除设备，成功{success_count}台，失败{error_count}台"
+    )
+    
+    return {
+        "message": f"批量删除完成，成功删除{success_count}台设备",
+        "success_count": success_count,
+        "error_count": error_count,
+        "deleted_equipment": deleted_equipment_names
+    }
+
+@router.post("/batch/export-selected")
+def batch_export_selected_equipments(
+    request_data: dict,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """批量导出选中的设备"""
+    equipment_ids = request_data.get('equipment_ids', [])
+    
+    if not equipment_ids:
+        raise HTTPException(status_code=400, detail="未选择设备")
+    
+    # 获取选中的设备
+    selected_equipments = []
+    for equipment_id in equipment_ids:
+        try:
+            db_equipment = equipment.get_equipment(
+                db, equipment_id=equipment_id,
+                user_id=current_user.id, is_admin=current_user.is_admin
+            )
+            if db_equipment:
+                selected_equipments.append(db_equipment)
+        except Exception:
+            continue
+    
+    if not selected_equipments:
+        raise HTTPException(status_code=404, detail="未找到可导出的设备")
+    
+    # 转换为DataFrame
+    data = []
+    for i, eq in enumerate(selected_equipments, 1):
+        data.append({
+            '序号': i,
+            '部门': eq.department.name,
+            '设备类别': eq.category.name,
+            '计量器具名称': eq.name,
+            '型号/规格': eq.model,
+            '准确度等级': eq.accuracy_level,
+            '测量范围': eq.measurement_range,
+            '检定周期': eq.calibration_cycle,
+            '检定日期': eq.calibration_date.strftime('%Y-%m-%d'),
+            '下次检定日期': eq.next_calibration_date.strftime('%Y-%m-%d'),
+            '计量编号': eq.serial_number,
+            '安装地点': eq.installation_location,
+            '制造厂家': eq.manufacturer,
+            '出厂日期': eq.manufacture_date.strftime('%Y-%m-%d') if eq.manufacture_date else '',
+            '分度值': eq.scale_value or '',
+            '检定方式': eq.calibration_method,
+            '设备状态': eq.status,
+            '状态变更时间': eq.status_change_date.strftime('%Y-%m-%d') if eq.status_change_date else '',
+            '备注': eq.notes
+        })
+    
+    df = pd.DataFrame(data)
+    
+    # 重新排列列顺序，确保序号在第一列
+    columns = ['序号'] + [col for col in df.columns if col != '序号']
+    df = df[columns]
+    
+    # 创建Excel文件
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, sheet_name='选中设备', index=False)
+    output.seek(0)
+    
+    filename = f"选中设备_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    encoded_filename = quote(filename)
+    
+    # 记录操作日志
+    create_audit_log(
+        db=db,
+        user_id=current_user.id,
+        action="批量导出选中",
+        description=f"批量导出选中设备，共{len(selected_equipments)}台"
+    )
+    
+    return Response(
+        content=output.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"}
+    )
+
 @router.post("/search", response_model=PaginatedEquipment)
 def search_equipments(search_params: EquipmentSearch, skip: int = 0, limit: int = 999999,
                      db: Session = Depends(get_db),
@@ -456,8 +616,9 @@ def export_search_equipments(search_params: EquipmentSearch,
     
     # 转换为DataFrame
     data = []
-    for eq in equipments:
+    for i, eq in enumerate(equipments, 1):
         data.append({
+            '序号': i,
             '部门': eq.department.name,
             '设备类别': eq.category.name,
             '计量器具名称': eq.name,
@@ -475,12 +636,14 @@ def export_search_equipments(search_params: EquipmentSearch,
             '检定方式': eq.calibration_method,
             '设备状态': eq.status,
             '状态变更时间': eq.status_change_date.strftime('%Y-%m-%d') if eq.status_change_date else '',
-            '备注': eq.notes,
-            '创建时间': eq.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-            '更新时间': eq.updated_at.strftime('%Y-%m-%d %H:%M:%S') if eq.updated_at else ''
+            '备注': eq.notes
         })
     
     df = pd.DataFrame(data)
+    
+    # 重新排列列顺序，确保序号在第一列
+    columns = ['序号'] + [col for col in df.columns if col != '序号']
+    df = df[columns]
     
     # 创建Excel文件
     output = io.BytesIO()
@@ -489,7 +652,7 @@ def export_search_equipments(search_params: EquipmentSearch,
     output.seek(0)
     
     filename = f"设备搜索结果_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-    encoded_filename = quote(filename, safe='')
+    encoded_filename = quote(filename)
     return Response(
         content=output.getvalue(),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

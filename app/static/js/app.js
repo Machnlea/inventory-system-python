@@ -114,6 +114,25 @@ function isDateDueSoon(dateString, days = 30) {
     return date <= dueSoonDate && date >= today;
 }
 
+// 从Content-Disposition头部解析文件名的函数
+function parseFilenameFromContentDisposition(contentDisposition) {
+    if (!contentDisposition) return null;
+    
+    // 首先尝试 RFC 5987 格式: filename*=UTF-8''...
+    const rfc5987Match = contentDisposition.match(/filename\*=UTF-8''([^;\n]*)/);
+    if (rfc5987Match && rfc5987Match[1]) {
+        return decodeURIComponent(rfc5987Match[1]);
+    }
+    
+    // 回退到普通格式: filename="..."
+    const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+    if (filenameMatch && filenameMatch[1]) {
+        return decodeURIComponent(filenameMatch[1].replace(/['"]/g, ''));
+    }
+    
+    return null;
+}
+
 // API调用函数
 async function apiCall(endpoint, method = 'GET', data = null, requireAuth = true) {
     const config = {
@@ -1001,11 +1020,15 @@ async function exportMonthlyPlan() {
         });
         
         if (response.ok) {
+            // 从Content-Disposition头部获取文件名
+            const contentDisposition = response.headers.get('Content-Disposition');
+            let filename = parseFilenameFromContentDisposition(contentDisposition) || `${year}年${month}月检定计划.xlsx`;
+            
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${year}年${month}月检定计划.xlsx`;
+            a.download = filename;
             a.click();
             window.URL.revokeObjectURL(url);
             showAlert('导出成功！', 'success');
@@ -1037,11 +1060,15 @@ async function exportFiltered() {
         });
         
         if (response.ok) {
+            // 从Content-Disposition头部获取文件名
+            const contentDisposition = response.headers.get('Content-Disposition');
+            let filename = parseFilenameFromContentDisposition(contentDisposition) || `设备台账_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `设备台账_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            a.download = filename;
             a.click();
             window.URL.revokeObjectURL(url);
             showAlert('导出成功！', 'success');
@@ -1068,11 +1095,15 @@ async function exportSearchResults() {
         });
         
         if (response.ok) {
+            // 从Content-Disposition头部获取文件名
+            const contentDisposition = response.headers.get('Content-Disposition');
+            let filename = parseFilenameFromContentDisposition(contentDisposition) || `设备搜索结果_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `设备搜索结果_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            a.download = filename;
             a.click();
             window.URL.revokeObjectURL(url);
             showAlert('搜索结果导出成功！', 'success');
@@ -1351,6 +1382,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const batchChangeStatusBtn = document.getElementById('batch-change-status');
     if (batchChangeStatusBtn) {
         batchChangeStatusBtn.addEventListener('click', showBatchChangeStatusModal);
+    }
+    
+    const batchExportSelectedBtn = document.getElementById('batch-export-selected');
+    if (batchExportSelectedBtn) {
+        batchExportSelectedBtn.addEventListener('click', batchExportSelected);
+    }
+    
+    const batchDeleteBtn = document.getElementById('batch-delete');
+    if (batchDeleteBtn) {
+        batchDeleteBtn.addEventListener('click', batchDeleteEquipments);
     }
     
     const clearSelectionBtn = document.getElementById('clear-selection');
@@ -3020,4 +3061,86 @@ function getAuditFilterValues() {
     if (endDate) filters.end_date = endDate;
     
     return filters;
+}
+
+// 批量删除设备
+async function batchDeleteEquipments() {
+    const selectedIds = getSelectedEquipmentIds();
+    if (selectedIds.length === 0) {
+        showAlert('请先选择要删除的设备', 'warning');
+        return;
+    }
+    
+    // 确认对话框
+    if (!confirm(`确定要删除选中的 ${selectedIds.length} 台设备吗？此操作不可恢复！`)) {
+        return;
+    }
+    
+    try {
+        const result = await apiCall('/equipment/batch/delete', 'POST', {
+            equipment_ids: selectedIds
+        });
+        
+        if (result) {
+            showAlert(result.message, 'success');
+            clearSelection();
+            // 重新加载设备列表
+            loadEquipmentList();
+        }
+    } catch (error) {
+        showAlert('批量删除失败：' + error.message, 'danger');
+    }
+}
+
+// 批量导出选中的设备
+async function batchExportSelected() {
+    const selectedIds = getSelectedEquipmentIds();
+    if (selectedIds.length === 0) {
+        showAlert('请先选择要导出的设备', 'warning');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/equipment/batch/export-selected`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({
+                equipment_ids: selectedIds
+            })
+        });
+        
+        if (response.ok) {
+            // 从Content-Disposition头部获取文件名
+            const contentDisposition = response.headers.get('Content-Disposition');
+            let filename = parseFilenameFromContentDisposition(contentDisposition) || '选中设备.xlsx';
+            
+            // 下载文件
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            showAlert('选中设备导出成功！', 'success');
+        } else {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || '导出失败');
+        }
+    } catch (error) {
+        showAlert('导出失败：' + error.message, 'danger');
+    }
+}
+
+// 获取选中的设备ID
+function getSelectedEquipmentIds() {
+    const checkboxes = document.querySelectorAll('#equipment-tbody input[type="checkbox"]:checked');
+    return Array.from(checkboxes).map(cb => parseInt(cb.value));
 }

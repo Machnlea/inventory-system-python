@@ -68,6 +68,8 @@ class EquipmentBase(BaseModel):
     manufacturer: Optional[str] = None
     manufacture_date: Optional[date] = None
     scale_value: Optional[str] = None
+    management_level: Optional[str] = None  # 管理级别
+    original_value: Optional[int] = None  # 原值/元
     status: str = "在用"
     status_change_date: Optional[str] = None  # 添加状态变更时间字段
     notes: Optional[str] = None
@@ -90,6 +92,8 @@ class EquipmentUpdate(BaseModel):
     manufacturer: Optional[str] = None
     manufacture_date: Optional[date] = None
     scale_value: Optional[str] = None
+    management_level: Optional[str] = None  # 管理级别
+    original_value: Optional[int] = None  # 原值/元
     status: Optional[str] = None
     status_change_date: Optional[str] = None  # 添加状态变更时间字段
     notes: Optional[str] = None

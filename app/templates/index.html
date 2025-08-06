@@ -243,17 +243,18 @@
                                     <table class="table table-striped table-sm">
                                         <thead>
                                             <tr>
-                                                <th>计量编号</th>
+                                                <th>使用部门</th>
                                                 <th>设备名称</th>
-                                                <th>部门</th>
-                                                <th>类别</th>
-                                                <th>下次检定日期</th>
+                                                <th>型号/规格</th>
+                                                <th>计量编号</th>
+                                                <th>有效期至</th>
+                                                <th>状态</th>
                                                 <th>操作</th>
                                             </tr>
                                         </thead>
                                         <tbody id="monthly-due-tbody">
                                             <tr>
-                                                <td colspan="6" class="text-center text-muted">
+                                                <td colspan="7" class="text-center text-muted">
                                                     <i class="bi bi-info-circle"></i> 加载中...
                                                 </td>
                                             </tr>
@@ -407,19 +408,16 @@
                                         <th>
                                             <input type="checkbox" id="select-all" onchange="toggleSelectAll()">
                                         </th>
-                                        <th>计量编号</th>
+                                        <th style="cursor: pointer;" onclick="sortEquipmentTable('department')">
+                                            使用部门 <i class="bi bi-arrow-down-up"></i>
+                                        </th>
                                         <th style="cursor: pointer;" onclick="sortEquipmentTable('name')">
                                             设备名称 <i class="bi bi-arrow-down-up"></i>
                                         </th>
-                                        <th style="cursor: pointer;" onclick="sortEquipmentTable('department')">
-                                            部门 <i class="bi bi-arrow-down-up"></i>
-                                        </th>
-                                        <th style="cursor: pointer;" onclick="sortEquipmentTable('category')">
-                                            类别 <i class="bi bi-arrow-down-up"></i>
-                                        </th>
                                         <th>型号/规格</th>
+                                        <th>计量编号</th>
                                         <th style="cursor: pointer;" onclick="sortEquipmentTable('next_calibration_date')">
-                                            下次检定日期 <i class="bi bi-arrow-down-up"></i>
+                                            有效期至 <i class="bi bi-arrow-down-up"></i>
                                         </th>
                                         <th>状态</th>
                                         <th>操作</th>

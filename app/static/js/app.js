@@ -309,7 +309,7 @@ async function loadMonthlyDueEquipments() {
             if (tbody) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="6" class="text-center text-muted">
+                        <td colspan="7" class="text-center text-muted">
                             <i class="bi bi-exclamation-triangle"></i> 加载失败
                         </td>
                     </tr>
@@ -322,7 +322,7 @@ async function loadMonthlyDueEquipments() {
         if (tbody) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="6" class="text-center text-muted">
+                    <td colspan="7" class="text-center text-muted">
                         <i class="bi bi-exclamation-triangle"></i> 加载失败: ${error.message}
                     </td>
                 </tr>
@@ -338,7 +338,7 @@ function renderMonthlyDueTable(equipments) {
     if (equipments.length === 0) {
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td colspan="6" class="text-center text-muted">
+            <td colspan="7" class="text-center text-muted">
                 <i class="bi bi-check-circle"></i> 本月无待检设备
             </td>
         `;
@@ -356,11 +356,14 @@ function renderMonthlyDueTable(equipments) {
         row.classList.add('equipment-due-soon');
         
         row.innerHTML = `
-            <td>${equipment.serial_number}</td>
-            <td>${equipment.name}</td>
             <td>${equipment.department.name}</td>
-            <td>${equipment.category.name}</td>
+            <td>${equipment.name}</td>
+            <td>${equipment.model}</td>
+            <td>${equipment.serial_number}</td>
             <td>${formatDate(equipment.next_calibration_date)}</td>
+            <td>
+                <span class="badge status-${equipment.status}">${equipment.status}</span>
+            </td>
             <td>
                 <div class="btn-group btn-group-sm">
                     <button class="btn btn-outline-success" onclick="updateCalibrationDate(${equipment.id})" title="更新检定日期">
@@ -653,11 +656,10 @@ function renderEquipmentTable(equipments) {
             <td>
                 <input type="checkbox" class="equipment-checkbox" value="${equipment.id}" onchange="updateSelectedCount()">
             </td>
-            <td>${equipment.serial_number}</td>
-            <td>${equipment.name}</td>
             <td>${equipment.department.name}</td>
-            <td>${equipment.category.name}</td>
+            <td>${equipment.name}</td>
             <td>${equipment.model}</td>
+            <td>${equipment.serial_number}</td>
             <td>${formatDate(equipment.next_calibration_date)}</td>
             <td>
                 <span class="badge status-${equipment.status}">${equipment.status}</span>
@@ -1438,7 +1440,7 @@ function showEditEquipmentModal(equipment) {
                                     </select>
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">设备类别 *</label>
+                                    <label class="form-label">计量器具类别 *</label>
                                     <select class="form-select" name="category_id" required>
                                         <option value="">请选择类别</option>
                                     </select>
@@ -1744,7 +1746,7 @@ function showAddEquipmentModal() {
                                     </select>
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">设备类别 *</label>
+                                    <label class="form-label">计量器具类别 *</label>
                                     <select class="form-select" name="category_id" required>
                                         <option value="">请选择类别</option>
                                     </select>
@@ -1775,6 +1777,24 @@ function showAddEquipmentModal() {
                                     <label class="form-label">分度值</label>
                                     <input type="text" class="form-control" name="scale_value" placeholder="例如：0.01mm">
                                     <div class="form-text">可选，用于记录设备的分度值信息</div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">管理级别</label>
+                                    <select class="form-select" name="management_level">
+                                        <option value="">请选择管理级别</option>
+                                        <option value="B级">B级</option>
+                                        <option value="C级">C级</option>
+                                        <option value="校准证书">校准证书</option>
+                                        <option value="检定证书">检定证书</option>
+                                    </select>
+                                    <div class="form-text">可选，用于设备分级管理</div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">原值/元</label>
+                                    <input type="number" class="form-control" name="original_value" placeholder="请输入设备原值" min="0" step="1">
+                                    <div class="form-text">可选，单位：元</div>
                                 </div>
                             </div>
                             <div class="row">

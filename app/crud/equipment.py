@@ -305,6 +305,9 @@ def get_equipments_due_for_calibration(db: Session, start_date: date, end_date: 
         )
         query = query.filter(Equipment.category_id.in_(authorized_categories))
     
+    # 按下次检定日期升序排序
+    query = query.order_by(Equipment.next_calibration_date.asc())
+    
     return query.all()
 
 def get_overdue_equipments(db: Session, user_id: Optional[int] = None, is_admin: bool = False):
@@ -322,6 +325,9 @@ def get_overdue_equipments(db: Session, user_id: Optional[int] = None, is_admin:
             UserCategory.user_id == user_id
         )
         query = query.filter(Equipment.category_id.in_(authorized_categories))
+    
+    # 按下次检定日期升序排序（最早超期的排在前面）
+    query = query.order_by(Equipment.next_calibration_date.asc())
     
     return query.all()
 

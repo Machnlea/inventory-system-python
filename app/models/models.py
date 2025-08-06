@@ -76,6 +76,8 @@ class Equipment(Base):
     
     # 扩展字段
     scale_value = Column(String(50))  # 分度值
+    management_level = Column(String(20))  # 管理级别
+    original_value = Column(Integer)  # 原值/元
     
     # 状态信息
     status = Column(String(20), default="在用")  # 设备状态：在用/停用/报废

@@ -26,21 +26,25 @@ def download_import_template():
     """下载数据导入Excel模板"""
     # 创建模板数据
     template_data = {
-        '部门': ['树脂车间（高温）', '工业漆车间', '质检部'],
-        '设备类别': ['铂热电阻', '玻璃量器', '压力表'],
+        '使用部门': ['树脂车间', '工业漆车间', '质检部'],
+        '计量器具类别': ['铂热电阻', '玻璃量器', '压力表'],
         '计量器具名称': ['铂热电阻温度计', '玻璃量筒', '压力表'],
         '型号/规格': ['PT100', '500ml A级', 'Y-100'],
         '准确度等级': ['A级', 'A级', '1.6级'],
         '测量范围': ['-200~850℃', '0~500ml', '0~1.6MPa'],
-        '检定周期': ['半年', '1年', '2年'],
-        '检定日期': ['2024-01-15', '2024-03-20', '2024-06-01'],
         '计量编号': ['PT001', 'GL001', 'YL001'],
+        '检定周期': ['半年', '1年', '2年'],
+        '检定（校准）日期': ['2024-01-15', '2024-03-20', '2024-06-01'],
+        '有效期至': ['2024-07-14', '2025-03-19', '2026-05-31'],
         '安装地点': ['1号反应釜', '质检室', '实验室'],
+        '分度值': ['0.1℃', '1ml', '0.01MPa'],
         '制造厂家': ['上海仪表厂', '北京玻璃厂', '深圳仪表厂'],
         '出厂日期': ['2023-12-01', '2023-11-15', '2023-10-20'],
-        '分度值': ['0.1℃', '1ml', '0.01MPa'],
         '检定方式': ['送检', '现场检定', '送检'],
+        '管理级别': ['B级', '校准证书', 'C级'],
+        '原值/元': [1500, 800, 1200],
         '设备状态': ['在用', '在用', '在用'],
+        '状态变更时间': ['', '', ''],
         '备注': ['正常使用', '新购设备', '半年检定周期示例']
     }
     
@@ -54,31 +58,35 @@ def download_import_template():
         # 添加说明工作表
         explanation_data = {
             '字段名': [
-                '部门', '设备类别', '计量器具名称', '型号/规格', '准确度等级',
-                '测量范围', '检定周期', '检定日期', '计量编号', '安装地点',
-                '制造厂家', '出厂日期', '分度值', '检定方式', '设备状态', '备注'
+                '使用部门', '计量器具类别', '计量器具名称', '型号/规格', '准确度等级', '测量范围',
+                '计量编号', '检定周期', '检定（校准）日期', '有效期至', 
+                '安装地点', '分度值', '制造厂家', '出厂日期', '检定方式', '管理级别', '原值/元', '设备状态', '状态变更时间', '备注'
             ],
             '是否必填': [
-                '是', '是', '是', '是', '是',
-                '否', '是', '是', '是', '否',
-                '否', '否', '否', '否', '否', '否'
+                '是', '是', '是', '是', '是', '否',
+                '是', '是', '是', '否', 
+                '否', '否', '否', '否', '否', '否', '否', '否', '否', '否'
             ],
             '说明': [
                 '必须是系统中已存在的部门名称',
-                '必须是系统中已存在的设备类别名称',
+                '必须是系统中已存在的计量器具类别名称',
                 '设备的具体名称',
                 '设备的型号或规格',
                 '设备的准确度等级',
                 '设备的测量范围',
+                '设备的唯一编号',
                 '只能填写"半年"、"1年"或"2年"',
                 '格式：YYYY-MM-DD，如2024-01-15',
-                '设备的唯一编号',
+                '自动计算，可不填',
                 '设备的安装位置',
+                '设备的分度值，如0.01mm',
                 '设备制造商名称',
                 '格式：YYYY-MM-DD',
-                '设备的分度值，如0.01mm',
                 '检定方式说明',
+                '管理级别：B级/C级/校准证书/检定证书',
+                '设备原值，单位：元',
                 '设备状态：在用/停用/报废',
+                '状态变更时间，格式：YYYY-MM-DD',
                 '备注信息'
             ]
         }
@@ -115,8 +123,8 @@ async def import_equipment_data(
         
         # 验证必需的列
         required_columns = [
-            '部门', '设备类别', '计量器具名称', '型号/规格', '准确度等级',
-            '检定周期', '检定日期', '计量编号'
+            '使用部门', '计量器具类别', '计量器具名称', '型号/规格', '准确度等级',
+            '检定周期', '检定（校准）日期', '计量编号'
         ]
         
         missing_columns = [col for col in required_columns if col not in df.columns]
@@ -143,19 +151,19 @@ async def import_equipment_data(
             
             try:
                 # 验证部门
-                department = departments.get_department_by_name(db, str(row['部门']))
+                department = departments.get_department_by_name(db, str(row['使用部门']))
                 if not department:
                     result["status"] = "失败"
-                    result["message"] = f"部门'{row['部门']}'不存在"
+                    result["message"] = f"部门'{row['使用部门']}'不存在"
                     detailed_results.append(result)
                     error_count += 1
                     continue
                 
                 # 验证设备类别
-                category = categories.get_category_by_name(db, str(row['设备类别']))
+                category = categories.get_category_by_name(db, str(row['计量器具类别']))
                 if not category:
                     result["status"] = "失败"
-                    result["message"] = f"设备类别'{row['设备类别']}'不存在"
+                    result["message"] = f"计量器具类别'{row['计量器具类别']}'不存在"
                     detailed_results.append(result)
                     error_count += 1
                     continue
@@ -170,7 +178,7 @@ async def import_equipment_data(
                 
                 # 验证日期格式
                 try:
-                    calibration_date = pd.to_datetime(row['检定日期']).date()
+                    calibration_date = pd.to_datetime(row['检定（校准）日期']).date()
                 except:
                     result["status"] = "失败"
                     result["message"] = "检定日期格式错误，请使用YYYY-MM-DD格式"
@@ -206,6 +214,8 @@ async def import_equipment_data(
                     manufacturer=str(row.get('制造厂家', '')),
                     manufacture_date=manufacture_date,
                     scale_value=str(row.get('分度值', '')),
+                    management_level=str(row.get('管理级别', '')),
+                    original_value=int(row.get('原值/元', 0)) if pd.notna(row.get('原值/元')) else None,
                     status=str(row.get('设备状态', '在用')),
                     notes=str(row.get('备注', ''))
                 )
@@ -233,6 +243,8 @@ async def import_equipment_data(
                             manufacturer=equipment_data.manufacturer,
                             manufacture_date=equipment_data.manufacture_date,
                             scale_value=equipment_data.scale_value,
+                            management_level=equipment_data.management_level,
+                            original_value=equipment_data.original_value,
                             status=equipment_data.status,
                             notes=equipment_data.notes
                         )

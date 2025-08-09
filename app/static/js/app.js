@@ -2765,6 +2765,14 @@ function showAddCategoryModal() {
     
     document.body.insertAdjacentHTML('beforeend', modalHtml);
     const modal = new bootstrap.Modal(document.getElementById('addCategoryModal'));
+    
+    // 阻止表单默认提交行为
+    const form = document.getElementById('add-category-form');
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        submitAddCategory();
+    });
+    
     modal.show();
 }
 
@@ -2975,6 +2983,14 @@ function showAddDepartmentModal() {
     
     document.body.insertAdjacentHTML('beforeend', modalHtml);
     const modal = new bootstrap.Modal(document.getElementById('addDepartmentModal'));
+    
+    // 阻止表单默认提交行为
+    const form = document.getElementById('add-department-form');
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        submitAddDepartment();
+    });
+    
     modal.show();
 }
 

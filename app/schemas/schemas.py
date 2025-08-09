@@ -60,18 +60,24 @@ class EquipmentBase(BaseModel):
     model: str
     accuracy_level: str
     measurement_range: Optional[str] = None
-    calibration_cycle: str  # "半年", "1年" 或 "2年"
+    calibration_cycle: str  # "6个月", "12个月" 或 "24个月"
     calibration_date: date
-    calibration_method: Optional[str] = None
+    calibration_method: str
+    
+    # 外检相关字段
+    certificate_number: Optional[str] = None
+    verification_result: Optional[str] = None
+    verification_agency: Optional[str] = None
+    certificate_form: Optional[str] = None
     serial_number: str
     installation_location: Optional[str] = None
     manufacturer: Optional[str] = None
     manufacture_date: Optional[date] = None
     scale_value: Optional[str] = None
     management_level: Optional[str] = None  # 管理级别
-    original_value: Optional[int] = None  # 原值/元
+    original_value: Optional[float] = None  # 原值/元
     status: str = "在用"
-    status_change_date: Optional[str] = None  # 添加状态变更时间字段
+    status_change_date: Optional[date] = None  # 状态变更时间
     notes: Optional[str] = None
 
 class EquipmentCreate(EquipmentBase):
@@ -87,21 +93,25 @@ class EquipmentUpdate(BaseModel):
     calibration_cycle: Optional[str] = None
     calibration_date: Optional[date] = None
     calibration_method: Optional[str] = None
+    certificate_number: Optional[str] = None
+    verification_result: Optional[str] = None
+    verification_agency: Optional[str] = None
+    certificate_form: Optional[str] = None
     serial_number: Optional[str] = None
     installation_location: Optional[str] = None
     manufacturer: Optional[str] = None
     manufacture_date: Optional[date] = None
     scale_value: Optional[str] = None
     management_level: Optional[str] = None  # 管理级别
-    original_value: Optional[int] = None  # 原值/元
+    original_value: Optional[float] = None  # 原值/元
     status: Optional[str] = None
-    status_change_date: Optional[str] = None  # 添加状态变更时间字段
+    status_change_date: Optional[date] = None  # 状态变更时间
     notes: Optional[str] = None
 
 class Equipment(EquipmentBase):
     id: int
-    next_calibration_date: date
-    status_change_date: Optional[datetime] = None
+    valid_until: date
+    status_change_date: Optional[date] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
     department: Department

@@ -16,7 +16,7 @@ router = APIRouter()
 
 @router.get("/", response_model=PaginatedEquipment)
 def read_equipments(skip: int = 0, limit: int = 999999,
-                   sort_field: str = "next_calibration_date", 
+                   sort_field: str = "valid_until", 
                    sort_order: str = "asc",
                    db: Session = Depends(get_db),
                    current_user = Depends(get_current_user)):
@@ -41,7 +41,10 @@ def create_equipment(equipment_data: EquipmentCreate,
                 detail="Not authorized to manage this equipment category"
             )
     
-    new_equipment = equipment.create_equipment(db=db, equipment=equipment_data)
+    try:
+        new_equipment = equipment.create_equipment(db=db, equipment=equipment_data)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     
     # 记录操作日志
     create_audit_log(
@@ -81,7 +84,10 @@ def update_equipment(equipment_id: int, equipment_update: EquipmentUpdate,
     # 记录更新前的状态
     old_status = db_equipment.status
     
-    updated_equipment = equipment.update_equipment(db, equipment_id=equipment_id, equipment_update=equipment_update)
+    try:
+        updated_equipment = equipment.update_equipment(db, equipment_id=equipment_id, equipment_update=equipment_update)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     
     # 记录操作日志
     changes = []
@@ -130,7 +136,7 @@ def delete_equipment(equipment_id: int,
 
 @router.post("/filter", response_model=PaginatedEquipment)
 def filter_equipments(filters: EquipmentFilter, skip: int = 0, limit: int = 999999,
-                     sort_field: str = "next_calibration_date", 
+                     sort_field: str = "valid_until", 
                      sort_order: str = "asc",
                      db: Session = Depends(get_db),
                      current_user = Depends(get_current_user)):
@@ -173,12 +179,16 @@ def export_monthly_plan(db: Session = Depends(get_db),
             '计量编号': eq.serial_number,
             '检定周期': eq.calibration_cycle,
             '检定（校准）日期': eq.calibration_date.strftime('%Y-%m-%d'),
-            '有效期至': eq.next_calibration_date.strftime('%Y-%m-%d'),
+            '有效期至': eq.valid_until.strftime('%Y-%m-%d'),
             '安装地点': eq.installation_location,
             '分度值': eq.scale_value or '',
             '制造厂家': eq.manufacturer,
             '出厂日期': eq.manufacture_date.strftime('%Y-%m-%d') if eq.manufacture_date else '',
             '检定方式': eq.calibration_method,
+            '证书编号': eq.certificate_number or '',
+            '检定结果': eq.verification_result or '',
+            '检定机构': eq.verification_agency or '',
+            '证书形式': eq.certificate_form or '',
             '管理级别': eq.management_level or '',
             '原值/元': eq.original_value or '',
             '设备状态': eq.status,
@@ -189,8 +199,12 @@ def export_monthly_plan(db: Session = Depends(get_db),
     df = pd.DataFrame(data)
     
     # 重新排列列顺序，确保序号在第一列
-    columns = ['序号'] + [col for col in df.columns if col != '序号']
-    df = df[columns]
+    if not df.empty:
+        columns = ['序号'] + [col for col in df.columns if col != '序号']
+        df = df[columns]
+    
+    # 替换NaN值为空字符串
+    df = df.fillna('')
     
     # 创建Excel文件
     output = io.BytesIO()
@@ -231,12 +245,16 @@ def export_filtered_equipments(filters: EquipmentFilter,
             '计量编号': eq.serial_number,
             '检定周期': eq.calibration_cycle,
             '检定（校准）日期': eq.calibration_date.strftime('%Y-%m-%d'),
-            '有效期至': eq.next_calibration_date.strftime('%Y-%m-%d'),
+            '有效期至': eq.valid_until.strftime('%Y-%m-%d'),
             '安装地点': eq.installation_location,
             '分度值': eq.scale_value or '',
             '制造厂家': eq.manufacturer,
             '出厂日期': eq.manufacture_date.strftime('%Y-%m-%d') if eq.manufacture_date else '',
             '检定方式': eq.calibration_method,
+            '证书编号': eq.certificate_number or '',
+            '检定结果': eq.verification_result or '',
+            '检定机构': eq.verification_agency or '',
+            '证书形式': eq.certificate_form or '',
             '管理级别': eq.management_level or '',
             '原值/元': eq.original_value or '',
             '设备状态': eq.status,
@@ -249,6 +267,9 @@ def export_filtered_equipments(filters: EquipmentFilter,
     # 重新排列列顺序，确保序号在第一列
     columns = ['序号'] + [col for col in df.columns if col != '序号']
     df = df[columns]
+    
+    # 替换NaN值为空字符串
+    df = df.fillna('')
     
     # 创建Excel文件
     output = io.BytesIO()
@@ -507,12 +528,16 @@ def batch_export_selected_equipments(
             '计量编号': eq.serial_number,
             '检定周期': eq.calibration_cycle,
             '检定（校准）日期': eq.calibration_date.strftime('%Y-%m-%d'),
-            '有效期至': eq.next_calibration_date.strftime('%Y-%m-%d'),
+            '有效期至': eq.valid_until.strftime('%Y-%m-%d'),
             '安装地点': eq.installation_location,
             '分度值': eq.scale_value or '',
             '制造厂家': eq.manufacturer,
             '出厂日期': eq.manufacture_date.strftime('%Y-%m-%d') if eq.manufacture_date else '',
             '检定方式': eq.calibration_method,
+            '证书编号': eq.certificate_number or '',
+            '检定结果': eq.verification_result or '',
+            '检定机构': eq.verification_agency or '',
+            '证书形式': eq.certificate_form or '',
             '管理级别': eq.management_level or '',
             '原值/元': eq.original_value or '',
             '设备状态': eq.status,
@@ -525,6 +550,9 @@ def batch_export_selected_equipments(
     # 重新排列列顺序，确保序号在第一列
     columns = ['序号'] + [col for col in df.columns if col != '序号']
     df = df[columns]
+    
+    # 替换NaN值为空字符串
+    df = df.fillna('')
     
     # 创建Excel文件
     output = io.BytesIO()
@@ -583,12 +611,16 @@ def export_search_equipments(search_params: EquipmentSearch,
             '计量编号': eq.serial_number,
             '检定周期': eq.calibration_cycle,
             '检定（校准）日期': eq.calibration_date.strftime('%Y-%m-%d'),
-            '有效期至': eq.next_calibration_date.strftime('%Y-%m-%d'),
+            '有效期至': eq.valid_until.strftime('%Y-%m-%d'),
             '安装地点': eq.installation_location,
             '分度值': eq.scale_value or '',
             '制造厂家': eq.manufacturer,
             '出厂日期': eq.manufacture_date.strftime('%Y-%m-%d') if eq.manufacture_date else '',
             '检定方式': eq.calibration_method,
+            '证书编号': eq.certificate_number or '',
+            '检定结果': eq.verification_result or '',
+            '检定机构': eq.verification_agency or '',
+            '证书形式': eq.certificate_form or '',
             '管理级别': eq.management_level or '',
             '原值/元': eq.original_value or '',
             '设备状态': eq.status,
@@ -601,6 +633,9 @@ def export_search_equipments(search_params: EquipmentSearch,
     # 重新排列列顺序，确保序号在第一列
     columns = ['序号'] + [col for col in df.columns if col != '序号']
     df = df[columns]
+    
+    # 替换NaN值为空字符串
+    df = df.fillna('')
     
     # 创建Excel文件
     output = io.BytesIO()

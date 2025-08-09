@@ -360,7 +360,7 @@ function renderMonthlyDueTable(equipments) {
             <td>${equipment.name}</td>
             <td>${equipment.model}</td>
             <td>${equipment.serial_number}</td>
-            <td>${formatDate(equipment.next_calibration_date)}</td>
+            <td>${formatDate(equipment.valid_until)}</td>
             <td>
                 <span class="badge status-${equipment.status}">${equipment.status}</span>
             </td>
@@ -552,13 +552,13 @@ async function loadEquipmentList(filters = {}) {
         if (Object.keys(filters).length > 0) {
             // 使用filter API，不传skip和limit参数获取全部数据
             const params = new URLSearchParams({
-                sort_field: "next_calibration_date",
+                sort_field: "valid_until",
                 sort_order: "asc"
             });
             response = await apiCall(`/equipment/filter?${params.toString()}`, 'POST', filters);
         } else {
             // 使用普通API，不传skip和limit参数获取全部数据
-            response = await apiCall(`/equipment/?sort_field=next_calibration_date&sort_order=asc`);
+            response = await apiCall(`/equipment/?sort_field=valid_until&sort_order=asc`);
         }
         
         if (response) {
@@ -600,9 +600,9 @@ function sortEquipmentTable(column) {
                 valueA = a.category.name;
                 valueB = b.category.name;
                 break;
-            case 'next_calibration_date':
-                valueA = new Date(a.next_calibration_date);
-                valueB = new Date(b.next_calibration_date);
+            case 'valid_until':
+                valueA = new Date(a.valid_until);
+                valueB = new Date(b.valid_until);
                 break;
             default:
                 return 0;
@@ -646,9 +646,9 @@ function renderEquipmentTable(equipments) {
         const row = document.createElement('tr');
         
         // 根据检定日期添加样式
-        if (isDateOverdue(equipment.next_calibration_date)) {
+        if (isDateOverdue(equipment.valid_until)) {
             row.classList.add('equipment-overdue');
-        } else if (isDateDueSoon(equipment.next_calibration_date)) {
+        } else if (isDateDueSoon(equipment.valid_until)) {
             row.classList.add('equipment-due-soon');
         }
         
@@ -660,7 +660,7 @@ function renderEquipmentTable(equipments) {
             <td>${equipment.name}</td>
             <td>${equipment.model}</td>
             <td>${equipment.serial_number}</td>
-            <td>${formatDate(equipment.next_calibration_date)}</td>
+            <td>${formatDate(equipment.valid_until)}</td>
             <td>
                 <span class="badge status-${equipment.status}">${equipment.status}</span>
                 ${equipment.status !== '在用' && equipment.status_change_date ? 
@@ -822,10 +822,10 @@ function showBatchUpdateCalibrationModal() {
                             <div class="mb-3">
                                 <label class="form-label">新的检定日期 *</label>
                                 <input type="date" class="form-control" name="calibration_date" required>
-                                <div class="form-text">将为选中的 ${selectedIds.length} 台设备更新检定日期，并自动计算下次检定日期</div>
+                                <div class="form-text">将为选中的 ${selectedIds.length} 台设备更新检定日期，并自动计算有效期至</div>
                             </div>
                             <div class="alert alert-info">
-                                <strong>注意：</strong>此操作将同时更新所有选中设备的检定日期和下次检定日期。
+                                <strong>注意：</strong>此操作将同时更新所有选中设备的检定日期和有效期至。
                             </div>
                         </form>
                     </div>
@@ -1048,7 +1048,7 @@ async function exportFiltered() {
     const filters = getFilterValues();
     
     try {
-        const response = await fetch(`${API_BASE}/equipment/export/filtered`, {
+        const response = await fetch(`${API_BASE}/import/export/filtered`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${authToken}`,
@@ -1278,6 +1278,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 导出按钮
     document.getElementById('export-monthly-btn').addEventListener('click', exportMonthlyPlan);
+    
+    // 导出全部设备按钮
+    document.getElementById('export-all-btn').addEventListener('click', exportAllEquipment);
+    
     document.getElementById('export-filtered').addEventListener('click', exportFiltered);
     
     // 导出搜索结果按钮
@@ -1297,9 +1301,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 导入数据按钮
     document.getElementById('import-data-btn').addEventListener('click', showImportDataModal);
     
-    // 下载模板按钮
-    document.getElementById('download-template-btn').addEventListener('click', downloadImportTemplate);
-    
+      
     // 系统管理链接
     const usersLink = document.getElementById('users-link');
     const categoriesLink = document.getElementById('categories-link');
@@ -1472,15 +1474,30 @@ function showEditEquipmentModal(equipment) {
                                     <input type="text" class="form-control" name="scale_value" value="${equipment.scale_value || ''}" placeholder="例如：0.01mm">
                                     <div class="form-text">可选，用于记录设备的分度值信息</div>
                                 </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">管理级别</label>
+                                    <select class="form-select" name="management_level">
+                                        <option value="">请选择管理级别</option>
+                                        <option value="A级" ${equipment.management_level === 'A级' ? 'selected' : ''}>A级</option>
+                                        <option value="B级" ${equipment.management_level === 'B级' ? 'selected' : ''}>B级</option>
+                                        <option value="C级" ${equipment.management_level === 'C级' ? 'selected' : ''}>C级</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">原值/元</label>
+                                    <input type="number" class="form-control" name="original_value" value="${equipment.original_value || ''}" placeholder="请输入设备原值" min="0" step="0.01">
+                                </div>
                             </div>
                             <div class="row">
                                 <div class="col-md-4 mb-3">
                                     <label class="form-label">检定周期 *</label>
                                     <select class="form-select" name="calibration_cycle" required>
                                         <option value="">请选择检定周期</option>
-                                        <option value="半年" ${equipment.calibration_cycle === '半年' ? 'selected' : ''}>半年</option>
-                                        <option value="1年" ${equipment.calibration_cycle === '1年' ? 'selected' : ''}>1年</option>
-                                        <option value="2年" ${equipment.calibration_cycle === '2年' ? 'selected' : ''}>2年</option>
+                                        <option value="6个月" ${equipment.calibration_cycle === '6个月' ? 'selected' : ''}>6个月</option>
+                                        <option value="12个月" ${equipment.calibration_cycle === '12个月' ? 'selected' : ''}>12个月</option>
+                                        <option value="24个月" ${equipment.calibration_cycle === '24个月' ? 'selected' : ''}>24个月</option>
                                     </select>
                                 </div>
                                 <div class="col-md-4 mb-3">
@@ -1502,13 +1519,41 @@ function showEditEquipmentModal(equipment) {
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">检定方式</label>
-                                    <select class="form-select" name="calibration_method">
-                                        <option value="内部检定" ${equipment.calibration_method === '内部检定' ? 'selected' : ''}>内部检定</option>
-                                        <option value="外部检定" ${equipment.calibration_method === '外部检定' ? 'selected' : ''}>外部检定</option>
-                                        <option value="校准" ${equipment.calibration_method === '校准' ? 'selected' : ''}>校准</option>
+                                    <select class="form-select" name="calibration_method" onchange="toggleExternalFields(this, 'edit')" required>
+                                        <option value="内检" ${equipment.calibration_method === '内检' ? 'selected' : ''}>内检</option>
+                                        <option value="外检" ${equipment.calibration_method === '外检' ? 'selected' : ''}>外检</option>
                                     </select>
                                 </div>
                             </div>
+                            
+                            <!-- 外检相关字段 -->
+                            <div id="edit-external-fields" style="display: ${equipment.calibration_method === '外检' ? 'block' : 'none'};">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">证书编号 *</label>
+                                        <input type="text" class="form-control" name="certificate_number" value="${equipment.certificate_number || ''}" ${equipment.calibration_method === '外检' ? 'required' : ''}>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">检定结果 *</label>
+                                        <input type="text" class="form-control" name="verification_result" value="${equipment.verification_result || ''}" ${equipment.calibration_method === '外检' ? 'required' : ''}>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">检定机构 *</label>
+                                        <input type="text" class="form-control" name="verification_agency" value="${equipment.verification_agency || ''}" ${equipment.calibration_method === '外检' ? 'required' : ''}>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">证书形式 *</label>
+                                        <select class="form-select" name="certificate_form" ${equipment.calibration_method === '外检' ? 'required' : ''}>
+                                            <option value="">请选择证书形式</option>
+                                            <option value="校准证书" ${equipment.certificate_form === '校准证书' ? 'selected' : ''}>校准证书</option>
+                                            <option value="检定证书" ${equipment.certificate_form === '检定证书' ? 'selected' : ''}>检定证书</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">设备状态</label>
@@ -1604,6 +1649,17 @@ async function submitEditEquipment() {
         }
     }
     
+    // 验证外检字段
+    if (equipmentData.calibration_method === '外检') {
+        const externalFields = ['certificate_number', 'verification_result', 'verification_agency', 'certificate_form'];
+        for (const field of externalFields) {
+            if (!equipmentData[field]) {
+                showAlert('外检时，证书编号、检定结果、检定机构、证书形式为必填项', 'warning');
+                return;
+            }
+        }
+    }
+    
     // 验证状态变更时间
     if ((equipmentData.status === '停用' || equipmentData.status === '报废') && !equipmentData.status_change_date) {
         showAlert('停用或报废状态时，状态变更时间为必填项', 'warning');
@@ -1641,7 +1697,7 @@ async function updateCalibrationDate(id) {
                             <div class="mb-3">
                                 <label class="form-label">新的检定日期 *</label>
                                 <input type="date" class="form-control" name="calibration_date" required>
-                                <div class="form-text">更新检定日期将自动计算下次检定日期</div>
+                                <div class="form-text">更新检定日期将自动计算有效期至</div>
                             </div>
                         </form>
                     </div>
@@ -1782,10 +1838,9 @@ function showAddEquipmentModal() {
                                     <label class="form-label">管理级别</label>
                                     <select class="form-select" name="management_level">
                                         <option value="">请选择管理级别</option>
+                                        <option value="A级">A级</option>
                                         <option value="B级">B级</option>
                                         <option value="C级">C级</option>
-                                        <option value="校准证书">校准证书</option>
-                                        <option value="检定证书">检定证书</option>
                                     </select>
                                     <div class="form-text">可选，用于设备分级管理</div>
                                 </div>
@@ -1793,7 +1848,7 @@ function showAddEquipmentModal() {
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">原值/元</label>
-                                    <input type="number" class="form-control" name="original_value" placeholder="请输入设备原值" min="0" step="1">
+                                    <input type="number" class="form-control" name="original_value" placeholder="请输入设备原值" min="0" step="0.01">
                                     <div class="form-text">可选，单位：元</div>
                                 </div>
                             </div>
@@ -1802,9 +1857,9 @@ function showAddEquipmentModal() {
                                     <label class="form-label">检定周期 *</label>
                                     <select class="form-select" name="calibration_cycle" required>
                                         <option value="">请选择检定周期</option>
-                                        <option value="半年">半年</option>
-                                        <option value="1年">1年</option>
-                                        <option value="2年">2年</option>
+                                        <option value="6个月">6个月</option>
+                                        <option value="12个月">12个月</option>
+                                        <option value="24个月">24个月</option>
                                     </select>
                                 </div>
                                 <div class="col-md-4 mb-3">
@@ -1823,13 +1878,40 @@ function showAddEquipmentModal() {
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">检定方式</label>
-                                    <select class="form-select" name="calibration_method">
-                                        <option value="内部检定">内部检定</option>
-                                        <option value="外部检定">外部检定</option>
-                                        <option value="校准">校准</option>
+                                    <select class="form-select" name="calibration_method" onchange="toggleExternalFields(this, 'add')" required>
+                                        <option value="内检">内检</option>
+                                        <option value="外检">外检</option>
                                     </select>
                                 </div>
                             </div>
+                            <!-- 外检相关字段 -->
+                            <div id="add-external-fields" style="display: none;">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">证书编号 *</label>
+                                        <input type="text" class="form-control" name="certificate_number" required>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">检定结果 *</label>
+                                        <input type="text" class="form-control" name="verification_result" required>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">检定机构 *</label>
+                                        <input type="text" class="form-control" name="verification_agency" required>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">证书形式 *</label>
+                                        <select class="form-select" name="certificate_form" required>
+                                            <option value="">请选择证书形式</option>
+                                            <option value="校准证书">校准证书</option>
+                                            <option value="检定证书">检定证书</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">设备状态</label>
@@ -1929,6 +2011,39 @@ function toggleStatusChangeDate(selectElement, formType) {
     }
 }
 
+// 外检字段显示控制
+function toggleExternalFields(selectElement, formType) {
+    const value = selectElement.value;
+    const container = document.getElementById(`${formType}-external-fields`);
+    const managementLevelSelect = document.querySelector(`#${formType}EquipmentModal select[name="management_level"]`);
+    
+    if (value === '外检') {
+        container.style.display = 'block';
+        // 设置外检字段为必填
+        container.querySelectorAll('input').forEach(input => {
+            input.required = true;
+        });
+        
+        // 如果检定方式为外检，自动设置管理级别为"-"并禁用选择
+        if (managementLevelSelect) {
+            managementLevelSelect.value = '-';
+            managementLevelSelect.disabled = true;
+        }
+    } else {
+        container.style.display = 'none';
+        // 移除外检字段的必填要求
+        container.querySelectorAll('input').forEach(input => {
+            input.required = false;
+            input.value = ''; // 清空值
+        });
+        
+        // 启用管理级别选择
+        if (managementLevelSelect) {
+            managementLevelSelect.disabled = false;
+        }
+    }
+}
+
 async function submitAddEquipment() {
     const form = document.getElementById('add-equipment-form');
     const formData = new FormData(form);
@@ -1945,12 +2060,22 @@ async function submitAddEquipment() {
     }
     
     // 验证必填字段
-    const requiredFields = ['name', 'serial_number', 'department_id', 'category_id', 'model', 'accuracy_level', 'calibration_cycle', 'calibration_date'];
+    const requiredFields = ['name', 'serial_number', 'department_id', 'category_id', 'model', 'accuracy_level', 'calibration_cycle', 'calibration_date', 'calibration_method'];
     const missingFields = [];
     
     for (const field of requiredFields) {
         if (!equipmentData[field]) {
             missingFields.push(field);
+        }
+    }
+    
+    // 验证外检字段
+    if (equipmentData.calibration_method === '外检') {
+        const externalFields = ['certificate_number', 'verification_result', 'verification_agency', 'certificate_form'];
+        for (const field of externalFields) {
+            if (!equipmentData[field]) {
+                missingFields.push(field);
+            }
         }
     }
     
@@ -2006,11 +2131,21 @@ function showImportDataModal() {
                             </div>
                             <div class="alert alert-info">
                                 <small>
-                                    <strong>注意：</strong><br>
+                                    <strong>导入字段顺序：</strong><br>
+                                    使用部门、设备类别、计量器具名称、型号/规格、准确度等级、测量范围、计量编号、检定周期、检定(校准)日期、安装地点、分度值、制造厂家、出厂日期、检定方式、管理级别、原值/元、设备状态、证书编号、检定结果、检定机构、证书形式、备注
+                                </small>
+                            </div>
+                            <div class="alert alert-warning">
+                                <small>
+                                    <strong>重要提示：</strong><br>
                                     1. 请确保Excel文件包含正确的列标题<br>
-                                    2. 必填字段：设备名称、计量编号、部门、设备类别、检定周期、检定日期<br>
+                                    2. 必填字段：使用部门、设备类别、计量器具名称、型号/规格、准确度等级、计量编号、检定周期、检定(校准)日期、检定方式<br>
                                     3. 日期格式：YYYY-MM-DD<br>
-                                    4. 检定周期只能填写：1年 或 2年
+                                    4. 检定周期：6个月、12个月、24个月<br>
+                                    5. 检定方式：内检、外检<br>
+                                    6. 外检时必须填写：证书编号、检定结果、检定机构、证书形式（校准证书/检定证书）<br>
+                                    7. 状态为停用/报废时必须填写状态变更时间<br>
+                                    8. 有效期至字段将由系统自动计算，无需填写
                                 </small>
                             </div>
                             <div class="mb-3">
@@ -3149,6 +3284,37 @@ async function batchExportSelected() {
         } else {
             const errorData = await response.json();
             throw new Error(errorData.detail || '导出失败');
+        }
+    } catch (error) {
+        showAlert('导出失败：' + error.message, 'danger');
+    }
+}
+
+// 导出全部设备
+async function exportAllEquipment() {
+    try {
+        const response = await fetch(`${API_BASE}/import/export/all?v=${Date.now()}`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        
+        if (response.ok) {
+            // 从Content-Disposition头部获取文件名
+            const contentDisposition = response.headers.get('Content-Disposition');
+            let filename = parseFilenameFromContentDisposition(contentDisposition) || '设备台账_全部.xlsx';
+            
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            window.URL.revokeObjectURL(url);
+            showAlert('导出成功！', 'success');
+        } else {
+            const error = await response.json();
+            showAlert('导出失败：' + error.detail, 'danger');
         }
     } catch (error) {
         showAlert('导出失败：' + error.message, 'danger');

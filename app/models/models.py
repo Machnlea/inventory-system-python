@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Date, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Date, Boolean, Float
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.database import Base
@@ -63,10 +63,16 @@ class Equipment(Base):
     measurement_range = Column(String(100))  # 测量范围
     
     # 检定信息
-    calibration_cycle = Column(String(10), nullable=False)  # 检定周期(半年/1年/2年)
+    calibration_cycle = Column(String(10), nullable=False)  # 检定周期(6个月/12个月/24个月)
     calibration_date = Column(Date, nullable=False)  # 检定日期
-    next_calibration_date = Column(Date, nullable=False)  # 下次检定日期
-    calibration_method = Column(String(50))  # 检定方式
+    valid_until = Column(Date, nullable=False)  # 有效期至
+    calibration_method = Column(String(50), nullable=False)  # 检定方式
+    
+    # 外检相关字段
+    certificate_number = Column(String(100))  # 证书编号
+    verification_result = Column(String(100))  # 检定结果
+    verification_agency = Column(String(100))  # 检定机构
+    certificate_form = Column(String(50))  # 证书形式
     
     # 设备信息
     serial_number = Column(String(100), unique=True, nullable=False)  # 计量编号
@@ -77,11 +83,11 @@ class Equipment(Base):
     # 扩展字段
     scale_value = Column(String(50))  # 分度值
     management_level = Column(String(20))  # 管理级别
-    original_value = Column(Integer)  # 原值/元
+    original_value = Column(Float)  # 原值/元
     
     # 状态信息
     status = Column(String(20), default="在用")  # 设备状态：在用/停用/报废
-    status_change_date = Column(DateTime(timezone=True))  # 状态变更时间
+    status_change_date = Column(Date)  # 状态变更时间
     notes = Column(Text)  # 备注
     
     # 时间戳

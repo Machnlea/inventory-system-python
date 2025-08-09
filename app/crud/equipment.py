@@ -5,20 +5,20 @@ from app.schemas.schemas import EquipmentCreate, EquipmentUpdate, EquipmentFilte
 from datetime import date, timedelta, datetime
 from typing import List, Optional
 
-def calculate_next_calibration_date(calibration_date: date, calibration_cycle: str) -> date:
-    """计算下次检定日期"""
-    if calibration_cycle == "1年":
+def calculate_valid_until(calibration_date: date, calibration_cycle: str) -> date:
+    """计算有效期至"""
+    if calibration_cycle == "12个月":
         next_date = calibration_date.replace(year=calibration_date.year + 1)
-    elif calibration_cycle == "2年":
+    elif calibration_cycle == "24个月":
         next_date = calibration_date.replace(year=calibration_date.year + 2)
-    elif calibration_cycle == "半年":
+    elif calibration_cycle == "6个月":
         # 增加6个月
         if calibration_date.month + 6 > 12:
             next_date = calibration_date.replace(year=calibration_date.year + 1, month=calibration_date.month + 6 - 12)
         else:
             next_date = calibration_date.replace(month=calibration_date.month + 6)
     else:
-        raise ValueError("检定周期必须是'1年'、'2年'或'半年'")
+        raise ValueError("检定周期必须是'6个月'、'12个月'或'24个月'")
     
     # 减去1天
     return next_date - timedelta(days=1)
@@ -37,7 +37,7 @@ def get_equipments_count(db: Session, user_id: Optional[int] = None, is_admin: b
     return query.count()
 
 def get_equipments(db: Session, skip: int = 0, limit: int = 100,
-                  sort_field: str = "next_calibration_date", 
+                  sort_field: str = "valid_until", 
                   sort_order: str = "asc",
                   user_id: Optional[int] = None, is_admin: bool = False):
     query = db.query(Equipment).options(
@@ -63,18 +63,18 @@ def get_equipments(db: Session, skip: int = 0, limit: int = 100,
         query = query.join(Equipment.category).order_by(
             EquipmentCategory.name.asc() if sort_order == "asc" else EquipmentCategory.name.desc()
         )
-    elif sort_field == "next_calibration_date":
+    elif sort_field == "valid_until":
         query = query.order_by(
-            Equipment.next_calibration_date.asc() if sort_order == "asc" else Equipment.next_calibration_date.desc()
+            Equipment.valid_until.asc() if sort_order == "asc" else Equipment.valid_until.desc()
         )
     else:
-        # 默认按下次检定日期排序
-        query = query.order_by(Equipment.next_calibration_date.asc())
+        # 默认按有效期至排序
+        query = query.order_by(Equipment.valid_until.asc())
     
     return query.offset(skip).limit(limit).all()
 
 def get_equipments_paginated(db: Session, skip: int = 0, limit: int = 100,
-                           sort_field: str = "next_calibration_date", 
+                           sort_field: str = "valid_until", 
                            sort_order: str = "asc",
                            user_id: Optional[int] = None, is_admin: bool = False):
     """获取分页设备数据"""
@@ -106,28 +106,32 @@ def get_equipment(db: Session, equipment_id: int, user_id: Optional[int] = None,
     return query.first()
 
 def create_equipment(db: Session, equipment: EquipmentCreate):
-    # 自动计算下次检定日期
-    next_calibration_date = calculate_next_calibration_date(
+    # 验证证书形式字段
+    if equipment.calibration_method == "外检" and equipment.certificate_form:
+        if equipment.certificate_form not in ["校准证书", "检定证书"]:
+            raise ValueError("证书形式必须是'校准证书'或'检定证书'")
+    
+    # 自动计算有效期至
+    valid_until = calculate_valid_until(
         equipment.calibration_date, equipment.calibration_cycle
     )
     
     # 准备设备数据
     equipment_data = equipment.dict()
-    equipment_data["next_calibration_date"] = next_calibration_date
+    equipment_data["valid_until"] = valid_until
+    
+    # 处理管理级别：如果检定方式为外检，管理级别设为"-"
+    if equipment.calibration_method == "外检":
+        equipment_data["management_level"] = "-"
     
     # 处理状态变更时间
     if hasattr(equipment, 'status') and equipment.status in ["停用", "报废"]:
         if hasattr(equipment, 'status_change_date') and equipment.status_change_date:
-            # 如果提供了状态变更时间，将日期字符串转换为datetime对象（只保留日期部分）
-            if isinstance(equipment.status_change_date, str):
-                parsed_date = datetime.strptime(equipment.status_change_date, "%Y-%m-%d")
-                equipment_data["status_change_date"] = parsed_date.replace(hour=0, minute=0, second=0, microsecond=0)
-            else:
-                equipment_data["status_change_date"] = equipment.status_change_date
+            # 如果提供了状态变更时间，使用提供的日期
+            equipment_data["status_change_date"] = equipment.status_change_date
         else:
-            # 如果没有提供状态变更时间，使用当前日期（00:00:00）
-            today = date.today()
-            equipment_data["status_change_date"] = datetime.combine(today, datetime.min.time())
+            # 如果没有提供状态变更时间，使用当前日期
+            equipment_data["status_change_date"] = date.today()
     
     db_equipment = Equipment(**equipment_data)
     db.add(db_equipment)
@@ -140,36 +144,38 @@ def update_equipment(db: Session, equipment_id: int, equipment_update: Equipment
     if db_equipment:
         update_data = equipment_update.dict(exclude_unset=True)
         
-        # 如果更新了检定日期或检定周期，重新计算下次检定日期
+        # 验证证书形式字段
+        if "certificate_form" in update_data:
+            calibration_method = update_data.get("calibration_method", db_equipment.calibration_method)
+            if calibration_method == "外检" and update_data["certificate_form"]:
+                if update_data["certificate_form"] not in ["校准证书", "检定证书"]:
+                    raise ValueError("证书形式必须是'校准证书'或'检定证书'")
+        
+        # 如果更新了检定日期或检定周期，重新计算有效期至
         if "calibration_date" in update_data or "calibration_cycle" in update_data:
             calibration_date = update_data.get("calibration_date", db_equipment.calibration_date)
             calibration_cycle = update_data.get("calibration_cycle", db_equipment.calibration_cycle)
-            update_data["next_calibration_date"] = calculate_next_calibration_date(
+            update_data["valid_until"] = calculate_valid_until(
                 calibration_date, calibration_cycle
             )
+        
+        # 处理管理级别：如果检定方式为外检，管理级别设为"-"
+        if "calibration_method" in update_data and update_data["calibration_method"] == "外检":
+            update_data["management_level"] = "-"
         
         # 处理状态变更时间
         if "status" in update_data:
             if update_data["status"] in ["停用", "报废"]:
                 # 如果提供了状态变更时间，使用提供的时间
                 if "status_change_date" in update_data and update_data["status_change_date"]:
-                    # 将日期字符串转换为datetime对象（只保留日期部分，时间设为00:00:00）
-                    if isinstance(update_data["status_change_date"], str):
-                        parsed_date = datetime.strptime(update_data["status_change_date"], "%Y-%m-%d")
-                        update_data["status_change_date"] = parsed_date.replace(hour=0, minute=0, second=0, microsecond=0)
+                    pass  # 使用提供的日期
                 elif db_equipment.status == "在用":
-                    # 只有当设备原本是在用状态且没有提供状态变更时间时，才使用当前日期（00:00:00）
-                    today = date.today()
-                    update_data["status_change_date"] = datetime.combine(today, datetime.min.time())
+                    # 只有当设备原本是在用状态且没有提供状态变更时间时，才使用当前日期
+                    update_data["status_change_date"] = date.today()
                 # 如果设备原本就是停用或报废状态且没有提供新的状态变更时间，保留原有时间
             else:
                 # 如果状态改为在用，清除状态变更时间
                 update_data["status_change_date"] = None
-        elif "status_change_date" in update_data and update_data["status_change_date"]:
-            # 单独更新状态变更时间
-            if isinstance(update_data["status_change_date"], str):
-                parsed_date = datetime.strptime(update_data["status_change_date"], "%Y-%m-%d")
-                update_data["status_change_date"] = parsed_date.replace(hour=0, minute=0, second=0, microsecond=0)
         
         for field, value in update_data.items():
             setattr(db_equipment, field, value)
@@ -209,10 +215,10 @@ def filter_equipments_count(db: Session, filters: EquipmentFilter, user_id: Opti
         query = query.filter(Equipment.status == filters.status)
     
     if filters.next_calibration_start:
-        query = query.filter(Equipment.next_calibration_date >= filters.next_calibration_start)
+        query = query.filter(Equipment.valid_until >= filters.next_calibration_start)
     
     if filters.next_calibration_end:
-        query = query.filter(Equipment.next_calibration_date <= filters.next_calibration_end)
+        query = query.filter(Equipment.valid_until <= filters.next_calibration_end)
     
     return query.count()
 
@@ -243,10 +249,10 @@ def filter_equipments(db: Session, filters: EquipmentFilter, user_id: Optional[i
         query = query.filter(Equipment.status == filters.status)
     
     if filters.next_calibration_start:
-        query = query.filter(Equipment.next_calibration_date >= filters.next_calibration_start)
+        query = query.filter(Equipment.valid_until >= filters.next_calibration_start)
     
     if filters.next_calibration_end:
-        query = query.filter(Equipment.next_calibration_date <= filters.next_calibration_end)
+        query = query.filter(Equipment.valid_until <= filters.next_calibration_end)
     
     # 添加排序
     if sort_field == "name":
@@ -259,19 +265,19 @@ def filter_equipments(db: Session, filters: EquipmentFilter, user_id: Optional[i
         query = query.join(Equipment.category).order_by(
             EquipmentCategory.name.asc() if sort_order == "asc" else EquipmentCategory.name.desc()
         )
-    elif sort_field == "next_calibration_date":
+    elif sort_field == "valid_until":
         query = query.order_by(
-            Equipment.next_calibration_date.asc() if sort_order == "asc" else Equipment.next_calibration_date.desc()
+            Equipment.valid_until.asc() if sort_order == "asc" else Equipment.valid_until.desc()
         )
     else:
-        # 默认按下次检定日期排序
-        query = query.order_by(Equipment.next_calibration_date.asc())
+        # 默认按有效期至排序
+        query = query.order_by(Equipment.valid_until.asc())
     
     return query.offset(skip).limit(limit).all()
 
 def filter_equipments_paginated(db: Session, filters: EquipmentFilter, user_id: Optional[int] = None, 
                                is_admin: bool = False, skip: int = 0, limit: int = 100,
-                               sort_field: str = "next_calibration_date", 
+                               sort_field: str = "valid_until", 
                                sort_order: str = "asc"):
     """获取分页筛选设备数据"""
     items = filter_equipments(db, filters, user_id, is_admin, skip, limit,
@@ -293,8 +299,8 @@ def get_equipments_due_for_calibration(db: Session, start_date: date, end_date: 
         joinedload(Equipment.category)
     ).filter(
         and_(
-            Equipment.next_calibration_date >= start_date,
-            Equipment.next_calibration_date <= end_date,
+            Equipment.valid_until >= start_date,
+            Equipment.valid_until <= end_date,
             Equipment.status == "在用"
         )
     )
@@ -305,8 +311,8 @@ def get_equipments_due_for_calibration(db: Session, start_date: date, end_date: 
         )
         query = query.filter(Equipment.category_id.in_(authorized_categories))
     
-    # 按下次检定日期升序排序
-    query = query.order_by(Equipment.next_calibration_date.asc())
+    # 按有效期至升序排序
+    query = query.order_by(Equipment.valid_until.asc())
     
     return query.all()
 
@@ -315,7 +321,7 @@ def get_overdue_equipments(db: Session, user_id: Optional[int] = None, is_admin:
     today = date.today()
     query = db.query(Equipment).filter(
         and_(
-            Equipment.next_calibration_date < today,
+            Equipment.valid_until < today,
             Equipment.status == "在用"
         )
     )
@@ -326,8 +332,8 @@ def get_overdue_equipments(db: Session, user_id: Optional[int] = None, is_admin:
         )
         query = query.filter(Equipment.category_id.in_(authorized_categories))
     
-    # 按下次检定日期升序排序（最早超期的排在前面）
-    query = query.order_by(Equipment.next_calibration_date.asc())
+    # 按有效期至升序排序（最早超期的排在前面）
+    query = query.order_by(Equipment.valid_until.asc())
     
     return query.all()
 

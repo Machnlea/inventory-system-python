@@ -106,12 +106,18 @@ function isDateOverdue(dateString) {
     return date < today;
 }
 
-function isDateDueSoon(dateString, days = 30) {
+function isDateDueSoon(dateString) {
     if (!dateString) return false;
     const date = new Date(dateString);
     const today = new Date();
-    const dueSoonDate = new Date(today.getTime() + (days * 24 * 60 * 60 * 1000));
-    return date <= dueSoonDate && date >= today;
+    
+    // 获取本月最后一天
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+    const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
+    
+    // 判断是否在本月内到期（包括今天）
+    return date <= lastDayOfMonth && date >= today;
 }
 
 // 从Content-Disposition头部解析文件名的函数

@@ -564,6 +564,12 @@ async function loadEquipmentList(filters = {}) {
         if (response) {
             currentEquipments = response.items; // 保存当前设备列表用于排序
             renderEquipmentTable(response.items);
+            // 更新附件计数
+            setTimeout(() => {
+                response.items.forEach(equipment => {
+                    loadAndUpdateAttachmentCount(equipment.id);
+                });
+            }, 100);
             // 移除分页显示
             const paginationContainer = document.getElementById('equipment-pagination');
             if (paginationContainer) {
@@ -665,6 +671,12 @@ function renderEquipmentTable(equipments) {
                 <span class="badge status-${equipment.status}">${equipment.status}</span>
                 ${equipment.status !== '在用' && equipment.status_change_date ? 
                     `<br><small class="text-muted">${formatDate(equipment.status_change_date)}</small>` : ''}
+            </td>
+            <td>
+                <button class="btn btn-outline-primary btn-sm" onclick="openAttachmentManagement(${equipment.id})" title="管理附件">
+                    <i class="bi bi-paperclip"></i>
+                    <span class="attachment-count-${equipment.id}">0</span>
+                </button>
             </td>
             <td>
                 <div class="btn-group btn-group-sm">
@@ -3342,3 +3354,375 @@ function getSelectedEquipmentIds() {
     const checkboxes = document.querySelectorAll('#equipment-tbody input[type="checkbox"]:checked');
     return Array.from(checkboxes).map(cb => parseInt(cb.value));
 }
+
+// ===== 附件管理功能 =====
+
+// 附件管理相关变量
+let currentAttachmentEquipmentId = null;
+let currentAttachmentId = null;
+
+// 更新设备附件计数
+async function updateEquipmentAttachmentCounts() {
+    try {
+        const response = await fetch(`${API_BASE}/equipment/`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const equipments = data.items;
+            
+            // 更新每个设备的附件计数
+            equipments.forEach(equipment => {
+                loadAndUpdateAttachmentCount(equipment.id);
+            });
+        }
+    } catch (error) {
+        console.error('更新附件计数失败:', error);
+    }
+}
+
+// 加载并更新单个设备的附件计数
+async function loadAndUpdateAttachmentCount(equipmentId) {
+    try {
+        const response = await fetch(`${API_BASE}/attachments/equipment/${equipmentId}/attachments`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        
+        if (response.ok) {
+            const attachments = await response.json();
+            const countElement = document.querySelector(`.attachment-count-${equipmentId}`);
+            if (countElement) {
+                countElement.textContent = attachments.length;
+                if (attachments.length > 0) {
+                    countElement.style.fontWeight = 'bold';
+                    countElement.style.color = '#0d6efd';
+                }
+            }
+        }
+    } catch (error) {
+        console.error('加载附件计数失败:', error);
+    }
+}
+
+// 打开附件管理模态框
+async function openAttachmentManagement(equipmentId) {
+    currentAttachmentEquipmentId = equipmentId;
+    
+    // 设置模态框标题
+    const modal = new bootstrap.Modal(document.getElementById('attachment-management-modal'));
+    
+    // 加载附件列表
+    await loadEquipmentAttachments(equipmentId);
+    
+    // 显示模态框
+    modal.show();
+}
+
+// 加载设备附件列表
+async function loadEquipmentAttachments(equipmentId) {
+    try {
+        const response = await fetch(`${API_BASE}/attachments/equipment/${equipmentId}/attachments`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        
+        if (response.ok) {
+            const attachments = await response.json();
+            renderAttachmentList(attachments);
+        } else {
+            const error = await response.json();
+            showAlert('加载附件列表失败：' + error.detail, 'danger');
+        }
+    } catch (error) {
+        showAlert('加载附件列表失败：' + error.message, 'danger');
+    }
+}
+
+// 渲染附件列表
+function renderAttachmentList(attachments) {
+    const tbody = document.getElementById('attachment-list-tbody');
+    
+    if (attachments.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center text-muted">
+                    <i class="bi bi-info-circle"></i> 暂无附件
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = attachments.map(attachment => `
+        <tr>
+            <td>
+                <i class="bi bi-file-earmark"></i>
+                ${attachment.original_filename}
+                ${attachment.is_certificate ? `<span class="badge bg-warning text-dark">${attachment.certificate_type}</span>` : ''}
+            </td>
+            <td>${attachment.file_type}</td>
+            <td>${formatFileSize(attachment.file_size)}</td>
+            <td>${formatDateTime(attachment.created_at)}</td>
+            <td>${attachment.description || '-'}</td>
+            <td>
+                <div class="btn-group btn-group-sm">
+                    ${attachment.file_type === 'PDF' || attachment.file_type === 'JPG' || attachment.file_type === 'PNG' || attachment.file_type === 'JPEG' || attachment.file_type === 'GIF' ? 
+                        `<button class="btn btn-outline-primary" onclick="previewAttachment(${attachment.id})" title="预览">
+                            <i class="bi bi-eye"></i>
+                        </button>` : ''
+                    }
+                    <button class="btn btn-outline-success" onclick="downloadAttachment(${attachment.id})" title="下载">
+                        <i class="bi bi-download"></i>
+                    </button>
+                    <button class="btn btn-outline-danger" onclick="deleteAttachment(${attachment.id})" title="删除">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// 打开附件上传模态框
+function openAttachmentUploadModal(equipmentId) {
+    currentAttachmentEquipmentId = equipmentId;
+    
+    // 重置表单
+    document.getElementById('attachment-upload-form').reset();
+    document.getElementById('attachment-equipment-id').value = equipmentId;
+    document.getElementById('certificate-type-group').style.display = 'none';
+    
+    // 显示模态框
+    const modal = new bootstrap.Modal(document.getElementById('attachment-upload-modal'));
+    modal.show();
+}
+
+// 上传附件
+async function uploadAttachment() {
+    const form = document.getElementById('attachment-upload-form');
+    const formData = new FormData();
+    
+    const fileInput = document.getElementById('attachment-file');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        showAlert('请选择要上传的文件', 'warning');
+        return;
+    }
+    
+    // 验证文件类型
+    const allowedTypes = ['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.doc', '.docx', '.xls', '.xlsx', '.txt'];
+    const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+    if (!allowedTypes.includes(fileExtension)) {
+        showAlert('不支持的文件类型', 'danger');
+        return;
+    }
+    
+    // 验证文件大小 (最大10MB)
+    if (file.size > 10 * 1024 * 1024) {
+        showAlert('文件大小不能超过10MB', 'danger');
+        return;
+    }
+    
+    formData.append('file', file);
+    formData.append('equipment_id', currentAttachmentEquipmentId);
+    formData.append('description', document.getElementById('attachment-description').value);
+    formData.append('is_certificate', document.getElementById('attachment-is-certificate').checked);
+    
+    if (document.getElementById('attachment-is-certificate').checked) {
+        const certificateType = document.getElementById('certificate-type').value;
+        if (!certificateType) {
+            showAlert('请选择证书类型', 'warning');
+            return;
+        }
+        formData.append('certificate_type', certificateType);
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/attachments/equipment/${currentAttachmentEquipmentId}/attachments`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: formData
+        });
+        
+        if (response.ok) {
+            showAlert('附件上传成功！', 'success');
+            
+            // 关闭上传模态框
+            const uploadModal = bootstrap.Modal.getInstance(document.getElementById('attachment-upload-modal'));
+            uploadModal.hide();
+            
+            // 刷新附件列表
+            await loadEquipmentAttachments(currentAttachmentEquipmentId);
+            
+            // 立即更新当前设备的附件计数
+            await loadAndUpdateAttachmentCount(currentAttachmentEquipmentId);
+            
+            // 刷新设备列表以更新附件计数
+            await loadEquipmentList();
+        } else {
+            const error = await response.json();
+            showAlert('上传失败：' + error.detail, 'danger');
+        }
+    } catch (error) {
+        showAlert('上传失败：' + error.message, 'danger');
+    }
+}
+
+// 预览附件
+async function previewAttachment(attachmentId) {
+    currentAttachmentId = attachmentId;
+    
+    try {
+        const response = await fetch(`${API_BASE}/attachments/${attachmentId}/preview`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        
+        if (response.ok) {
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            
+            const previewContent = document.getElementById('attachment-preview-content');
+            
+            if (blob.type.startsWith('image/')) {
+                previewContent.innerHTML = `<img src="${url}" style="max-width: 100%; max-height: 600px;" alt="预览图片">`;
+            } else if (blob.type === 'application/pdf') {
+                previewContent.innerHTML = `<iframe src="${url}" style="width: 100%; height: 600px;" frameborder="0"></iframe>`;
+            } else {
+                previewContent.innerHTML = `
+                    <div class="text-center">
+                        <i class="bi bi-file-earmark" style="font-size: 3rem;"></i>
+                        <p class="mt-2">该文件类型不支持在线预览</p>
+                        <button class="btn btn-primary" onclick="downloadAttachment(${attachmentId})">
+                            <i class="bi bi-download"></i> 下载文件
+                        </button>
+                    </div>
+                `;
+            }
+            
+            // 显示预览模态框
+            const modal = new bootstrap.Modal(document.getElementById('attachment-preview-modal'));
+            modal.show();
+        } else {
+            const error = await response.json();
+            showAlert('预览失败：' + error.detail, 'danger');
+        }
+    } catch (error) {
+        showAlert('预览失败：' + error.message, 'danger');
+    }
+}
+
+// 下载附件
+async function downloadAttachment(attachmentId) {
+    try {
+        const response = await fetch(`${API_BASE}/attachments/${attachmentId}/download`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        
+        if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = ''; // 浏览器会从响应头获取文件名
+            a.click();
+            window.URL.revokeObjectURL(url);
+        } else {
+            const error = await response.json();
+            showAlert('下载失败：' + error.detail, 'danger');
+        }
+    } catch (error) {
+        showAlert('下载失败：' + error.message, 'danger');
+    }
+}
+
+// 删除附件
+async function deleteAttachment(attachmentId) {
+    if (!confirm('确定要删除这个附件吗？此操作不可撤销。')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/attachments/${attachmentId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        
+        if (response.ok) {
+            showAlert('附件删除成功！', 'success');
+            
+            // 刷新附件列表
+            await loadEquipmentAttachments(currentAttachmentEquipmentId);
+            
+            // 立即更新当前设备的附件计数
+            await loadAndUpdateAttachmentCount(currentAttachmentEquipmentId);
+            
+            // 刷新设备列表以更新附件计数
+            await loadEquipmentList();
+        } else {
+            const error = await response.json();
+            showAlert('删除失败：' + error.detail, 'danger');
+        }
+    } catch (error) {
+        showAlert('删除失败：' + error.message, 'danger');
+    }
+}
+
+// 格式化文件大小
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 B';
+    
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+// 证书类型复选框事件处理
+document.addEventListener('DOMContentLoaded', function() {
+    const certificateCheckbox = document.getElementById('attachment-is-certificate');
+    const certificateTypeGroup = document.getElementById('certificate-type-group');
+    
+    if (certificateCheckbox && certificateTypeGroup) {
+        certificateCheckbox.addEventListener('change', function() {
+            certificateTypeGroup.style.display = this.checked ? 'block' : 'none';
+        });
+    }
+    
+    // 上传附件按钮事件
+    const uploadBtn = document.getElementById('upload-attachment-btn');
+    if (uploadBtn) {
+        uploadBtn.addEventListener('click', uploadAttachment);
+    }
+    
+    // 添加附件按钮事件
+    const addAttachmentBtn = document.getElementById('add-attachment-btn');
+    if (addAttachmentBtn) {
+        addAttachmentBtn.addEventListener('click', function() {
+            openAttachmentUploadModal(currentAttachmentEquipmentId);
+        });
+    }
+    
+    // 下载附件按钮事件（在预览模态框中）
+    const downloadAttachmentBtn = document.getElementById('download-attachment-btn');
+    if (downloadAttachmentBtn) {
+        downloadAttachmentBtn.addEventListener('click', function() {
+            downloadAttachment(currentAttachmentId);
+        });
+    }
+});

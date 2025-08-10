@@ -199,3 +199,33 @@ class DashboardStats(BaseModel):
 class ImportTemplate(BaseModel):
     filename: str
     url: str
+
+# 设备附件相关
+class EquipmentAttachmentBase(BaseModel):
+    filename: str
+    original_filename: str
+    file_path: str
+    file_size: Optional[int] = None
+    file_type: Optional[str] = None
+    mime_type: Optional[str] = None
+    description: Optional[str] = None
+    is_certificate: bool = False
+    certificate_type: Optional[str] = None
+
+class EquipmentAttachmentCreate(EquipmentAttachmentBase):
+    equipment_id: int
+
+class EquipmentAttachmentUpdate(BaseModel):
+    description: Optional[str] = None
+    is_certificate: Optional[bool] = None
+    certificate_type: Optional[str] = None
+
+class EquipmentAttachment(EquipmentAttachmentBase):
+    id: int
+    equipment_id: int
+    uploaded_by: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True

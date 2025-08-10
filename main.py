@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, RedirectResponse
-from app.api import users, auth, equipment, departments, dashboard, audit_logs, categories, import_export
+from app.api import users, auth, equipment, departments, dashboard, audit_logs, categories, import_export, attachments
 from app.db.database import engine
 from app.models import models
 
@@ -31,6 +31,7 @@ app.include_router(departments.router, prefix="/api/departments", tags=["部门�
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["仪表盘"])
 app.include_router(audit_logs.router, prefix="/api/audit", tags=["操作日志"])
 app.include_router(import_export.router, prefix="/api/import", tags=["数据导入导出"])
+app.include_router(attachments.router, prefix="/api/attachments", tags=["附件管理"])
 
 @app.get("/favicon.ico")
 async def favicon():

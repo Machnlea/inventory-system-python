@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设备详情 - 设备台账管理系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="/static/js/api-client.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        .info-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 24px;
+            padding: 24px;
+            transition: all 0.3s ease;
+        }
+        .info-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            font-weight: 500;
+            color: #374151;
+            min-width: 140px;
+        }
+        .info-value {
+            color: #1f2937;
+            font-weight: 400;
+            text-align: right;
+        }
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 600;
+            text-align: center;
+            min-width: 60px;
+        }
+        .status-normal { background-color: #d1fae5; color: #065f46; }
+        .status-warning { background-color: #fed7aa; color: #9a3412; }
+        .status-danger { background-color: #fecaca; color: #991b1b; }
+        .status-inactive { background-color: #f3f4f6; color: #374151; }
+        .equipment-photo {
+            width: 200px;
+            height: 200px;
+            border-radius: 12px;
+            object-fit: cover;
+            border: 3px solid #e5e7eb;
+        }
+        .qr-code {
+            width: 120px;
+            height: 120px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f9fafb;
+        }
+        .attachment-item {
+            display: flex;
+            align-items: center;
+            justify-content: between;
+            padding: 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            transition: all 0.2s ease;
+        }
+        .attachment-item:hover {
+            background-color: #f9fafb;
+            border-color: #d1d5db;
+        }
+        .timeline-item {
+            position: relative;
+            padding-left: 32px;
+            padding-bottom: 24px;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #e5e7eb;
+        }
+        .timeline-item:last-child::before {
+            display: none;
+        }
+        .timeline-dot {
+            position: absolute;
+            left: 0;
+            top: 4px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 3px solid #e5e7eb;
+            background: white;
+        }
+        .timeline-dot.success { border-color: #10b981; }
+        .timeline-dot.warning { border-color: #f59e0b; }
+        .timeline-dot.danger { border-color: #ef4444; }
+        
+        /* 模态框样式 */
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+        .modal-content {
+            animation: modalSlideIn 0.3s ease-out;
+        }
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- 顶部通知容器 -->
+    <div id="notification-container" class="fixed top-4 right-4 z-50 space-y-2 max-w-md"></div>
+    
+    <div class="min-h-screen py-8">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <!-- 页面头部 -->
+            <div class="mb-8">
+                <div class="flex items-center gap-4 mb-4">
+                    <button onclick="history.back()" class="text-gray-600 hover:text-gray-900">
+                        <i class="fas fa-arrow-left text-xl"></i>
+                    </button>
+                    <div class="flex-1">
+                        <h1 class="text-3xl font-bold text-gray-900">设备详情</h1>
+                        <p class="text-gray-600 mt-1">查看设备的完整信息和历史记录</p>
+                    </div>
+                    <div class="flex gap-3">
+                        <button id="editEquipmentBtn" onclick="editEquipment()" class="btn-primary text-white px-6 py-3 rounded-lg">
+                            <i class="fas fa-edit mr-2"></i>编辑设备
+                        </button>
+                        <button onclick="printDetails()" class="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors duration-200">
+                            <i class="fas fa-print mr-2"></i>打印
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- 主要信息 -->
+                <div class="lg:col-span-2 space-y-6">
+                    <!-- 基本信息 -->
+                    <div class="info-card">
+                        <h2 class="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                            <i class="fas fa-info-circle text-blue-600 mr-3"></i>
+                            基本信息
+                        </h2>
+                        
+                        <div class="space-y-4">
+                            <div class="info-row">
+                                <span class="info-label">计量器具名称</span>
+                                <span id="equipmentName" class="info-value font-semibold text-lg">加载中...</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">计量编号</span>
+                                <span id="equipmentSerial" class="info-value font-mono bg-gray-100 px-3 py-1 rounded">加载中...</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">型号/规格</span>
+                                <span id="equipmentModel" class="info-value">加载中...</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">使用部门</span>
+                                <span id="equipmentDepartment" class="info-value">加载中...</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">设备类别</span>
+                                <span id="equipmentCategory" class="info-value">加载中...</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">准确度等级</span>
+                                <span id="equipmentAccuracy" class="info-value">加载中...</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">测量范围</span>
+                                <span id="equipmentRange" class="info-value">加载中...</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">安装地点</span>
+                                <span id="installationLocation" class="info-value">加载中...</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">分度值</span>
+                                <span id="equipmentDivision" class="info-value">加载中...</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">设备状态</span>
+                                <span id="equipmentStatus" class="status-badge status-normal">加载中...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 生产信息 -->
+                    <div class="info-card">
+                        <h2 class="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                            <i class="fas fa-industry text-purple-600 mr-3"></i>
+                            生产信息
+                        </h2>
+                        
+                        <div class="space-y-4">
+                            <div class="info-row">
+                                <span class="info-label">制造厂家</span>
+                                <span id="manufacturer" class="info-value">加载中...</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">出厂日期</span>
+                                <span id="manufactureDate" class="info-value">加载中...</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">原值</span>
+                                <span id="originalValue" class="info-value font-semibold text-green-600">加载中...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 检定信息 -->
+                    <div class="info-card">
+                        <h2 class="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                            <i class="fas fa-certificate text-orange-600 mr-3"></i>
+                            检定信息
+                        </h2>
+                        
+                        <div class="space-y-4">
+                            <div class="info-row">
+                                <span class="info-label">检定周期</span>
+                                <span id="calibrationCycle" class="info-value">加载中...</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">检定(校准)日期</span>
+                                <span id="calibrationDate" class="info-value">加载中...</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">有效期至</span>
+                                <span id="validUntil" class="info-value font-semibold text-orange-600">加载中...</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">检定方式</span>
+                                <span id="calibrationMethod" class="info-value">加载中...</span>
+                            </div>
+                            
+                            <!-- 外检专用字段 - 默认隐藏 -->
+                            <div id="externalInspectionFields" style="display: none;">
+                                <div class="info-row">
+                                    <span class="info-label">证书编号</span>
+                                    <span id="certificateNumber" class="info-value">-</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">检定结果</span>
+                                    <span id="verificationResult" class="info-value">-</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">检定机构</span>
+                                    <span id="verificationAgency" class="info-value">-</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">证书形式</span>
+                                    <span id="certificateForm" class="info-value">-</span>
+                                </div>
+                            </div>
+                            
+                            <div class="info-row">
+                                <span class="info-label">管理级别</span>
+                                <span id="managementLevel" class="info-value">
+                                    <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">加载中...</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 检定历史 -->
+                    <div class="info-card">
+                        <h2 class="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                            <i class="fas fa-history text-green-600 mr-3"></i>
+                            检定历史
+                        </h2>
+                        
+                        <div class="space-y-4">
+                            <div class="timeline-item">
+                                <div class="timeline-dot success"></div>
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <div class="font-medium text-gray-900">最新检定</div>
+                                        <div class="text-sm text-gray-600">2023-10-15</div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-sm font-medium text-green-600">合格</div>
+                                        <div class="text-xs text-gray-500">内检</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="timeline-item">
+                                <div class="timeline-dot success"></div>
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <div class="font-medium text-gray-900">历史检定</div>
+                                        <div class="text-sm text-gray-600">2022-10-15</div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-sm font-medium text-green-600">合格</div>
+                                        <div class="text-xs text-gray-500">内检</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="timeline-item">
+                                <div class="timeline-dot success"></div>
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <div class="font-medium text-gray-900">首次检定</div>
+                                        <div class="text-sm text-gray-600">2021-10-15</div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-sm font-medium text-green-600">合格</div>
+                                        <div class="text-xs text-gray-500">外检</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6">
+                            <button onclick="viewCalibrationHistory('YB-001')" 
+                                    class="w-full text-center py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors duration-200">
+                                <i class="fas fa-external-link-alt mr-2"></i>查看完整检定记录
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 侧边信息 -->
+                <div class="space-y-6">
+                    <!-- 设备照片 -->
+                    <div class="info-card">
+                        <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                            <i class="fas fa-image text-indigo-600 mr-2"></i>
+                            设备照片
+                        </h2>
+                        
+                        <div class="text-center">
+                            <img src="https://via.placeholder.com/200x200/e5e7eb/6b7280?text=压力表" 
+                                 alt="设备照片" 
+                                 class="equipment-photo mx-auto mb-4">
+                            <button class="text-sm text-blue-600 hover:text-blue-800">
+                                <i class="fas fa-camera mr-1"></i>更新照片
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 二维码 -->
+                    <div class="info-card">
+                        <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                            <i class="fas fa-qrcode text-green-600 mr-2"></i>
+                            设备二维码
+                        </h2>
+                        
+                        <div class="text-center">
+                            <div class="qr-code mx-auto mb-4">
+                                <i class="fas fa-qrcode text-4xl text-gray-400"></i>
+                            </div>
+                            <div class="text-xs text-gray-500 mb-3">扫码查看设备信息</div>
+                            <button onclick="downloadQRCode()" class="text-sm text-blue-600 hover:text-blue-800">
+                                <i class="fas fa-download mr-1"></i>下载二维码
+                            </button>
+                        </div>
+                    </div>
+
+  
+                    <!-- 快速操作 -->
+                    <div class="info-card">
+                        <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                            <i class="fas fa-bolt text-yellow-600 mr-2"></i>
+                            快速操作
+                        </h2>
+                        
+                        <div class="space-y-3">
+                            <button onclick="manageAttachments(currentEquipmentId)" 
+                                    class="w-full py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors duration-200 text-sm">
+                                <i class="fas fa-paperclip mr-2"></i>管理附件
+                                <span id="attachmentCountBadge" class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs ml-2">0个</span>
+                            </button>
+                            
+                            <button onclick="scheduleCalibration(currentEquipmentId)" 
+                                    class="w-full py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors duration-200 text-sm">
+                                <i class="fas fa-calendar-plus mr-2"></i>安排检定
+                            </button>
+                            
+                            <button onclick="recordMaintenance(currentEquipmentId)" 
+                                    class="w-full py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors duration-200 text-sm">
+                                <i class="fas fa-wrench mr-2"></i>记录维护
+                            </button>
+                            
+                            <button onclick="transferEquipment(currentEquipmentId)" 
+                                    class="w-full py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors duration-200 text-sm">
+                                <i class="fas fa-exchange-alt mr-2"></i>设备转移
+                            </button>
+                            
+                            <button onclick="reportIssue(currentEquipmentId)" 
+                                    class="w-full py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors duration-200 text-sm">
+                                <i class="fas fa-exclamation-triangle mr-2"></i>报告问题
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 附件管理模态框 -->
+    <div id="attachmentModal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center p-4">
+        <div class="modal-content bg-white rounded-xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-semibold text-gray-900" id="attachmentModalTitle">
+                        <i class="fas fa-paperclip text-blue-600 mr-2"></i>设备附件管理
+                    </h3>
+                    <button type="button" class="text-gray-400 hover:text-gray-600 transition-colors" onclick="closeAttachmentModal()">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                <p class="text-sm text-gray-600 mt-1">设备编号: <span id="attachmentEquipmentId" class="font-mono font-semibold"></span></p>
+            </div>
+            
+            <div class="px-6 py-4 border-b border-gray-200">
+                <div class="flex justify-between items-center">
+                    <div class="text-sm text-gray-600">
+                        支持格式: PDF, JPG, PNG, DOCX | 
+                        当前附件: <span id="attachmentCount" class="font-semibold">0</span> 个
+                    </div>
+                    <button onclick="triggerFileUpload()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors text-sm btn-click-effect">
+                        <i class="fas fa-plus mr-2"></i>添加附件
+                    </button>
+                </div>
+                <!-- 隐藏的文件上传输入 -->
+                <input type="file" id="attachmentFileInput" class="hidden" multiple accept=".pdf,.jpg,.jpeg,.png,.docx" onchange="handleFileUpload(event)">
+            </div>
+            
+            <div class="px-6 py-4 overflow-y-auto" style="max-height: 400px;">
+                <div id="attachmentList" class="space-y-3">
+                    <!-- 附件列表将在这里动态生成 -->
+                </div>
+                
+                <!-- 空状态 -->
+                <div id="attachmentEmptyState" class="text-center py-12">
+                    <i class="fas fa-paperclip text-gray-300 text-4xl mb-4"></i>
+                    <p class="text-gray-500 mb-2">暂无附件</p>
+                    <p class="text-sm text-gray-400">点击"添加附件"按钮上传设备相关文件</p>
+                </div>
+            </div>
+            
+            <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                <button type="button" class="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors btn-click-effect" onclick="closeAttachmentModal()">
+                    关闭
+                </button>
+                <button type="button" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors btn-click-effect" onclick="saveAttachments()">
+                    <i class="fas fa-save mr-2"></i>保存更改
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 附件预览模态框 -->
+    <div id="attachmentPreviewModal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center p-4">
+        <div class="modal-content bg-white rounded-xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-semibold text-gray-900" id="previewModalTitle">
+                        <i class="fas fa-eye text-green-600 mr-2"></i>附件预览
+                    </h3>
+                    <button type="button" class="text-gray-400 hover:text-gray-600 transition-colors" onclick="closePreviewModal()">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="px-6 py-4 overflow-y-auto" style="max-height: 60vh;">
+                <div id="previewContent" class="text-center">
+                    <!-- 预览内容将在这里显示 -->
+                </div>
+            </div>
+            
+            <div class="px-6 py-4 border-t border-gray-200 flex justify-between items-center">
+                <button type="button" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors" onclick="downloadAttachment()">
+                    <i class="fas fa-download mr-2"></i>下载附件
+                </button>
+                <button type="button" class="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors" onclick="closePreviewModal()">
+                    关闭预览
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let currentEquipmentId = null;
+        let equipmentData = null;
+        let currentEquipmentForAttachments = null;
+        let currentPreviewAttachment = null;
+
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // 获取URL参数
+                const urlParams = new URLSearchParams(window.location.search);
+                const equipmentId = urlParams.get('id');
+
+                if (!equipmentId) {
+                    showNotification('未指定设备ID', 'error');
+                    setTimeout(() => {
+                        window.location.href = '/equipment';
+                    }, 2000);
+                    return;
+                }
+
+                currentEquipmentId = parseInt(equipmentId);
+                
+                // 加载设备数据
+                await loadEquipmentData(currentEquipmentId);
+                
+                // 渲染设备信息
+                renderEquipmentInfo();
+                
+                // 更新附件计数
+                await updateAttachmentCount(currentEquipmentId);
+
+            } catch (error) {
+                console.error('页面初始化失败:', error);
+                showNotification('页面加载失败，请刷新页面重试', 'error');
+            }
+        });
+
+        // 加载设备数据
+        async function loadEquipmentData(equipmentId) {
+            try {
+                showNotification('正在加载设备数据...', 'info');
+                equipmentData = await EquipmentAPI.getEquipment(equipmentId);
+                showNotification('设备数据加载成功', 'success');
+            } catch (error) {
+                console.error('加载设备数据失败:', error);
+                showNotification('加载设备数据失败: ' + error.message, 'error');
+                throw error;
+            }
+        }
+
+        // 渲染设备信息
+        function renderEquipmentInfo() {
+            if (!equipmentData) return;
+
+            try {
+                // 基本信息
+                document.getElementById('equipmentName').textContent = equipmentData.name || '-';
+                document.getElementById('equipmentModel').textContent = equipmentData.model || '-';
+                document.getElementById('equipmentSerial').textContent = equipmentData.serial_number || '-';
+                document.getElementById('equipmentDepartment').textContent = equipmentData.department?.name || '-';
+                document.getElementById('equipmentCategory').textContent = equipmentData.category?.name || '-';
+                document.getElementById('equipmentAccuracy').textContent = equipmentData.accuracy_level || '-';
+                document.getElementById('equipmentRange').textContent = equipmentData.measurement_range || '-';
+                document.getElementById('equipmentDivision').textContent = equipmentData.scale_value || '-';
+
+                // 检定信息
+                document.getElementById('calibrationCycle').textContent = equipmentData.calibration_cycle || '-';
+                document.getElementById('calibrationDate').textContent = equipmentData.calibration_date ? 
+                    new Date(equipmentData.calibration_date).toLocaleDateString('zh-CN') : '-';
+                document.getElementById('validUntil').textContent = equipmentData.valid_until ? 
+                    new Date(equipmentData.valid_until).toLocaleDateString('zh-CN') : '-';
+                document.getElementById('calibrationMethod').textContent = equipmentData.calibration_method || '-';
+                
+                // 处理外检专用字段的显示
+                const externalInspectionFields = document.getElementById('externalInspectionFields');
+                if (equipmentData.calibration_method === '外检') {
+                    // 显示外检专用字段
+                    externalInspectionFields.style.display = 'block';
+                    
+                    // 填充外检专用字段数据
+                    document.getElementById('certificateNumber').textContent = equipmentData.certificate_number || '-';
+                    document.getElementById('verificationResult').textContent = equipmentData.verification_result || '-';
+                    document.getElementById('verificationAgency').textContent = equipmentData.verification_agency || '-';
+                    document.getElementById('certificateForm').textContent = equipmentData.certificate_form || '-';
+                } else {
+                    // 隐藏外检专用字段
+                    externalInspectionFields.style.display = 'none';
+                }
+
+                // 管理级别
+                const managementLevelElement = document.getElementById('managementLevel');
+                if (equipmentData.management_level) {
+                    managementLevelElement.innerHTML = `<span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">${equipmentData.management_level}</span>`;
+                } else {
+                    managementLevelElement.textContent = '-';
+                }
+
+                // 生产信息
+                document.getElementById('manufacturer').textContent = equipmentData.manufacturer || '-';
+                document.getElementById('manufactureDate').textContent = equipmentData.manufacture_date ? 
+                    new Date(equipmentData.manufacture_date).toLocaleDateString('zh-CN') : '-';
+                if (equipmentData.original_value) {
+                    document.getElementById('originalValue').textContent = `¥${parseFloat(equipmentData.original_value).toFixed(2)}`;
+                } else {
+                    document.getElementById('originalValue').textContent = '-';
+                }
+
+                // 安装信息
+                document.getElementById('installationLocation').textContent = equipmentData.installation_location || '-';
+
+                // 状态信息
+                const statusElement = document.getElementById('equipmentStatus');
+                statusElement.textContent = equipmentData.status || '-';
+                statusElement.className = `status-badge ${getStatusClass(equipmentData.status)}`;
+
+                // 更新编辑按钮的设备ID
+                const editButton = document.querySelector('button[onclick^="editEquipment"]');
+                if (editButton) {
+                    editButton.setAttribute('onclick', `editEquipment(${equipmentData.id})`);
+                }
+
+                console.log('设备信息渲染完成:', equipmentData);
+                
+            } catch (error) {
+                console.error('渲染设备信息时出错:', error);
+                showNotification('渲染设备信息失败', 'error');
+            }
+        }
+
+        // 获取状态样式类
+        function getStatusClass(status) {
+            const statusMap = {
+                '在用': 'status-normal',
+                '停用': 'status-inactive',
+                '报废': 'status-danger'
+            };
+            return statusMap[status] || 'status-inactive';
+        }
+
+  
+        // 获取文件图标
+        function getFileIcon(type) {
+            const iconMap = {
+                'pdf': '<i class="fas fa-file-pdf text-red-500 text-lg"></i>',
+                'jpg': '<i class="fas fa-file-image text-green-500 text-lg"></i>',
+                'jpeg': '<i class="fas fa-file-image text-green-500 text-lg"></i>',
+                'png': '<i class="fas fa-file-image text-green-500 text-lg"></i>',
+                'docx': '<i class="fas fa-file-word text-blue-500 text-lg"></i>'
+            };
+            return iconMap[type] || '<i class="fas fa-file text-gray-500 text-lg"></i>';
+        }
+
+      
+      
+        // 编辑设备
+        function editEquipment() {
+            if (currentEquipmentId) {
+                window.location.href = `/equipment/edit?id=${currentEquipmentId}`;
+            } else {
+                showNotification('设备ID无效', 'error');
+            }
+        }
+
+        // 预览附件
+        function previewAttachment(attachmentId) {
+            // 这里可以实现附件预览功能
+            showNotification('附件预览功能开发中...', 'info');
+        }
+
+        // 下载附件
+        async function downloadAttachment(attachmentId, filename) {
+            try {
+                showNotification('正在下载附件...', 'info');
+                await AttachmentAPI.downloadAttachment(attachmentId, filename);
+                showNotification('附件下载成功', 'success');
+            } catch (error) {
+                showNotification('附件下载失败: ' + error.message, 'error');
+            }
+        }
+
+        // 移除重复的变量声明，已在上文定义
+
+        // 平滑显示模态框
+        function showModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                // 强制重排以确保过渡效果生效
+                modal.offsetHeight;
+                modal.classList.remove('hidden');
+                // 添加一个微小的延迟来确保过渡效果开始
+                setTimeout(() => {
+                    modal.style.opacity = '1';
+                    modal.style.pointerEvents = 'auto';
+                }, 10);
+            }
+        }
+
+        // 平滑隐藏模态框
+        function hideModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.style.opacity = '0';
+                modal.style.pointerEvents = 'none';
+                // 等待过渡完成后隐藏
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                }, 300);
+            }
+        }
+
+        // 管理附件
+        function manageAttachments(equipmentId) {
+            console.log('管理附件:', equipmentId);
+            currentEquipmentForAttachments = equipmentId;
+            newAttachments = [];
+            deletedAttachments = [];
+            
+            // 设置模态框标题
+            document.getElementById('attachmentEquipmentId').textContent = equipmentId;
+            
+            // 加载附件数据
+            loadAttachmentsForModal(equipmentId);
+            
+            // 显示模态框
+            showModal('attachmentModal');
+        }
+
+        // 查看检定记录
+        function viewCalibrationHistory(equipmentId) {
+            console.log('查看检定记录:', equipmentId);
+            alert('跳转到检定记录页面 (开发中)');
+        }
+
+        // 安排检定
+        function scheduleCalibration(equipmentId) {
+            console.log('安排检定:', equipmentId);
+            if (confirm('确定要为此设备安排检定吗？')) {
+                alert('检定安排功能开发中...');
+            }
+        }
+
+        // 记录维护
+        function recordMaintenance(equipmentId) {
+            console.log('记录维护:', equipmentId);
+            alert('维护记录功能开发中...');
+        }
+
+        // 设备转移
+        function transferEquipment(equipmentId) {
+            console.log('设备转移:', equipmentId);
+            const newDepartment = prompt('请输入要转移到的部门:');
+            if (newDepartment) {
+                alert(`设备将转移到 ${newDepartment} (功能开发中)`);
+            }
+        }
+
+        // 报告问题
+        function reportIssue(equipmentId) {
+            console.log('报告问题:', equipmentId);
+            const issue = prompt('请描述问题:');
+            if (issue) {
+                alert('问题已提交 (功能开发中)');
+            }
+        }
+
+        // 打印详情
+        function printDetails() {
+            window.print();
+        }
+
+        // 下载二维码
+        function downloadQRCode() {
+            alert('二维码下载功能开发中...');
+        }
+
+        // 页面加载完成后的初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('设备详情页面加载完成');
+        });
+
+        // ========== 附件管理功能 ==========
+
+        // 加载附件数据（模态框使用）
+        async function loadAttachmentsForModal(equipmentId) {
+            try {
+                showNotification('正在加载附件...', 'info');
+                const attachments = await AttachmentAPI.getEquipmentAttachments(equipmentId);
+                renderModalAttachmentList(attachments);
+                showNotification('附件加载成功', 'success');
+            } catch (error) {
+                console.error('加载附件失败:', error);
+                showNotification('加载附件失败: ' + error.message, 'error');
+                document.getElementById('attachmentList').innerHTML = 
+                    '<div class="text-gray-500 text-center py-4">加载附件失败</div>';
+            }
+        }
+
+        // 渲染附件列表（模态框使用）
+        function renderModalAttachmentList(attachments) {
+            const attachmentList = document.getElementById('attachmentList');
+            const emptyState = document.getElementById('attachmentEmptyState');
+            const attachmentCount = document.getElementById('attachmentCount');
+
+            // 确保attachments是数组
+            const attachmentsArray = Array.isArray(attachments) ? attachments : [];
+            
+            attachmentCount.textContent = attachmentsArray.length;
+
+            if (attachmentsArray.length === 0) {
+                attachmentList.style.display = 'none';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            attachmentList.style.display = 'block';
+            emptyState.style.display = 'none';
+
+            attachmentList.innerHTML = attachmentsArray.map(attachment => {
+                // 获取文件类型 - 优先使用file_type字段，否则从文件名提取
+                const fileType = attachment.file_type || (attachment.original_filename || attachment.filename).split('.').pop().toLowerCase();
+                
+                return `
+                <div class="attachment-item border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow" data-attachment-id="${attachment.id}">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center flex-1">
+                            <div class="flex-shrink-0 mr-4">
+                                ${getFileIcon(fileType)}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-sm font-medium text-gray-900 truncate">${attachment.original_filename || attachment.filename}</div>
+                                <div class="text-xs text-gray-500">
+                                    ${formatFileSize(attachment.file_size)} • 上传于 ${new Date(attachment.created_at).toLocaleDateString('zh-CN')}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2 ml-4">
+                            <button onclick="previewAttachment(${attachment.id})" 
+                                    class="text-green-600 hover:text-green-800 p-2 rounded-full hover:bg-green-50 transition-colors" 
+                                    title="预览">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button onclick="downloadAttachmentById(${attachment.id})" 
+                                    class="text-blue-600 hover:text-blue-800 p-2 rounded-full hover:bg-blue-50 transition-colors" 
+                                    title="下载">
+                                <i class="fas fa-download"></i>
+                            </button>
+                            <button onclick="deleteAttachment(${attachment.id})" 
+                                    class="text-red-600 hover:text-red-800 p-2 rounded-full hover:bg-red-50 transition-colors" 
+                                    title="删除">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;}).join('');
+        }
+
+        // 获取文件图标
+        function getFileIcon(type) {
+            const iconMap = {
+                'pdf': '<i class="fas fa-file-pdf text-red-500 text-2xl"></i>',
+                'jpg': '<i class="fas fa-file-image text-green-500 text-2xl"></i>',
+                'jpeg': '<i class="fas fa-file-image text-green-500 text-2xl"></i>',
+                'png': '<i class="fas fa-file-image text-green-500 text-2xl"></i>',
+                'docx': '<i class="fas fa-file-word text-blue-500 text-2xl"></i>'
+            };
+            return iconMap[type] || '<i class="fas fa-file text-gray-500 text-2xl"></i>';
+        }
+
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+      
+        // 触发文件上传
+        function triggerFileUpload() {
+            document.getElementById('attachmentFileInput').click();
+        }
+
+        // 处理文件上传
+        async function handleFileUpload(event) {
+            const files = Array.from(event.target.files);
+            
+            for (const file of files) {
+                // 验证文件类型
+                const allowedTypes = ['pdf', 'jpg', 'jpeg', 'png', 'docx'];
+                const fileExtension = file.name.split('.').pop().toLowerCase();
+                
+                if (!allowedTypes.includes(fileExtension)) {
+                    showNotification(`不支持的文件格式: ${file.name}\\n支持的格式: PDF, JPG, PNG, DOCX`, 'error');
+                    continue;
+                }
+
+                // 验证文件大小 (10MB限制)
+                if (file.size > 10 * 1024 * 1024) {
+                    showNotification(`文件过大: ${file.name}\\n文件大小不能超过 10MB`, 'error');
+                    continue;
+                }
+
+                try {
+                    showNotification(`正在上传: ${file.name}`, 'info');
+                    
+                    // 上传文件
+                    await AttachmentAPI.uploadAttachment(currentEquipmentForAttachments, file, (progress) => {
+                        console.log(`上传进度: ${progress}%`);
+                    });
+                    
+                    showNotification(`文件上传成功: ${file.name}`, 'success');
+                    
+                } catch (error) {
+                    console.error('文件上传失败:', error);
+                    showNotification(`文件上传失败: ${file.name} - ${error.message}`, 'error');
+                }
+            }
+
+            // 清空文件输入
+            event.target.value = '';
+
+            // 重新加载附件列表
+            await loadAttachmentsForModal(currentEquipmentForAttachments);
+        }
+
+        // 预览附件
+        async function previewAttachment(attachmentId) {
+            try {
+                showNotification('正在加载预览...', 'info');
+                
+                // 获取附件信息
+                const attachment = await AttachmentAPI.getAttachment(attachmentId);
+                currentPreviewAttachment = attachment;
+                
+                // 设置预览模态框标题
+                document.getElementById('previewModalTitle').innerHTML = 
+                    `<i class="fas fa-eye text-green-600 mr-2"></i>附件预览 - ${attachment.original_filename || attachment.filename}`;
+
+                const previewContent = document.getElementById('previewContent');
+                const fileType = attachment.file_type || (attachment.original_filename || attachment.filename).split('.').pop().toLowerCase();
+
+                if (fileType === 'pdf') {
+                    previewContent.innerHTML = `
+                        <div class="bg-gray-100 p-8 rounded-lg">
+                            <i class="fas fa-file-pdf text-red-500 text-6xl mb-4"></i>
+                            <p class="text-gray-600 mb-4">PDF 文件预览</p>
+                            <p class="text-sm text-gray-500">文件名: ${attachment.original_filename || attachment.filename}</p>
+                            <p class="text-sm text-gray-500">文件大小: ${formatFileSize(attachment.file_size)}</p>
+                            <button class="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors btn-click-effect" onclick="downloadCurrentAttachment()">
+                                <i class="fas fa-download mr-2"></i>下载文件
+                            </button>
+                        </div>
+                    `;
+                } else if (['jpg', 'jpeg', 'png'].includes(fileType)) {
+                    // 使用真实的预览API
+                    const previewUrl = `/api/attachments/${attachmentId}/preview`;
+                    previewContent.innerHTML = `
+                        <div class="text-center">
+                            <img src="${previewUrl}" 
+                                 alt="${attachment.original_filename || attachment.filename}" 
+                                 class="max-w-full max-h-96 mx-auto rounded-lg shadow-lg">
+                            <p class="mt-4 text-sm text-gray-500">文件名: ${attachment.original_filename || attachment.filename}</p>
+                            <p class="text-sm text-gray-500">文件大小: ${formatFileSize(attachment.file_size)}</p>
+                        </div>
+                    `;
+                } else if (fileType === 'docx') {
+                    previewContent.innerHTML = `
+                        <div class="bg-gray-100 p-8 rounded-lg">
+                            <i class="fas fa-file-word text-blue-500 text-6xl mb-4"></i>
+                            <p class="text-gray-600 mb-4">Word 文档预览</p>
+                            <p class="text-sm text-gray-500">文件名: ${attachment.original_filename || attachment.filename}</p>
+                            <p class="text-sm text-gray-500">文件大小: ${formatFileSize(attachment.file_size)}</p>
+                            <button class="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors btn-click-effect" onclick="downloadCurrentAttachment()">
+                                <i class="fas fa-download mr-2"></i>下载文件
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    previewContent.innerHTML = `
+                        <div class="bg-gray-100 p-8 rounded-lg">
+                            <i class="fas fa-file text-gray-500 text-6xl mb-4"></i>
+                            <p class="text-gray-600 mb-4">文件预览</p>
+                            <p class="text-sm text-gray-500">文件名: ${attachment.original_filename || attachment.filename}</p>
+                            <p class="text-sm text-gray-500">文件大小: ${formatFileSize(attachment.file_size)}</p>
+                            <button class="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors btn-click-effect" onclick="downloadCurrentAttachment()">
+                                <i class="fas fa-download mr-2"></i>下载文件
+                            </button>
+                        </div>
+                    `;
+                }
+
+                // 显示预览模态框
+                showModal('attachmentPreviewModal');
+                showNotification('预览加载成功', 'success');
+                
+            } catch (error) {
+                console.error('加载预览失败:', error);
+                showNotification('预览加载失败: ' + error.message, 'error');
+            }
+        }
+
+        // 关闭预览模态框
+        function closePreviewModal() {
+            hideModal('attachmentPreviewModal');
+            currentPreviewAttachment = null;
+        }
+
+        // 下载当前预览的附件
+        async function downloadCurrentAttachment() {
+            if (!currentPreviewAttachment) return;
+            
+            try {
+                showNotification('正在下载附件...', 'info');
+                const filename = currentPreviewAttachment.original_filename || currentPreviewAttachment.filename;
+                await AttachmentAPI.downloadAttachment(currentPreviewAttachment.id, filename);
+                showNotification('附件下载成功', 'success');
+            } catch (error) {
+                console.error('下载附件失败:', error);
+                showNotification('下载附件失败: ' + error.message, 'error');
+            }
+        }
+
+        // 根据ID下载附件
+        async function downloadAttachmentById(attachmentId) {
+            try {
+                showNotification('正在下载附件...', 'info');
+                
+                // 首先获取附件信息来得到文件名
+                const attachment = await AttachmentAPI.getAttachment(attachmentId);
+                const filename = attachment.original_filename || attachment.filename;
+                
+                await AttachmentAPI.downloadAttachment(attachmentId, filename);
+                showNotification('附件下载成功', 'success');
+            } catch (error) {
+                console.error('下载附件失败:', error);
+                showNotification('下载附件失败: ' + error.message, 'error');
+            }
+        }
+
+        // 删除附件
+        async function deleteAttachment(attachmentId) {
+            if (!confirm('确定要删除这个附件吗？')) return;
+
+            try {
+                showNotification('正在删除附件...', 'info');
+                await AttachmentAPI.deleteAttachment(attachmentId);
+                showNotification('附件删除成功', 'success');
+                
+                // 重新加载附件列表
+                await loadAttachmentsForModal(currentEquipmentForAttachments);
+            } catch (error) {
+                console.error('删除附件失败:', error);
+                showNotification('删除附件失败: ' + error.message, 'error');
+            }
+        }
+
+        // 关闭附件管理模态框
+        function closeAttachmentModal() {
+            hideModal('attachmentModal');
+            currentEquipmentForAttachments = null;
+            newAttachments = [];
+            deletedAttachments = [];
+        }
+
+        // 保存附件更改
+        function saveAttachments() {
+            // 现在附件是实时上传的，所以这里只需要关闭模态框
+            showNotification('附件管理已完成', 'success');
+            closeAttachmentModal();
+            
+            // 重新更新附件计数
+            updateAttachmentCount(currentEquipmentId);
+        }
+
+        // 更新附件计数显示
+        async function updateAttachmentCount(equipmentId) {
+            try {
+                const attachments = await AttachmentAPI.getEquipmentAttachments(equipmentId);
+                const count = attachments.length;
+                // 更新详情页面上的附件计数
+                const attachmentBadge = document.getElementById('attachmentCountBadge');
+                if (attachmentBadge) {
+                    attachmentBadge.textContent = `${count}个`;
+                }
+            } catch (error) {
+                console.error('更新附件计数失败:', error);
+            }
+        }
+
+        // ESC键关闭模态框
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const attachmentModal = document.getElementById('attachmentModal');
+                const previewModal = document.getElementById('attachmentPreviewModal');
+                
+                if (!previewModal.classList.contains('hidden')) {
+                    closePreviewModal();
+                } else if (!attachmentModal.classList.contains('hidden')) {
+                    closeAttachmentModal();
+                }
+            }
+        });
+
+        // 点击模态框外部关闭
+        document.getElementById('attachmentModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeAttachmentModal();
+            }
+        });
+
+        document.getElementById('attachmentPreviewModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closePreviewModal();
+            }
+        });
+    </script>
+</body>
+</html>

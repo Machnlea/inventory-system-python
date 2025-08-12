@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设备台账管理系统 - 登录</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="/static/js/api-client.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .glass-effect {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .input-focus:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen flex items-center justify-center p-4">
+    <!-- 背景装饰 -->
+    <div class="absolute inset-0 overflow-hidden">
+        <div class="absolute -top-40 -right-40 w-80 h-80 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
+        <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-yellow-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
+        <div class="absolute top-40 left-40 w-80 h-80 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
+    </div>
+
+    <!-- 主登录容器 -->
+    <div class="relative z-10 w-full max-w-md">
+        <div class="glass-effect rounded-2xl shadow-2xl p-8 fade-in">
+            <!-- Logo和标题 -->
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-white rounded-full mb-4 shadow-lg">
+                    <i class="fas fa-clipboard-list text-2xl text-purple-600"></i>
+                </div>
+                <h1 class="text-3xl font-bold text-white mb-2">设备台账管理系统</h1>
+                <p class="text-purple-100">安全登录，高效管理</p>
+            </div>
+
+            <!-- 登录表单 -->
+            <form id="login-form" class="space-y-6">
+                <!-- 用户名输入 -->
+                <div class="space-y-2">
+                    <label for="username" class="block text-sm font-medium text-white">
+                        <i class="fas fa-user mr-2"></i>用户名
+                    </label>
+                    <div class="relative">
+                        <input 
+                            type="text" 
+                            id="username" 
+                            name="username"
+                            required
+                            class="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg text-white placeholder-white/70 input-focus outline-none transition-all duration-200"
+                            placeholder="请输入用户名"
+                        >
+                        <i class="fas fa-user absolute right-3 top-3.5 text-white/70"></i>
+                    </div>
+                </div>
+
+                <!-- 密码输入 -->
+                <div class="space-y-2">
+                    <label for="password" class="block text-sm font-medium text-white">
+                        <i class="fas fa-lock mr-2"></i>密码
+                    </label>
+                    <div class="relative">
+                        <input 
+                            type="password" 
+                            id="password" 
+                            name="password"
+                            required
+                            class="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg text-white placeholder-white/70 input-focus outline-none transition-all duration-200"
+                            placeholder="请输入密码"
+                        >
+                        <button 
+                            type="button" 
+                            id="toggle-password"
+                            class="absolute right-3 top-3.5 text-white/70 hover:text-white transition-colors"
+                        >
+                            <i class="fas fa-eye" id="eye-icon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 记住我和忘记密码 -->
+                <div class="flex items-center justify-between">
+                    <label class="flex items-center">
+                        <input type="checkbox" class="w-4 h-4 text-purple-600 bg-white/20 border-white/30 rounded focus:ring-purple-500 focus:ring-2">
+                        <span class="ml-2 text-sm text-white">记住我</span>
+                    </label>
+                    <a href="#" class="text-sm text-purple-100 hover:text-white transition-colors">忘记密码？</a>
+                </div>
+
+                <!-- 登录按钮 -->
+                <button 
+                    type="submit" 
+                    id="login-btn"
+                    class="w-full btn-primary text-white font-medium py-3 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-purple-200"
+                >
+                    <span id="login-text">
+                        <i class="fas fa-sign-in-alt mr-2"></i>登录
+                    </span>
+                    <span id="loading-text" class="hidden">
+                        <i class="fas fa-spinner fa-spin mr-2"></i>登录中...
+                    </span>
+                </button>
+            </form>
+
+            <!-- 系统信息 -->
+            <div class="mt-8 text-center">
+                <div class="glass-effect rounded-lg p-4">
+                    <h3 class="text-white font-medium mb-2">系统信息</h3>
+                    <div class="space-y-1 text-sm text-purple-100">
+                        <div class="flex justify-between">
+                            <span>版本:</span>
+                            <span>v1.0.0</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>状态:</span>
+                            <span class="flex items-center">
+                                <span class="w-2 h-2 bg-green-400 rounded-full mr-2 pulse-animation"></span>
+                                正常运行
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+          </div>
+    </div>
+
+    <!-- 通知容器 -->
+    <div id="notification-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <script>
+        // 等待页面完全加载后再初始化事件
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOMContentLoaded 事件触发');
+            console.log('检查全局对象:');
+            console.log('  typeof api:', typeof api);
+            console.log('  typeof showNotification:', typeof showNotification);
+            // 密码显示/隐藏切换
+            const togglePasswordBtn = document.getElementById('toggle-password');
+            if (togglePasswordBtn) {
+                togglePasswordBtn.addEventListener('click', function() {
+                    const passwordInput = document.getElementById('password');
+                    const eyeIcon = document.getElementById('eye-icon');
+                    
+                    if (passwordInput.type === 'password') {
+                        passwordInput.type = 'text';
+                        eyeIcon.className = 'fas fa-eye-slash';
+                    } else {
+                        passwordInput.type = 'password';
+                        eyeIcon.className = 'fas fa-eye';
+                    }
+                });
+            }
+            // 表单提交处理
+            const loginForm = document.getElementById('login-form');
+            if (loginForm) {
+                console.log('找到登录表单，绑定提交事件');
+                loginForm.addEventListener('submit', async function(e) {
+                    console.log('表单提交事件触发');
+                    e.preventDefault();
+                    
+                    // 检查api对象是否可用
+                    if (typeof api === 'undefined') {
+                        console.log('api对象未定义');
+                        alert('系统初始化中，请稍后再试');
+                        return;
+                    }
+                    
+                    console.log('api对象已定义，开始登录流程');
+                    
+                    const username = document.getElementById('username').value;
+                    const password = document.getElementById('password').value;
+                    const loginBtn = document.getElementById('login-btn');
+                    const loginText = document.getElementById('login-text');
+                    const loadingText = document.getElementById('loading-text');
+                    
+                    // 显示加载状态
+                    loginBtn.disabled = true;
+                    loginText.classList.add('hidden');
+                    loadingText.classList.remove('hidden');
+                    
+                    try {
+                        console.log('开始发送登录请求...');
+                        const response = await api.post('/api/auth/login/json', {
+                            username: username,
+                            password: password
+                        });
+                        
+                        console.log('登录响应:', response);
+                        
+                                                
+                        // 如果showNotification函数存在，使用它
+                        if (typeof showNotification === 'function') {
+                            showNotification('登录成功！正在跳转...', 'success');
+                        }
+                        
+                        // 存储token和用户信息
+                        localStorage.setItem('access_token', response.access_token);
+                        localStorage.setItem('refresh_token', response.refresh_token);
+                        localStorage.setItem('user_info', JSON.stringify(response.user));
+                        
+                        // 更新API客户端的token
+                        api.token = response.access_token;
+                        
+                        console.log('准备跳转到仪表盘...');
+                        
+                        // 跳转到仪表盘页面
+                        setTimeout(() => {
+                            console.log('执行跳转...');
+                            window.location.href = '/dashboard';
+                        }, 1000);
+                        
+                    } catch (error) {
+                        console.error('登录失败:', error);
+                        alert('登录失败: ' + error.message);
+                        
+                        if (typeof showNotification === 'function') {
+                            showNotification(error.message || '登录失败，请检查用户名和密码', 'error');
+                        }
+                    } finally {
+                            // 恢复按钮状态
+                            loginBtn.disabled = false;
+                            loginText.classList.remove('hidden');
+                            loadingText.classList.add('hidden');
+                        }
+                    });
+                } else {
+                    console.log('未找到登录表单');
+                }
+            
+            // 动画样式
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes blob {
+                    0% { transform: translate(0px, 0px) scale(1); }
+                    33% { transform: translate(30px, -50px) scale(1.1); }
+                    66% { transform: translate(-20px, 20px) scale(0.9); }
+                    100% { transform: translate(0px, 0px) scale(1); }
+                }
+                .animate-blob {
+                    animation: blob 7s infinite;
+                }
+                .animation-delay-2000 {
+                    animation-delay: 2s;
+                }
+                .animation-delay-4000 {
+                    animation-delay: 4s;
+                }
+            `;
+            document.head.appendChild(style);
+
+            // 回车键提交
+            document.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    const form = document.getElementById('login-form');
+                    if (form && document.activeElement.form === form) {
+                        form.dispatchEvent(new Event('submit'));
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

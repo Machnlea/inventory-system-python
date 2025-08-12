@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API客户端诊断</title>
+    <script src="/static/js/api-client.js"></script>
+</head>
+<body class="p-8">
+    <h1>API客户端诊断页面</h1>
+    
+    <div id="diagnostic-info"></div>
+    
+    <script>
+        console.log('=== 诊断开始 ===');
+        
+        function updateInfo(message) {
+            const div = document.getElementById('diagnostic-info');
+            div.innerHTML += '<p>' + message + '</p>';
+            console.log(message);
+        }
+        
+        // 检查脚本加载
+        updateInfo('页面加载完成');
+        
+        setTimeout(() => {
+            updateInfo('typeof ApiClient: ' + typeof ApiClient);
+            updateInfo('typeof api: ' + typeof api);
+            updateInfo('typeof showNotification: ' + typeof showNotification);
+            
+            if (typeof api === 'undefined') {
+                updateInfo('❌ api对象未定义 - 脚本加载问题');
+            } else {
+                updateInfo('✅ api对象已定义');
+                updateInfo('api.baseURL: ' + api.baseURL);
+                updateInfo('api.token: ' + (api.token ? '存在' : '不存在'));
+            }
+            
+            if (typeof showNotification === 'function') {
+                updateInfo('✅ showNotification函数可用');
+            } else {
+                updateInfo('❌ showNotification函数不可用');
+            }
+        }, 1000);
+        
+        // 测试登录功能
+        function testLogin() {
+            updateInfo('开始测试登录...');
+            
+            if (typeof api === 'undefined') {
+                updateInfo('❌ 无法测试登录：api对象未定义');
+                return;
+            }
+            
+            api.post('/api/auth/login/json', {
+                username: 'admin',
+                password: 'admin123'
+            })
+            .then(response => {
+                updateInfo('✅ 登录测试成功: ' + response.user.username);
+            })
+            .catch(error => {
+                updateInfo('❌ 登录测试失败: ' + error.message);
+            });
+        }
+    </script>
+    
+    <button onclick="testLogin()" style="margin-top: 20px; padding: 10px 20px; background: blue; color: white; border: none; border-radius: 5px; cursor: pointer;">
+        测试登录
+    </button>
+</body>
+</html>

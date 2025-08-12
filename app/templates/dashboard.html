@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设备台账管理系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/static/js/api-client.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .glass-effect {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .sidebar-item {
+            transition: all 0.2s ease;
+        }
+        .sidebar-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
+        .sidebar-item.active {
+            background: rgba(255, 255, 255, 0.2);
+            border-left: 4px solid #667eea;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="flex h-screen">
+        <!-- 左侧导航栏 -->
+        <div class="w-64 gradient-bg shadow-xl fixed left-0 top-0 h-full z-10">
+            <div class="flex flex-col h-full">
+                <!-- Logo和标题 -->
+                <div class="flex items-center justify-center h-16 px-4 border-b border-white/20">
+                    <div class="flex items-center">
+                        <i class="fas fa-clipboard-list text-white text-2xl mr-3"></i>
+                        <h1 class="text-white text-lg font-bold">设备台账管理系统</h1>
+                    </div>
+                </div>
+
+                <!-- 导航菜单 -->
+                <nav class="flex-1 px-4 py-6 space-y-2">
+                    <a href="/dashboard" class="sidebar-item active flex items-center px-4 py-3 text-white rounded-lg" id="dashboard-link">
+                        <i class="fas fa-home mr-3 text-lg"></i>
+                        <span>仪表盘</span>
+                    </a>
+                    <a href="/equipment" class="sidebar-item flex items-center px-4 py-3 text-white/90 rounded-lg" id="equipment-link">
+                        <i class="fas fa-cogs mr-3 text-lg"></i>
+                        <span>设备管理</span>
+                    </a>
+                    <a href="#" class="sidebar-item flex items-center px-4 py-3 text-white/90 rounded-lg" id="maintenance-link">
+                        <i class="fas fa-tools mr-3 text-lg"></i>
+                        <span>维护记录</span>
+                    </a>
+                    <a href="#" class="sidebar-item flex items-center px-4 py-3 text-white/90 rounded-lg" id="reports-link">
+                        <i class="fas fa-chart-bar mr-3 text-lg"></i>
+                        <span>统计报表</span>
+                    </a>
+                    
+                    <!-- 系统管理下拉菜单 -->
+                    <div class="relative">
+                        <button class="sidebar-item flex items-center justify-between w-full px-4 py-3 text-white/90 rounded-lg" id="system-menu-btn">
+                            <div class="flex items-center">
+                                <i class="fas fa-cog mr-3 text-lg"></i>
+                                <span>系统管理</span>
+                            </div>
+                            <i class="fas fa-chevron-down text-sm transition-transform duration-200" id="system-menu-arrow"></i>
+                        </button>
+                        <div class="ml-4 mt-1 space-y-1 hidden" id="system-submenu">
+                            <a href="/categories" class="sidebar-item flex items-center px-4 py-2 text-white/80 rounded-lg text-sm" id="categories-link">
+                                <i class="fas fa-tags mr-3"></i>
+                                <span>设备类别</span>
+                            </a>
+                            <a href="/departments" class="sidebar-item flex items-center px-4 py-2 text-white/80 rounded-lg text-sm">
+                                <i class="fas fa-building mr-3"></i>
+                                <span>部门管理</span>
+                            </a>
+                            <a href="#" class="sidebar-item flex items-center px-4 py-2 text-white/80 rounded-lg text-sm" id="audit-link">
+                                <i class="fas fa-history mr-3"></i>
+                                <span>操作日志</span>
+                            </a>
+                            <a href="#" class="sidebar-item flex items-center px-4 py-2 text-white/80 rounded-lg text-sm" id="settings-link">
+                                <i class="fas fa-cog mr-3"></i>
+                                <span>系统设置</span>
+                            </a>
+                        </div>
+                    </div>
+                </nav>
+
+                <!-- 用户信息 -->
+                <div class="border-t border-white/20 p-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <i class="fas fa-user-circle text-white text-xl mr-3"></i>
+                            <div>
+                                <p class="text-white text-sm font-medium" id="current-user">用户</p>
+                                <p class="text-white/70 text-xs">在线</p>
+                            </div>
+                        </div>
+                        <button class="text-white/70 hover:text-white transition-colors" id="logout-btn">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="flex-1 ml-64 overflow-hidden">
+            <div class="h-full overflow-y-auto">
+            <!-- 顶部通知容器 -->
+            <div id="notification-container" class="fixed top-4 right-4 z-[99999] space-y-2 max-w-md"></div>
+            
+            <!-- 主要内容 -->
+            <div class="p-8">
+                <!-- 页面标题 -->
+                <div class="mb-8">
+                    <h1 class="text-3xl font-bold text-gray-900 mb-2">仪表盘</h1>
+                    <p class="text-gray-600">设备管理概览与统计信息</p>
+                </div>
+
+                <!-- 设备统计卡片 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
+                    <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-600">设备总数</p>
+                                <p class="text-2xl font-bold text-gray-900" id="total-equipment">-</p>
+                            </div>
+                            <div class="bg-blue-100 rounded-full p-3">
+                                <i class="fas fa-cogs text-blue-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-600">在用设备</p>
+                                <p class="text-2xl font-bold text-green-600" id="active-equipment">-</p>
+                            </div>
+                            <div class="bg-green-100 rounded-full p-3">
+                                <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-600">停用报废</p>
+                                <p class="text-2xl font-bold text-gray-600" id="inactive-equipment">-</p>
+                            </div>
+                            <div class="bg-gray-100 rounded-full p-3">
+                                <i class="fas fa-ban text-gray-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-600">本月待检</p>
+                                <p class="text-2xl font-bold text-orange-600" id="monthly-due">-</p>
+                            </div>
+                            <div class="bg-orange-100 rounded-full p-3">
+                                <i class="fas fa-clock text-orange-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-600">超期未检</p>
+                                <p class="text-2xl font-bold text-purple-600" id="overdue-equipment">-</p>
+                            </div>
+                            <div class="bg-purple-100 rounded-full p-3">
+                                <i class="fas fa-exclamation-triangle text-purple-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-600">设备类别</p>
+                                <p class="text-2xl font-bold text-indigo-600" id="category-count">-</p>
+                            </div>
+                            <div class="bg-indigo-100 rounded-full p-3">
+                                <i class="fas fa-tags text-indigo-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 图表区域 -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                    <!-- 设备类别分布图 -->
+                    <div class="bg-white rounded-xl shadow-md p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">在用设备类别分布</h3>
+                        <div class="flex justify-center">
+                            <canvas id="categoryChart" width="300" height="300"></canvas>
+                        </div>
+                    </div>
+                    <!-- 部门分布图 -->
+                    <div class="bg-white rounded-xl shadow-md p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">在用设备部门分布</h3>
+                        <div class="flex justify-center">
+                            <canvas id="departmentChart" width="300" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 快速操作 -->
+                <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">快速操作</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <button class="btn-primary text-white font-medium py-3 px-4 rounded-lg hover:shadow-lg transition-all duration-200">
+                            <i class="fas fa-plus mr-2"></i>添加设备
+                        </button>
+                        <button class="bg-gradient-to-r from-orange-600 to-orange-700 text-white font-medium py-3 px-4 rounded-lg hover:shadow-lg transition-all duration-200 transform hover:-translate-y-1">
+                            <i class="fas fa-file-export mr-2"></i>导出月度计划
+                        </button>
+                        <button class="bg-gradient-to-r from-green-600 to-green-700 text-white font-medium py-3 px-4 rounded-lg hover:shadow-lg transition-all duration-200 transform hover:-translate-y-1">
+                            <i class="fas fa-download mr-2"></i>导出全部设备
+                        </button>
+                        <button class="bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium py-3 px-4 rounded-lg hover:shadow-lg transition-all duration-200 transform hover:-translate-y-1">
+                            <i class="fas fa-file-import mr-2"></i>导入数据
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 本月待检设备表格 -->
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">本月待检设备</h3>
+                        <div class="flex items-center space-x-4">
+                            <span class="text-sm text-gray-600">
+                                共 <span id="monthly-due-total-count" class="font-medium text-orange-600">0</span> 台
+                            </span>
+                            <button class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                                查看全部 <i class="fas fa-arrow-right ml-1"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">设备信息</th>
+                                    <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">计量编号</th>
+                                    <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">使用部门</th>
+                                    <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">有效期至</th>
+                                    <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">设备状态</th>
+                                    <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="monthlyDueTableBody" class="bg-white divide-y divide-gray-200">
+                                <!-- 动态加载的待检设备数据 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 侧边栏功能
+        document.addEventListener('DOMContentLoaded', function() {
+            // 系统管理下拉菜单
+            const systemMenuBtn = document.getElementById('system-menu-btn');
+            const systemSubmenu = document.getElementById('system-submenu');
+            const systemMenuArrow = document.getElementById('system-menu-arrow');
+            
+            if (systemMenuBtn) {
+                systemMenuBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    // 切换子菜单显示
+                    systemSubmenu.classList.toggle('hidden');
+                    
+                    // 旋转箭头
+                    if (systemSubmenu.classList.contains('hidden')) {
+                        systemMenuArrow.style.transform = 'rotate(0deg)';
+                    } else {
+                        systemMenuArrow.style.transform = 'rotate(180deg)';
+                    }
+                });
+            }
+            
+            // 侧边栏导航项点击事件
+            const sidebarItems = document.querySelectorAll('.sidebar-item');
+            sidebarItems.forEach(item => {
+                item.addEventListener('click', function(e) {
+                    // 如果是下拉菜单按钮，不执行导航逻辑
+                    if (item.id === 'system-menu-btn') {
+                        return;
+                    }
+                    
+                    // 如果有href且不是#，让浏览器正常跳转
+                    if (this.href && this.href !== location.href.split('#')[0] + '#') {
+                        return; // 让浏览器处理跳转
+                    }
+                    
+                    e.preventDefault();
+                    
+                    // 移除所有active类
+                    sidebarItems.forEach(i => i.classList.remove('active'));
+                    
+                    // 添加active类到当前项
+                    this.classList.add('active');
+                    
+                    // 如果是子菜单项，同时激活父菜单
+                    if (this.closest('#system-submenu')) {
+                        systemMenuBtn.classList.add('active');
+                    }
+                    
+                    // 处理特定的导航逻辑
+                    const linkId = this.id;
+                    console.log('导航到:', linkId);
+                    
+                    // 只为没有实际链接的项显示通知
+                    if (this.href === location.href.split('#')[0] + '#' || !this.href) {
+                        showNotification(`正在加载${this.textContent.trim()}页面...`, 'info');
+                    }
+                });
+            });
+
+            // 退出登录
+            const logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', function() {
+                    if (confirm('确定要退出登录吗？')) {
+                        // 清除本地存储
+                        localStorage.removeItem('access_token');
+                        localStorage.removeItem('refresh_token');
+                        localStorage.removeItem('user_info');
+                        
+                        // 跳转到登录页面
+                        window.location.href = '/login';
+                    }
+                });
+            }
+
+            // 检查登录状态
+            const userInfo = localStorage.getItem('user_info');
+            if (userInfo) {
+                const user = JSON.parse(userInfo);
+                const currentUserElement = document.getElementById('current-user');
+                if (currentUserElement) {
+                    currentUserElement.textContent = user.username || '用户';
+                }
+            }
+        });
+
+  
+        // 加载仪表盘数据
+        async function loadDashboardData() {
+            try {
+                showNotification('正在加载仪表盘数据...', 'info');
+                
+                // 获取统计数据
+                const stats = await DashboardAPI.getStats();
+                
+                // 更新统计卡片
+                document.getElementById('total-equipment').textContent = stats.total_equipment_count;
+                document.getElementById('active-equipment').textContent = stats.active_equipment_count;
+                document.getElementById('inactive-equipment').textContent = stats.inactive_count;
+                document.getElementById('monthly-due').textContent = stats.monthly_due_count;
+                document.getElementById('overdue-equipment').textContent = stats.overdue_count;
+                document.getElementById('category-count').textContent = stats.category_distribution.length;
+                
+                // 创建图表
+                createCharts(stats.category_distribution, stats.department_distribution);
+                
+                // 加载本月待检设备列表
+                await loadMonthlyDueEquipments();
+                
+                showNotification('仪表盘数据加载成功', 'success');
+                
+            } catch (error) {
+                console.error('加载仪表盘数据失败:', error);
+                showNotification('加载仪表盘数据失败: ' + error.message, 'error');
+                
+                // 使用默认数据
+                createCharts([], []);
+                loadMonthlyDueEquipments([]); // 传入空数组作为默认数据
+            }
+        }
+
+        // 加载本月待检设备列表
+        async function loadMonthlyDueEquipments() {
+            try {
+                const equipments = await DashboardAPI.getMonthlyDueEquipments();
+                updateMonthlyDueTable(equipments);
+            } catch (error) {
+                console.error('加载本月待检设备失败:', error);
+                showNotification('加载本月待检设备失败: ' + error.message, 'error');
+                updateMonthlyDueTable([]); // 传入空数组作为默认数据
+            }
+        }
+
+        // 更新本月待检设备表格
+        function updateMonthlyDueTable(equipments) {
+            const tableBody = document.getElementById('monthlyDueTableBody');
+            const totalCountElement = document.getElementById('monthly-due-total-count');
+            
+            // 更新总数显示
+            if (totalCountElement) {
+                totalCountElement.textContent = equipments.length;
+            }
+            
+            if (!equipments || equipments.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="px-6 py-4 text-center text-gray-500">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            本月暂无待检设备
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            // 限制显示最多5条记录
+            const displayEquipments = equipments.slice(0, 5);
+            const hasMoreEquipments = equipments.length > 5;
+            
+            tableBody.innerHTML = displayEquipments.map(equipment => {
+                // 安全地获取关联数据
+                const departmentName = equipment.department ? equipment.department.name : '未知部门';
+                const categoryName = equipment.category ? equipment.category.name : '其他';
+                
+                // 获取设备状态对应的样式
+                const getStatusStyle = (status) => {
+                    switch(status) {
+                        case '在用':
+                            return 'bg-green-100 text-green-800';
+                        case '停用':
+                            return 'bg-gray-100 text-gray-800';
+                        case '报废':
+                            return 'bg-red-100 text-red-800';
+                        default:
+                            return 'bg-gray-100 text-gray-800';
+                    }
+                };
+
+                // 获取设备图标
+                const getEquipmentIcon = (categoryName) => {
+                    const iconMap = {
+                        '压力表': 'fa-gauge',
+                        '温度计': 'fa-thermometer-half',
+                        '电子秤': 'fa-balance-scale',
+                        '卡尺': 'fa-tachometer-alt',
+                        '万用表': 'fa-microchip',
+                        '游标卡尺': 'fa-tachometer-alt'
+                    };
+                    return iconMap[categoryName] || 'fa-cogs';
+                };
+
+                // 获取图标颜色
+                const getIconColor = (categoryName) => {
+                    const colorMap = {
+                        '压力表': 'text-blue-600',
+                        '温度计': 'text-yellow-600',
+                        '电子秤': 'text-red-600',
+                        '卡尺': 'text-green-600',
+                        '万用表': 'text-purple-600',
+                        '游标卡尺': 'text-green-600'
+                    };
+                    return colorMap[categoryName] || 'text-gray-600';
+                };
+
+                const iconClass = getEquipmentIcon(categoryName);
+                const iconColor = getIconColor(categoryName);
+                const statusStyle = getStatusStyle(equipment.status || '未知');
+                
+                // 格式化日期显示
+                const formatDate = (dateString) => {
+                    if (!dateString) return '-';
+                    return dateString; // API返回的应该是格式化的日期字符串
+                };
+                
+                // 检查设备是否可以进行检定（在用状态）
+                const canCalibrate = equipment.status === '在用';
+                const buttonClass = canCalibrate ? 'text-blue-600 hover:text-blue-900' : 'text-gray-400 hover:text-gray-600';
+                const buttonDisabled = canCalibrate ? '' : 'disabled';
+
+                return `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="h-10 w-10 flex-shrink-0">
+                                    <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                        <i class="fas ${iconClass} ${iconColor}"></i>
+                                    </div>
+                                </div>
+                                <div class="ml-4">
+                                    <div class="text-sm font-medium text-gray-900">${equipment.name || '未知设备'}</div>
+                                    <div class="text-sm text-gray-500">型号: ${equipment.model || '未知'}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${equipment.serial_number || '-'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${departmentName}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatDate(equipment.valid_until)}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusStyle}">${equipment.status || '未知'}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button class="${buttonClass}" ${buttonDisabled} onclick="handleCalibration('${equipment.id}', '${equipment.name || '设备'}')">检定</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            
+            // 如果有更多设备，添加一个"显示更多"行
+            if (hasMoreEquipments) {
+                const remainingCount = equipments.length - 5;
+                tableBody.innerHTML += `
+                    <tr class="bg-gray-50 hover:bg-gray-100">
+                        <td colspan="6" class="px-6 py-4 text-center">
+                            <div class="flex items-center justify-center text-gray-600">
+                                <i class="fas fa-ellipsis-h mr-2"></i>
+                                <span class="text-sm">还有 ${remainingCount} 台待检设备，点击"查看全部"查看详情</span>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        // 处理检定操作
+        function handleCalibration(equipmentId, equipmentName) {
+            showNotification(`正在处理 ${equipmentName} 的检定...`, 'info');
+            // 这里可以跳转到检定页面或打开检定模态框
+            // 例如: window.location.href = `/equipment/edit?id=${equipmentId}`;
+        }
+
+        // 创建图表
+        function createCharts(categoryData, departmentData) {
+            // 设备类别分布图
+            const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+            const categoryLabels = categoryData.map(item => item.name);
+            const categoryCounts = categoryData.map(item => item.count);
+            
+            new Chart(categoryCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: categoryLabels.length > 0 ? categoryLabels : ['压力表', '温度计', '电子秤', '卡尺', '万用表', '其他'],
+                    datasets: [{
+                        data: categoryCounts.length > 0 ? categoryCounts : [35, 28, 22, 18, 15, 24],
+                        backgroundColor: [
+                            '#3B82F6',
+                            '#10B981',
+                            '#F59E0B',
+                            '#EF4444',
+                            '#8B5CF6',
+                            '#6B7280'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 部门分布图
+            const departmentCtx = document.getElementById('departmentChart').getContext('2d');
+            const departmentLabels = departmentData.map(item => item.name);
+            const departmentCounts = departmentData.map(item => item.count);
+            
+            new Chart(departmentCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: departmentLabels.length > 0 ? departmentLabels : ['生产部', '质检部', '仓储部', '维修部', '行政部'],
+                    datasets: [{
+                        data: departmentCounts.length > 0 ? departmentCounts : [45, 32, 28, 20, 17],
+                        backgroundColor: [
+                            '#06B6D4',
+                            '#84CC16',
+                            '#F97316',
+                            '#EC4899',
+                            '#6366F1'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 快速操作按钮事件
+        function setupQuickActions() {
+            const quickActions = {
+                '添加设备': () => {
+                    // 跳转到设备编辑页面（新增模式）
+                    window.location.href = '/equipment/edit?mode=add';
+                },
+                '导出月度计划': async () => {
+                    try {
+                        showNotification('正在导出月度计划...', 'info');
+                        await EquipmentAPI.exportMonthlyPlan();
+                        showNotification('月度计划导出成功', 'success');
+                    } catch (error) {
+                        showNotification('导出失败: ' + error.message, 'error');
+                    }
+                },
+                '导出全部设备': async () => {
+                    try {
+                        showNotification('正在导出全部设备数据...', 'info');
+                        await EquipmentAPI.exportFiltered({});
+                        showNotification('设备数据导出成功', 'success');
+                    } catch (error) {
+                        showNotification('导出失败: ' + error.message, 'error');
+                    }
+                },
+                '导入数据': () => {
+                    importEquipmentData();
+                }
+            };
+
+            // 为所有快速操作按钮添加事件监听器
+            document.querySelectorAll('.grid button').forEach(button => {
+                button.addEventListener('click', async function() {
+                    const buttonText = this.textContent.trim();
+                    if (quickActions[buttonText]) {
+                        await quickActions[buttonText]();
+                    }
+                });
+            });
+        }
+
+        // 表格操作按钮事件
+        function setupTableActions() {
+            // 检定按钮 - 使用文本内容匹配
+            document.querySelectorAll('button').forEach(button => {
+                if (button.textContent.includes('检定') && !button.textContent.includes('紧急检定')) {
+                    button.addEventListener('click', function() {
+                        const row = this.closest('tr');
+                        const equipmentName = row.cells[0].textContent;
+                        showNotification(`正在处理 ${equipmentName} 的检定...`, 'info');
+                    });
+                }
+            });
+
+            // 紧急检定按钮
+            document.querySelectorAll('button').forEach(button => {
+                if (button.textContent.includes('紧急检定')) {
+                    button.addEventListener('click', function() {
+                        const row = this.closest('tr');
+                        const equipmentName = row.cells[0].textContent;
+                        showNotification(`正在紧急处理 ${equipmentName} 的检定...`, 'warning');
+                    });
+                }
+            });
+
+            // 查看全部按钮
+            document.querySelectorAll('button').forEach(button => {
+                if (button.textContent.includes('查看全部')) {
+                    button.addEventListener('click', function() {
+                        // 跳转到设备管理页面
+                        window.location.href = '/equipment';
+                    });
+                }
+            });
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // 延迟加载以确保DOM完全加载
+                setTimeout(async () => {
+                    // 加载仪表盘数据
+                    await loadDashboardData();
+                    setupQuickActions();
+                    setupTableActions();
+                }, 100);
+            } catch (error) {
+                console.error('页面初始化失败:', error);
+                showNotification('页面初始化失败，请刷新页面重试', 'error');
+            }
+        });
+
+        // 模态框点击外部关闭功能
+        const importModal = document.getElementById('importModal');
+        if (importModal) {
+            importModal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeImportModal();
+                }
+            });
+        }
+        const importResultModal = document.getElementById('importResultModal');
+        if (importResultModal) {
+            importResultModal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeImportResultModal();
+                }
+            });
+        }
+
+        // 导入数据功能
+        function importEquipmentData() {
+            document.getElementById('importModal').classList.add('show');
+        }
+
+        // 关闭导入模态框
+        function closeImportModal() {
+            document.getElementById('importModal').classList.remove('show');
+            // 重置表单
+            document.getElementById('importFileInput').value = '';
+            document.getElementById('selectedFileInfo').classList.add('hidden');
+            document.getElementById('importBtn').disabled = true;
+            document.getElementById('overwriteExisting').checked = false;
+        }
+
+        // 处理文件选择
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                document.getElementById('selectedFileName').textContent = file.name;
+                document.getElementById('selectedFileInfo').classList.remove('hidden');
+                document.getElementById('importBtn').disabled = false;
+            }
+        }
+
+        // 下载导入模板
+        async function downloadTemplate() {
+            try {
+                showNotification('正在下载导入模板...', 'info');
+                await ImportExportAPI.downloadTemplate();
+                showNotification('导入模板下载成功', 'success');
+            } catch (error) {
+                console.error('模板下载失败:', error);
+                showNotification('模板下载失败: ' + error.message, 'error');
+            }
+        }
+
+        // 执行导入操作
+        async function performImport() {
+            const fileInput = document.getElementById('importFileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showNotification('请选择要导入的Excel文件', 'warning');
+                return;
+            }
+            
+            const overwrite = document.getElementById('overwriteExisting').checked;
+            
+            try {
+                showNotification('正在导入数据，请稍候...', 'info');
+                document.getElementById('importBtn').disabled = true;
+                
+                const result = await ImportExportAPI.uploadImportFile(file, overwrite);
+                showImportResult(result);
+                closeImportModal();
+                
+                // 重新加载仪表盘数据
+                await loadDashboardData();
+                
+            } catch (error) {
+                console.error('导入失败:', error);
+                showNotification('导入失败: ' + error.message, 'error');
+                document.getElementById('importBtn').disabled = false;
+            }
+        }
+
+        // 显示导入结果
+        function showImportResult(result) {
+            document.getElementById('successCount').textContent = result.success_count;
+            document.getElementById('updateCount').textContent = result.update_count;
+            document.getElementById('errorCount').textContent = result.error_count;
+            document.getElementById('totalCount').textContent = result.summary.total_rows;
+            
+            const resultsList = document.getElementById('importResultsList');
+            resultsList.innerHTML = result.detailed_results.map(item => `
+                <div class="grid grid-cols-12 gap-4 px-4 py-3 items-center">
+                    <div class="col-span-1 text-sm text-gray-500">${item.row}</div>
+                    <div class="col-span-3 text-sm font-medium text-gray-900">${item.serial_number}</div>
+                    <div class="col-span-3 text-sm text-gray-900">${item.name}</div>
+                    <div class="col-span-2">
+                        <span class="px-2 py-1 text-xs font-medium rounded-full ${getResultStatusStyle(item.status)}">
+                            ${item.status}
+                        </span>
+                    </div>
+                    <div class="col-span-3 text-sm text-gray-600">${item.message}</div>
+                </div>
+            `).join('');
+            
+            document.getElementById('importResultModal').classList.add('show');
+        }
+
+        // 获取结果状态样式
+        function getResultStatusStyle(status) {
+            switch (status) {
+                case '成功':
+                case '更新':
+                    return 'bg-green-100 text-green-800';
+                case '失败':
+                    return 'bg-red-100 text-red-800';
+                case '跳过':
+                    return 'bg-yellow-100 text-yellow-800';
+                default:
+                    return 'bg-gray-100 text-gray-800';
+            }
+        }
+
+        // 关闭导入结果模态框
+        function closeImportResultModal() {
+            document.getElementById('importResultModal').classList.remove('show');
+        }
+    </script>
+
+    <!-- 导入数据模态框 -->
+    <div id="importModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-900">导入设备数据</h3>
+                <button class="text-gray-400 hover:text-gray-600" onclick="closeImportModal()">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-6">
+                    <h4 class="text-md font-medium text-gray-900 mb-4">操作说明</h4>
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <ul class="text-sm text-blue-800 space-y-1">
+                            <li>• 请先下载导入模板，按照模板格式填写数据</li>
+                            <li>• 支持Excel格式(.xlsx, .xls)</li>
+                            <li>• 必填字段：使用部门、设备类别、计量器具名称、型号/规格、检定周期、检定(校准)日期、计量编号、检定方式</li>
+                            <li>• 外检设备需要填写证书编号、检定结果、检定机构、证书形式</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">1. 下载导入模板</label>
+                    <button class="w-full bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-4 hover:bg-gray-50 transition-colors" onclick="downloadTemplate()">
+                        <i class="fas fa-download text-gray-600 text-2xl mb-2"></i>
+                        <p class="text-gray-700">点击下载设备台账导入模板</p>
+                    </button>
+                </div>
+                
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">2. 选择Excel文件</label>
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                        <input type="file" id="importFileInput" class="hidden" accept=".xlsx,.xls" onchange="handleFileSelect(event)">
+                        <i class="fas fa-file-excel text-gray-400 text-3xl mb-3"></i>
+                        <p class="text-gray-600 mb-2">点击选择文件或拖拽文件到此处</p>
+                        <p class="text-sm text-gray-500">支持 .xlsx, .xls 格式</p>
+                        <button class="mt-3 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700" onclick="document.getElementById('importFileInput').click()">
+                            选择文件
+                        </button>
+                    </div>
+                    <div id="selectedFileInfo" class="mt-3 hidden">
+                        <div class="bg-green-50 border border-green-200 rounded-lg p-3">
+                            <p class="text-sm text-green-800">
+                                <i class="fas fa-file-excel mr-2"></i>
+                                已选择文件: <span id="selectedFileName"></span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <label class="flex items-center">
+                        <input type="checkbox" id="overwriteExisting" class="mr-2">
+                        <span class="text-sm text-gray-700">覆盖已存在的设备数据（根据计量编号）</span>
+                    </label>
+                </div>
+                
+                <div class="flex justify-end space-x-3">
+                    <button class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400" onclick="closeImportModal()">
+                        取消
+                    </button>
+                    <button id="importBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed" onclick="performImport()" disabled>
+                        <i class="fas fa-upload mr-2"></i>开始导入
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 导入结果模态框 -->
+    <div id="importResultModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-900">导入结果</h3>
+                <button class="text-gray-400 hover:text-gray-600" onclick="closeImportResultModal()">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-6">
+                    <div class="grid grid-cols-4 gap-4">
+                        <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                            <div class="text-2xl font-bold text-green-600" id="successCount">0</div>
+                            <div class="text-sm text-green-700">导入成功</div>
+                        </div>
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                            <div class="text-2xl font-bold text-blue-600" id="updateCount">0</div>
+                            <div class="text-sm text-blue-700">更新成功</div>
+                        </div>
+                        <div class="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+                            <div class="text-2xl font-bold text-red-600" id="errorCount">0</div>
+                            <div class="text-sm text-red-700">导入失败</div>
+                        </div>
+                        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
+                            <div class="text-2xl font-bold text-gray-600" id="totalCount">0</div>
+                            <div class="text-sm text-gray-700">总计处理</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <h4 class="text-md font-medium text-gray-900 mb-3">详细结果</h4>
+                    <div class="bg-gray-50 rounded-lg border border-gray-200">
+                        <div class="grid grid-cols-12 gap-4 px-4 py-3 bg-gray-100 text-sm font-semibold text-gray-700">
+                            <div class="col-span-1">行号</div>
+                            <div class="col-span-3">计量编号</div>
+                            <div class="col-span-3">设备名称</div>
+                            <div class="col-span-2">状态</div>
+                            <div class="col-span-3">说明</div>
+                        </div>
+                        <div id="importResultsList" class="divide-y divide-gray-200">
+                            <!-- 动态生成的结果列表 -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end">
+                    <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700" onclick="closeImportResultModal()">
+                        确定
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 模态框样式 -->
+    <style>
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</body>
+</html>

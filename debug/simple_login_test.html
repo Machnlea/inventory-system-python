@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>简单登录测试</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/static/js/api-client.js"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
+        <h1 class="text-2xl font-bold mb-4">简单登录测试</h1>
+        
+        <form id="simple-login-form" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">用户名</label>
+                <input type="text" id="simple-username" value="admin" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700">密码</label>
+                <input type="password" id="simple-password" value="admin123" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md">
+            </div>
+            
+            <button type="submit" class="w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600">
+                登录测试
+            </button>
+        </form>
+        
+        <div id="simple-result" class="mt-4 p-4 bg-gray-50 rounded-md"></div>
+    </div>
+
+    <script>
+        console.log('脚本开始执行');
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOMContentLoaded 触发');
+            console.log('api 对象:', typeof api);
+            
+            const form = document.getElementById('simple-login-form');
+            if (form) {
+                console.log('找到表单');
+                
+                form.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    console.log('表单提交');
+                    
+                    const username = document.getElementById('simple-username').value;
+                    const password = document.getElementById('simple-password').value;
+                    const resultDiv = document.getElementById('simple-result');
+                    
+                    resultDiv.innerHTML = '<div class="text-blue-500">登录中...</div>';
+                    
+                    try {
+                        console.log('准备发送请求');
+                        const response = await api.post('/api/auth/login/json', {
+                            username: username,
+                            password: password
+                        });
+                        
+                        console.log('收到响应:', response);
+                        
+                        // 显示成功信息
+                        resultDiv.innerHTML = `
+                            <div class="text-green-500">
+                                <h3 class="font-bold">登录成功！</h3>
+                                <p>用户: ${response.user.username}</p>
+                                <p>权限: ${response.user.is_admin ? '管理员' : '普通用户'}</p>
+                                <p>Token: ${response.access_token.substring(0, 20)}...</p>
+                            </div>
+                        `;
+                        
+                        // 测试跳转
+                        setTimeout(() => {
+                            if (confirm('登录成功！是否跳转到仪表盘？')) {
+                                window.location.href = '/dashboard';
+                            }
+                        }, 1000);
+                        
+                    } catch (error) {
+                        console.error('登录失败:', error);
+                        resultDiv.innerHTML = `
+                            <div class="text-red-500">
+                                <h3 class="font-bold">登录失败</h3>
+                                <p>错误: ${error.message}</p>
+                            </div>
+                        `;
+                    }
+                });
+                
+            } else {
+                console.log('未找到表单');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设备编辑 - 设备台账管理系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="/static/js/api-client.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        .required-field::after {
+            content: '*';
+            color: #ef4444;
+            margin-left: 4px;
+        }
+        .form-section {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 24px;
+            padding: 24px;
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 6px;
+        }
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        }
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        .form-input:disabled, .form-select:disabled {
+            background-color: #f9fafb;
+            color: #6b7280;
+            cursor: not-allowed;
+        }
+        .error-message {
+            color: #ef4444;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+        .success-message {
+            color: #10b981;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+        .conditional-field {
+            display: none;
+        }
+        .conditional-field.show {
+            display: block;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- 顶部通知容器 -->
+    <div id="notification-container" class="fixed top-4 right-4 z-50 space-y-2 max-w-md"></div>
+    
+    <div class="min-h-screen py-8">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <!-- 页面头部 -->
+            <div class="mb-8">
+                <div class="flex items-center gap-4 mb-4">
+                    <button onclick="history.back()" class="text-gray-600 hover:text-gray-900">
+                        <i class="fas fa-arrow-left text-xl"></i>
+                    </button>
+                    <h1 id="pageTitle" class="text-3xl font-bold text-gray-900">编辑设备信息</h1>
+                </div>
+                <p id="pageDescription" class="text-gray-600">修改设备的详细信息，带 <span class="text-red-500">*</span> 的字段为必填项</p>
+            </div>
+
+            <form id="equipmentForm" onsubmit="saveEquipment(event)">
+                <!-- 基本信息 -->
+                <div class="form-section">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                        <i class="fas fa-info-circle text-blue-600 mr-2"></i>
+                        基本信息
+                    </h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="form-group">
+                            <label class="form-label required-field" for="department">使用部门</label>
+                            <select id="department" name="department" class="form-select" required>
+                                <option value="">请选择使用部门</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label required-field" for="category">设备类别</label>
+                            <select id="category" name="category" class="form-select" required>
+                                <option value="">请选择设备类别</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label required-field" for="equipmentName">计量器具名称</label>
+                            <input type="text" id="equipmentName" name="equipmentName" class="form-input" 
+                                   required placeholder="请输入设备名称">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label required-field" for="model">型号/规格</label>
+                            <input type="text" id="model" name="model" class="form-input" 
+                                   required placeholder="请输入型号或规格">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="accuracy">准确度等级</label>
+                            <input type="text" id="accuracy" name="accuracy" class="form-input" 
+                                   placeholder="请输入准确度等级">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="measureRange">测量范围</label>
+                            <input type="text" id="measureRange" name="measureRange" class="form-input" 
+                                   placeholder="请输入测量范围">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 标识信息 -->
+                <div class="form-section">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                        <i class="fas fa-barcode text-green-600 mr-2"></i>
+                        标识信息
+                    </h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="form-group">
+                            <label class="form-label required-field" for="equipmentCode">计量编号</label>
+                            <input type="text" id="equipmentCode" name="equipmentCode" class="form-input" 
+                                   required placeholder="请输入计量编号">
+                            <div class="success-message" id="codeValidation"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="installLocation">安装地点</label>
+                            <input type="text" id="installLocation" name="installLocation" class="form-input" 
+                                   placeholder="请输入安装地点">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="division">分度值</label>
+                            <input type="text" id="division" name="division" class="form-input" 
+                                   placeholder="请输入分度值">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 生产信息 -->
+                <div class="form-section">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                        <i class="fas fa-industry text-purple-600 mr-2"></i>
+                        生产信息
+                    </h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="form-group">
+                            <label class="form-label" for="manufacturer">制造厂家</label>
+                            <input type="text" id="manufacturer" name="manufacturer" class="form-input" 
+                                   placeholder="请输入制造厂家">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="manufactureDate">出厂日期</label>
+                            <input type="date" id="manufactureDate" name="manufactureDate" class="form-input">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="originalValue">原值/元</label>
+                            <input type="number" id="originalValue" name="originalValue" class="form-input" 
+                                   step="0.01" min="0" placeholder="请输入设备原值">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 检定信息 -->
+                <div class="form-section">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                        <i class="fas fa-certificate text-orange-600 mr-2"></i>
+                        检定信息
+                    </h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="form-group">
+                            <label class="form-label required-field" for="calibrationPeriod">检定周期</label>
+                            <select id="calibrationPeriod" name="calibrationPeriod" class="form-select" required onchange="calculateValidDate()">
+                                <option value="">请选择检定周期</option>
+                                <option value="6个月">6个月</option>
+                                <option value="12个月">12个月</option>
+                                <option value="24个月">24个月</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label required-field" for="calibrationDate">检定(校准)日期</label>
+                            <input type="date" id="calibrationDate" name="calibrationDate" class="form-input" 
+                                   required onchange="calculateValidDate()">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="validUntil">有效期至</label>
+                            <input type="date" id="validUntil" name="validUntil" class="form-input" 
+                                   readonly disabled>
+                            <div class="success-message">系统自动计算</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label required-field" for="calibrationMethod">检定方式</label>
+                            <select id="calibrationMethod" name="calibrationMethod" class="form-select" required onchange="toggleExternalFields()">
+                                <option value="">请选择检定方式</option>
+                                <option value="内检">内检</option>
+                                <option value="外检">外检</option>
+                            </select>
+                        </div>
+
+                        <!-- 外检专属字段 -->
+                        <div id="externalFields" class="col-span-1 md:col-span-2 conditional-field">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                <div class="form-group">
+                                    <label class="form-label required-field" for="certificateNumber">证书编号</label>
+                                    <input type="text" id="certificateNumber" name="certificateNumber" class="form-input" 
+                                           placeholder="外检时必填">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label required-field" for="calibrationResult">检定结果</label>
+                                    <input type="text" id="calibrationResult" name="calibrationResult" class="form-input" 
+                                           placeholder="外检时必填">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label required-field" for="calibrationOrg">检定机构</label>
+                                    <input type="text" id="calibrationOrg" name="calibrationOrg" class="form-input" 
+                                           placeholder="外检时必填">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label required-field" for="certificateType">证书形式</label>
+                                    <select id="certificateType" name="certificateType" class="form-select">
+                                        <option value="">请选择证书形式</option>
+                                        <option value="校准证书">校准证书</option>
+                                        <option value="检定证书">检定证书</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label required-field" for="managementLevel">管理级别</label>
+                            <select id="managementLevel" name="managementLevel" class="form-select" required>
+                                <option value="">请选择管理级别</option>
+                                <option value="A级">A级</option>
+                                <option value="B级">B级</option>
+                                <option value="C级">C级</option>
+                                <option value="-" disabled>- (外检自动设置)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 状态信息 -->
+                <div class="form-section">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                        <i class="fas fa-toggle-on text-red-600 mr-2"></i>
+                        状态信息
+                    </h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="form-group">
+                            <label class="form-label required-field" for="equipmentStatus">设备状态</label>
+                            <select id="equipmentStatus" name="equipmentStatus" class="form-select" required onchange="toggleStatusChangeDate()">
+                                <option value="">请选择设备状态</option>
+                                <option value="在用">在用</option>
+                                <option value="停用">停用</option>
+                                <option value="报废">报废</option>
+                            </select>
+                        </div>
+
+                        <div id="statusChangeDate" class="form-group conditional-field">
+                            <label class="form-label" for="statusChangeTime">状态变更时间</label>
+                            <input type="date" id="statusChangeTime" name="statusChangeTime" class="form-input">
+                            <div class="success-message">状态变更时自动记录</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="remarks">备注</label>
+                        <textarea id="remarks" name="remarks" class="form-textarea" rows="3" 
+                                  placeholder="请输入备注信息"></textarea>
+                    </div>
+                </div>
+
+                <!-- 操作按钮 -->
+                <div class="flex justify-between items-center bg-white rounded-xl shadow-md p-6">
+                    <div class="flex gap-4">
+                        <button type="button" onclick="history.back()" 
+                                class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors duration-200">
+                            <i class="fas fa-arrow-left mr-2"></i>返回
+                        </button>
+                        
+                        <button type="button" onclick="resetForm()" 
+                                class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors duration-200">
+                            <i class="fas fa-undo mr-2"></i>重置
+                        </button>
+                    </div>
+
+                    <div class="flex gap-4">
+                        <button type="button" onclick="saveAsDraft()" 
+                                class="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors duration-200">
+                            <i class="fas fa-save mr-2"></i>保存草稿
+                        </button>
+                        
+                        <button type="submit" 
+                                class="btn-primary px-6 py-3 text-white rounded-lg">
+                            <i class="fas fa-check mr-2"></i>保存设备
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let currentEquipmentId = null;
+        let allDepartments = [];
+        let allCategories = [];
+        let isEditMode = false;
+
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // 获取URL参数
+                const urlParams = new URLSearchParams(window.location.search);
+                const mode = urlParams.get('mode');
+                const equipmentId = urlParams.get('id');
+
+                // 加载基础数据
+                await loadInitialData();
+
+                if (mode === 'add' || !equipmentId) {
+                    // 新增模式
+                    isEditMode = false;
+                    initializePageMode('add');
+                } else {
+                    // 编辑模式
+                    isEditMode = true;
+                    currentEquipmentId = parseInt(equipmentId);
+                    await loadEquipmentData(currentEquipmentId);
+                    initializePageMode('edit');
+                }
+
+                // 初始化表单事件
+                initializeFormEvents();
+
+            } catch (error) {
+                console.error('页面初始化失败:', error);
+                showNotification('页面加载失败，请刷新页面重试', 'error');
+            }
+        });
+
+        // 加载基础数据
+        async function loadInitialData() {
+            try {
+                const [departments, categories] = await Promise.all([
+                    DepartmentAPI.getDepartments(),
+                    CategoryAPI.getCategories()
+                ]);
+
+                allDepartments = departments;
+                allCategories = categories;
+
+                // 更新下拉选项
+                updateSelectOptions();
+
+            } catch (error) {
+                console.error('加载基础数据失败:', error);
+                throw error;
+            }
+        }
+
+        // 更新下拉选项
+        function updateSelectOptions() {
+            // 更新部门下拉框
+            const departmentSelect = document.getElementById('department');
+            departmentSelect.innerHTML = '<option value="">请选择使用部门</option>';
+            allDepartments.forEach(dept => {
+                departmentSelect.innerHTML += `<option value="${dept.id}">${dept.name}</option>`;
+            });
+
+            // 更新类别下拉框
+            const categorySelect = document.getElementById('category');
+            categorySelect.innerHTML = '<option value="">请选择设备类别</option>';
+            allCategories.forEach(cat => {
+                categorySelect.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
+            });
+        }
+
+        // 加载设备数据
+        async function loadEquipmentData(equipmentId) {
+            try {
+                showNotification('正在加载设备数据...', 'info');
+                const equipment = await EquipmentAPI.getEquipment(equipmentId);
+                
+                // 填充表单数据
+                fillFormData(equipment);
+                
+                showNotification('设备数据加载成功', 'success');
+            } catch (error) {
+                console.error('加载设备数据失败:', error);
+                showNotification('加载设备数据失败: ' + error.message, 'error');
+                throw error;
+            }
+        }
+
+        // 填充表单数据
+        function fillFormData(equipment) {
+            // 基本信息
+            document.getElementById('department').value = equipment.department_id;
+            document.getElementById('category').value = equipment.category_id;
+            document.getElementById('equipmentName').value = equipment.name;
+            document.getElementById('model').value = equipment.model;
+            document.getElementById('accuracy').value = equipment.accuracy_level;
+            document.getElementById('measureRange').value = equipment.measurement_range || '';
+
+            // 标识信息
+            document.getElementById('equipmentCode').value = equipment.serial_number;
+            document.getElementById('installLocation').value = equipment.installation_location || '';
+            document.getElementById('division').value = equipment.scale_value || '';
+
+            // 生产信息
+            document.getElementById('manufacturer').value = equipment.manufacturer || '';
+            document.getElementById('manufactureDate').value = equipment.manufacture_date || '';
+            document.getElementById('originalValue').value = equipment.original_value || '';
+
+            // 检定信息
+            document.getElementById('calibrationPeriod').value = equipment.calibration_cycle;
+            document.getElementById('calibrationDate').value = equipment.calibration_date;
+            document.getElementById('calibrationMethod').value = equipment.calibration_method;
+
+            // 外检字段
+            document.getElementById('certificateNumber').value = equipment.certificate_number || '';
+            document.getElementById('calibrationResult').value = equipment.verification_result || '';
+            document.getElementById('calibrationOrg').value = equipment.verification_agency || '';
+            document.getElementById('certificateType').value = equipment.certificate_form || '';
+
+            // 管理级别
+            document.getElementById('managementLevel').value = equipment.management_level || '';
+
+            // 状态信息
+            document.getElementById('equipmentStatus').value = equipment.status;
+            document.getElementById('statusChangeTime').value = equipment.status_change_date || '';
+
+            // 备注
+            document.getElementById('remarks').value = equipment.notes || '';
+
+            // 计算有效期
+            calculateValidDate();
+            
+            // 初始化外检字段显示
+            toggleExternalFields();
+            
+            // 初始化状态变更时间显示
+            toggleStatusChangeDate();
+        }
+
+        // 初始化页面模式
+        function initializePageMode(mode) {
+            const pageTitle = document.getElementById('pageTitle');
+            const pageDescription = document.getElementById('pageDescription');
+
+            if (mode === 'add') {
+                pageTitle.textContent = '添加新设备';
+                pageDescription.innerHTML = '填写设备的详细信息，带 <span class="text-red-500">*</span> 的字段为必填项';
+                
+                // 新增模式下清空表单并设置合理的默认值
+                document.getElementById('equipmentForm').reset();
+                
+                // 设置一些合理的默认值
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('calibrationDate').value = today;
+                document.getElementById('equipmentStatus').value = '在用';
+                document.getElementById('calibrationMethod').value = '内检';
+                document.getElementById('calibrationPeriod').value = '12个月';
+                
+                // 清空验证消息
+                document.getElementById('codeValidation').textContent = '';
+                
+                // 重新初始化表单状态
+                toggleExternalFields();
+                toggleStatusChangeDate();
+                calculateValidDate();
+            } else {
+                pageTitle.textContent = '编辑设备信息';
+                pageDescription.innerHTML = '修改设备的详细信息，带 <span class="text-red-500">*</span> 的字段为必填项';
+            }
+        }
+
+        // 初始化表单事件
+        function initializeFormEvents() {
+            // 检定周期和日期变化时计算有效期
+            document.getElementById('calibrationPeriod').addEventListener('change', calculateValidDate);
+            document.getElementById('calibrationDate').addEventListener('change', calculateValidDate);
+
+            // 检定方式变化时切换外检字段
+            document.getElementById('calibrationMethod').addEventListener('change', toggleExternalFields);
+
+            // 设备状态变化时切换状态变更时间
+            document.getElementById('equipmentStatus').addEventListener('change', toggleStatusChangeDate);
+
+            // 计量编号验证
+            document.getElementById('equipmentCode').addEventListener('input', validateEquipmentCode);
+        }
+
+        // 保存设备
+        async function saveEquipment(event) {
+            event.preventDefault();
+            
+            if (!validateForm()) {
+                return;
+            }
+
+            try {
+                const formData = collectFormData();
+                
+                if (isEditMode && currentEquipmentId) {
+                    // 更新设备
+                    showNotification('正在更新设备信息...', 'info');
+                    await EquipmentAPI.updateEquipment(currentEquipmentId, formData);
+                    showNotification('设备信息更新成功', 'success');
+                } else {
+                    // 创建设备
+                    showNotification('正在创建设备...', 'info');
+                    await EquipmentAPI.createEquipment(formData);
+                    showNotification('设备创建成功', 'success');
+                }
+
+                // 返回设备管理页面
+                setTimeout(() => {
+                    window.location.href = '/equipment';
+                }, 1000);
+
+            } catch (error) {
+                console.error('保存设备失败:', error);
+                showNotification('保存失败: ' + error.message, 'error');
+            }
+        }
+
+        // 收集表单数据
+        function collectFormData() {
+            const calibrationDate = document.getElementById('calibrationDate').value;
+            const calibrationPeriod = document.getElementById('calibrationPeriod').value;
+            const calibrationMethod = document.getElementById('calibrationMethod').value;
+
+            // 计算有效期
+            let validUntil = '';
+            if (calibrationDate && calibrationPeriod) {
+                const date = new Date(calibrationDate);
+                const months = parseInt(calibrationPeriod.replace('个月', ''));
+                date.setMonth(date.getMonth() + months);
+                date.setDate(date.getDate() - 1);
+                validUntil = date.toISOString().split('T')[0];
+            }
+
+            const formData = {
+                department_id: parseInt(document.getElementById('department').value),
+                category_id: parseInt(document.getElementById('category').value),
+                name: document.getElementById('equipmentName').value,
+                model: document.getElementById('model').value,
+                accuracy_level: document.getElementById('accuracy').value,
+                measurement_range: document.getElementById('measureRange').value || null,
+                calibration_cycle: calibrationPeriod,
+                calibration_date: calibrationDate,
+                calibration_method: calibrationMethod,
+                serial_number: document.getElementById('equipmentCode').value,
+                installation_location: document.getElementById('installLocation').value || null,
+                scale_value: document.getElementById('division').value || null,
+                manufacturer: document.getElementById('manufacturer').value || null,
+                manufacture_date: document.getElementById('manufactureDate').value || null,
+                original_value: document.getElementById('originalValue').value ? 
+                    parseFloat(document.getElementById('originalValue').value) : null,
+                status: document.getElementById('equipmentStatus').value,
+                status_change_date: document.getElementById('statusChangeTime').value || null,
+                notes: document.getElementById('remarks').value || null,
+                valid_until: validUntil
+            };
+
+            // 外检字段
+            if (calibrationMethod === '外检') {
+                formData.certificate_number = document.getElementById('certificateNumber').value;
+                formData.verification_result = document.getElementById('calibrationResult').value;
+                formData.verification_agency = document.getElementById('calibrationOrg').value;
+                formData.certificate_form = document.getElementById('certificateType').value;
+                formData.management_level = '-';
+            } else {
+                formData.management_level = document.getElementById('managementLevel').value;
+            }
+
+            return formData;
+        }
+
+        // 表单验证
+        function validateForm() {
+            const requiredFields = [
+                'department', 'category', 'equipmentName', 'model',
+                'equipmentCode', 'calibrationPeriod', 'calibrationDate', 
+                'calibrationMethod', 'equipmentStatus'
+            ];
+
+            let isValid = true;
+            
+            requiredFields.forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                if (!field.value.trim()) {
+                    field.style.borderColor = '#ef4444';
+                    isValid = false;
+                } else {
+                    field.style.borderColor = '#d1d5db';
+                }
+            });
+
+            // 外检时验证外检字段
+            const calibrationMethod = document.getElementById('calibrationMethod').value;
+            if (calibrationMethod === '外检') {
+                const externalFields = ['certificateNumber', 'calibrationResult', 'calibrationOrg'];
+                externalFields.forEach(fieldId => {
+                    const field = document.getElementById(fieldId);
+                    if (!field.value.trim()) {
+                        field.style.borderColor = '#ef4444';
+                        isValid = false;
+                    } else {
+                        field.style.borderColor = '#d1d5db';
+                    }
+                });
+            }
+
+            // 验证计量编号格式
+            const equipmentCode = document.getElementById('equipmentCode').value;
+            if (equipmentCode && equipmentCode.length < 3) {
+                document.getElementById('equipmentCode').style.borderColor = '#ef4444';
+                isValid = false;
+            }
+
+            if (!isValid) {
+                showNotification('请填写所有必填字段', 'error');
+            }
+
+            return isValid;
+        }
+
+        // 验证计量编号唯一性
+        async function validateEquipmentCode() {
+            const code = document.getElementById('equipmentCode').value;
+            const validation = document.getElementById('codeValidation');
+            
+            if (code) {
+                if (code.length >= 3) {
+                    validation.textContent = '编号格式正确';
+                    validation.className = 'success-message';
+                } else {
+                    validation.textContent = '编号至少需要3个字符';
+                    validation.className = 'error-message';
+                }
+            } else {
+                validation.textContent = '';
+            }
+        }
+
+        // 重写原有的保存草稿功能
+        async function saveAsDraft() {
+            try {
+                const formData = collectFormData();
+                console.log('保存草稿:', formData);
+                showNotification('草稿保存成功', 'success');
+            } catch (error) {
+                showNotification('草稿保存失败', 'error');
+            }
+        }
+
+        // 重写重置表单功能
+        function resetForm() {
+            if (confirm('确定要重置表单吗？所有未保存的更改将丢失。')) {
+                if (isEditMode && currentEquipmentId) {
+                    // 重新加载数据
+                    loadEquipmentData(currentEquipmentId);
+                } else {
+                    // 清空表单
+                    document.getElementById('equipmentForm').reset();
+                    initializePageMode('add');
+                }
+                
+                // 重新初始化表单状态
+                toggleExternalFields();
+                toggleStatusChangeDate();
+                calculateValidDate();
+            }
+        }
+
+        // 计算有效期
+        function calculateValidDate() {
+            const calibrationDate = document.getElementById('calibrationDate').value;
+            const calibrationPeriod = document.getElementById('calibrationPeriod').value;
+            const validUntilInput = document.getElementById('validUntil');
+            
+            if (calibrationDate && calibrationPeriod) {
+                const date = new Date(calibrationDate);
+                const months = parseInt(calibrationPeriod.replace('个月', ''));
+                date.setMonth(date.getMonth() + months);
+                date.setDate(date.getDate() - 1); // 减去一天，因为到期当天不算有效
+                validUntilInput.value = date.toISOString().split('T')[0];
+            } else {
+                validUntilInput.value = '';
+            }
+        }
+
+        // 切换外检字段显示
+        function toggleExternalFields() {
+            const calibrationMethod = document.getElementById('calibrationMethod').value;
+            const externalFields = document.getElementById('externalFields');
+            const managementLevelSelect = document.getElementById('managementLevel');
+            
+            if (calibrationMethod === '外检') {
+                externalFields.classList.add('show');
+                // 设置外检字段为必填
+                externalFields.querySelectorAll('input').forEach(input => {
+                    input.required = true;
+                });
+                
+                // 如果检定方式为外检，自动设置管理级别为"-"并禁用选择
+                if (managementLevelSelect) {
+                    managementLevelSelect.value = '-';
+                    managementLevelSelect.disabled = true;
+                }
+            } else {
+                externalFields.classList.remove('show');
+                // 移除外检字段的必填要求
+                externalFields.querySelectorAll('input').forEach(input => {
+                    input.required = false;
+                    input.value = ''; // 清空值
+                });
+                
+                // 启用管理级别选择
+                if (managementLevelSelect) {
+                    managementLevelSelect.disabled = false;
+                }
+            }
+        }
+
+        // 切换状态变更时间显示
+        function toggleStatusChangeDate() {
+            const equipmentStatus = document.getElementById('equipmentStatus').value;
+            const statusChangeDate = document.getElementById('statusChangeDate');
+            
+            if (equipmentStatus === '停用' || equipmentStatus === '报废') {
+                statusChangeDate.classList.add('show');
+                const statusChangeTime = document.getElementById('statusChangeTime');
+                statusChangeTime.required = true;
+                // 只在状态变更且没有值时设置为今天
+                if (!statusChangeTime.value) {
+                    statusChangeTime.value = new Date().toISOString().split('T')[0];
+                }
+            } else {
+                statusChangeDate.classList.remove('show');
+                document.getElementById('statusChangeTime').required = false;
+            }
+        }
+
+      </script>
+</body>
+</html>

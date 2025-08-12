@@ -4,742 +4,174 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>设备台账管理系统</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="/static/css/style.css" rel="stylesheet">
-    <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .glass-effect {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        .text-shadow {
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        .text-shadow-light {
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+        }
+        .content-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        @keyframes blob {
+            0% { transform: translate(0px, 0px) scale(1); }
+            33% { transform: translate(30px, -50px) scale(1.1); }
+            66% { transform: translate(-20px, 20px) scale(0.9); }
+            100% { transform: translate(0px, 0px) scale(1); }
+        }
+        .animate-blob {
+            animation: blob 7s infinite;
+        }
+        .animation-delay-2000 {
+            animation-delay: 2s;
+        }
+        .animation-delay-4000 {
+            animation-delay: 4s;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .float-animation {
+            animation: float 6s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+        .hero-pattern {
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(102, 126, 234, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(118, 75, 162, 0.3) 0%, transparent 50%);
+        }
+    </style>
 </head>
-<body>
-    <!-- 导航栏 -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/">
-                <i class="bi bi-clipboard-data"></i>
-                设备台账管理系统
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link active" href="/" id="dashboard-link">
-                            <i class="bi bi-house-door"></i> 仪表盘
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#" id="equipment-link">
-                            <i class="bi bi-gear"></i> 设备管理
-                        </a>
-                    </li>
-                    <li class="nav-item dropdown" id="admin-menu" style="display: none;">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-shield-lock"></i> 系统管理
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#" id="users-link">用户管理</a></li>
-                            <li><a class="dropdown-item" href="#" id="categories-link">设备类别管理</a></li>
-                            <li><a class="dropdown-item" href="#" id="departments-link">部门管理</a></li>
-                            <li><a class="dropdown-item" href="#" id="audit-link">操作日志</a></li>
-                        </ul>
-                    </li>
-                </ul>
-                <ul class="navbar-nav">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-person-circle"></i>
-                            <span id="current-user"></span>
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#" id="logout-link">退出登录</a></li>
-                        </ul>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+<body class="gradient-bg min-h-screen flex items-center justify-center p-4">
+    <!-- 背景装饰 -->
+    <div class="absolute inset-0 overflow-hidden">
+        <div class="absolute -top-40 -right-40 w-80 h-80 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
+        <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-yellow-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
+        <div class="absolute top-40 left-40 w-80 h-80 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
+    </div>
 
-    <!-- 通知容器 -->
-    <div id="notification-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999; max-width: 400px;"></div>
+    <!-- 主要内容 -->
+    <div class="relative z-10 w-full max-w-6xl mx-auto px-6">
+        <div class="text-center fade-in">
+            <!-- 标题 -->
+            <div class="mb-8">
+                <h1 class="text-5xl md:text-7xl font-bold mb-4 bg-gradient-to-r from-purple-400 via-pink-500 to-purple-600 bg-clip-text text-transparent">
+                    设备台账管理系统
+                </h1>
+            </div>
 
-    <!-- 庆祝效果容器 -->
-    <div id="celebration-container" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10000; display: none;">
-        <div id="celebration-content" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; animation: celebrationBounce 0.6s ease-out;">
-            <div style="font-size: 4rem; margin-bottom: 1rem;">
-                🎉
+            <!-- 特性展示 -->
+            <div class="grid md:grid-cols-3 gap-8 mb-12">
+                <div class="content-card rounded-2xl p-6 text-gray-800 hover:scale-105 transition-transform duration-300">
+                    <div class="w-16 h-16 bg-blue-500 rounded-xl flex items-center justify-center mb-4 mx-auto">
+                        <i class="fas fa-chart-line text-2xl text-white"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2 text-gray-900">数据可视化</h3>
+                    <p class="text-gray-700">直观的图表展示，让设备数据一目了然</p>
+                </div>
+                
+                <div class="content-card rounded-2xl p-6 text-gray-800 hover:scale-105 transition-transform duration-300">
+                    <div class="w-16 h-16 bg-green-500 rounded-xl flex items-center justify-center mb-4 mx-auto">
+                        <i class="fas fa-cogs text-2xl text-white"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2 text-gray-900">智能管理</h3>
+                    <p class="text-gray-700">自动化设备管理，提升工作效率</p>
+                </div>
+                
+                <div class="content-card rounded-2xl p-6 text-gray-800 hover:scale-105 transition-transform duration-300">
+                    <div class="w-16 h-16 bg-purple-500 rounded-xl flex items-center justify-center mb-4 mx-auto">
+                        <i class="fas fa-shield-alt text-2xl text-white"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2 text-gray-900">安全可靠</h3>
+                    <p class="text-gray-700">数据安全加密，保障信息安全</p>
+                </div>
             </div>
-            <div style="font-size: 2rem; font-weight: bold; color: #28a745; margin-bottom: 0.5rem;">
-                太棒了！
+
+            <!-- 功能亮点 -->
+            <div class="content-card rounded-3xl p-8 mb-12 text-gray-800">
+                <h2 class="text-3xl font-bold mb-8 text-gray-900 text-shadow-light">核心功能</h2>
+                <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="text-center">
+                        <i class="fas fa-box text-3xl mb-3 text-blue-600"></i>
+                        <h4 class="font-semibold mb-2 text-gray-900">设备台账</h4>
+                        <p class="text-sm text-gray-700">完整的设备信息管理</p>
+                    </div>
+                    <div class="text-center">
+                        <i class="fas fa-calendar-check text-3xl mb-3 text-green-600"></i>
+                        <h4 class="font-semibold mb-2 text-gray-900">定期检定</h4>
+                        <p class="text-sm text-gray-700">自动提醒和跟踪</p>
+                    </div>
+                    <div class="text-center">
+                        <i class="fas fa-file-export text-3xl mb-3 text-yellow-600"></i>
+                        <h4 class="font-semibold mb-2 text-gray-900">数据导入导出</h4>
+                        <p class="text-sm text-gray-700">灵活的数据处理</p>
+                    </div>
+                    <div class="text-center">
+                        <i class="fas fa-users text-3xl mb-3 text-purple-600"></i>
+                        <h4 class="font-semibold mb-2 text-gray-900">用户管理</h4>
+                        <p class="text-sm text-gray-700">权限分级管理</p>
+                    </div>
+                </div>
             </div>
-            <div style="font-size: 1.2rem; color: #6c757d;">
-                本月无待检设备，所有设备状态良好！
+
+            <!-- 行动按钮 -->
+            <div class="flex justify-center items-center">
+                <a href="/login" class="glass-effect text-white font-semibold py-4 px-8 rounded-2xl text-lg hover:bg-white hover:bg-opacity-20 transition-all duration-300">
+                    <i class="fas fa-sign-in-alt mr-2"></i>
+                    立即登录
+                </a>
+            </div>
+
+            <!-- 底部信息 -->
+            <div class="mt-16 text-gray-100">
+                <p class="text-sm text-shadow-light">
+                    <i class="fas fa-code mr-2"></i>
+                    基于 Python FastAPI + Tailwind CSS 构建
+                </p>
+                <p class="text-xs mt-2 opacity-80 text-shadow-light">
+                    © 2024 设备台账管理系统 - 让设备管理更简单
+                </p>
             </div>
         </div>
     </div>
 
-    <!-- 主内容区 -->
-    <div class="container-fluid mt-3">
-        <!-- 登录表单 -->
-        <div id="login-section" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 9998;">
-            <div class="row justify-content-center align-items-center h-100">
-                <div class="col-md-6 col-lg-4">
-                    <div class="card shadow-lg">
-                        <div class="card-header bg-primary text-white">
-                            <h4 class="mb-0 text-center">
-                                <i class="bi bi-box-arrow-in-right"></i>
-                                用户登录
-                            </h4>
-                        </div>
-                        <div class="card-body">
-                            <form id="login-form">
-                                <div class="mb-3">
-                                    <label for="username" class="form-label">用户名</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text"><i class="bi bi-person"></i></span>
-                                        <input type="text" class="form-control" id="username" required placeholder="请输入用户名">
-                                    </div>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="password" class="form-label">密码</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text"><i class="bi bi-lock"></i></span>
-                                        <input type="password" class="form-control" id="password" required placeholder="请输入密码">
-                                    </div>
-                                </div>
-                                <button type="submit" class="btn btn-primary w-100">
-                                    <i class="bi bi-box-arrow-in-right"></i> 登录
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 主要内容区 -->
-        <div id="main-content" style="display: none;">
-            <!-- 仪表盘 -->
-            <div id="dashboard-section">
-                <h2><i class="bi bi-speedometer2"></i> 仪表盘</h2>
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="card text-white bg-primary">
-                            <div class="card-body">
-                                <h5 class="card-title">设备总数</h5>
-                                <h3 id="total-equipment-count">-</h3>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card text-white bg-info">
-                            <div class="card-body">
-                                <h5 class="card-title">本月待检设备</h5>
-                                <h3 id="monthly-due-count">-</h3>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card text-white bg-warning">
-                            <div class="card-body">
-                                <h5 class="card-title">超期未检设备</h5>
-                                <h3 id="overdue-count">-</h3>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="row mt-4">
-                    <div class="col-md-4">
-                        <div class="card text-white bg-secondary">
-                            <div class="card-body">
-                                <h5 class="card-title">停用设备</h5>
-                                <h3 id="inactive-count">-</h3>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card text-white bg-success">
-                            <div class="card-body">
-                                <h5 class="card-title">在用设备类别</h5>
-                                <h3 id="category-count">-</h3>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card bg-danger text-white">
-                            <div class="card-body">
-                                <h5 class="card-title">在用设备</h5>
-                                <h3 id="active-equipment-count">-</h3>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="row mt-4">
-                    <div class="col-md-6">
-                        <div class="card h-100">
-                            <div class="card-header py-1">
-                                <h6 class="mb-0">在用设备类别分布</h6>
-                            </div>
-                            <div class="card-body py-1 px-2">
-                                <canvas id="categoryChart" style="max-height: 200px;"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="card h-100">
-                            <div class="card-header py-1">
-                                <h6 class="mb-0">在用设备部门分布</h6>
-                            </div>
-                            <div class="card-body py-1 px-2">
-                                <canvas id="departmentChart" style="max-height: 200px;"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="row mt-4">
-                    <div class="col-md-12">
-                        <div class="card h-100">
-                            <div class="card-header py-1">
-                                <h6 class="mb-0">快速操作</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-3">
-                                        <button class="btn btn-primary w-100" id="add-equipment-btn">
-                                            <i class="bi bi-plus-circle"></i> 添加设备
-                                        </button>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <button class="btn btn-success w-100" id="export-monthly-btn">
-                                            <i class="bi bi-download"></i> 导出月度计划
-                                        </button>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <button class="btn btn-info w-100" id="export-all-btn">
-                                            <i class="bi bi-file-earmark-spreadsheet"></i> 导出全部设备
-                                        </button>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <button class="btn btn-warning w-100" id="import-data-btn">
-                                            <i class="bi bi-upload"></i> 导入数据
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- 本月待检设备列表 -->
-                <div class="row mt-4">
-                    <div class="col-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5><i class="bi bi-calendar-check"></i> 本月待检设备</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="table-responsive">
-                                    <table class="table table-striped table-sm">
-                                        <thead>
-                                            <tr>
-                                                <th>使用部门</th>
-                                                <th>设备名称</th>
-                                                <th>型号/规格</th>
-                                                <th>计量编号</th>
-                                                <th>有效期至</th>
-                                                <th>状态</th>
-                                                <th>操作</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="monthly-due-tbody">
-                                            <tr>
-                                                <td colspan="7" class="text-center text-muted">
-                                                    <i class="bi bi-info-circle"></i> 加载中...
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 设备管理 -->
-            <div id="equipment-section" style="display: none;">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h2><i class="bi bi-gear"></i> 设备管理</h2>
-                    <button class="btn btn-primary" id="add-equipment-modal-btn">
-                        <i class="bi bi-plus-circle"></i> 添加设备
-                    </button>
-                </div>
-                
-                <!-- 搜索表单 -->
-                <div class="card mb-3">
-                    <div class="card-header">
-                        <h5>全文本搜索</h5>
-                    </div>
-                    <div class="card-body">
-                        <form id="search-form" class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label">搜索关键词</label>
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                                    <input type="text" class="form-control" id="search-query" 
-                                           placeholder="搜索设备名称、型号、计量编号、厂家、地点等...">
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label">部门</label>
-                                <select class="form-select" id="search-department">
-                                    <option value="">全部部门</option>
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label">设备类别</label>
-                                <select class="form-select" id="search-category">
-                                    <option value="">全部类别</option>
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label">设备状态</label>
-                                <select class="form-select" id="search-status">
-                                    <option value="">全部状态</option>
-                                    <option value="在用">在用</option>
-                                    <option value="停用">停用</option>
-                                    <option value="报废">报废</option>
-                                </select>
-                            </div>
-                            <div class="col-12">
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="bi bi-search"></i> 搜索
-                                </button>
-                                <button type="button" class="btn btn-secondary" id="clear-search">清除搜索</button>
-                                <button type="button" class="btn btn-success" id="export-search" style="display: none;">
-                                    <i class="bi bi-download"></i> 导出搜索结果
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-
-                <!-- 筛选表单 -->
-                <div class="card mb-3">
-                    <div class="card-header">
-                        <h5>筛选条件</h5>
-                    </div>
-                    <div class="card-body">
-                        <form id="filter-form" class="row g-3">
-                            <div class="col-md-3">
-                                <label class="form-label">部门</label>
-                                <select class="form-select" id="filter-department">
-                                    <option value="">全部部门</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">设备类别</label>
-                                <select class="form-select" id="filter-category">
-                                    <option value="">全部类别</option>
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label">设备状态</label>
-                                <select class="form-select" id="filter-status">
-                                    <option value="">全部状态</option>
-                                    <option value="在用" selected>在用</option>
-                                    <option value="停用">停用</option>
-                                    <option value="报废">报废</option>
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label">检定开始日期</label>
-                                <input type="date" class="form-control" id="filter-start-date">
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label">检定结束日期</label>
-                                <input type="date" class="form-control" id="filter-end-date">
-                            </div>
-                            <div class="col-12">
-                                <button type="submit" class="btn btn-primary">筛选</button>
-                                <button type="button" class="btn btn-secondary" id="clear-filter">清除</button>
-                                <button type="button" class="btn btn-success" id="export-filtered">导出结果</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-                
-                <!-- 批量操作工具栏 -->
-                <div class="card mb-3" id="batch-operations" style="display: none;">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center">
-                            <span class="me-3">
-                                <strong>已选择 <span id="selected-count">0</span> 台设备</strong>
-                            </span>
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-warning" id="batch-update-calibration">
-                                    <i class="bi bi-calendar-check"></i> 批量更新检定日期
-                                </button>
-                                <button type="button" class="btn btn-info" id="batch-change-status">
-                                    <i class="bi bi-arrow-repeat"></i> 批量变更状态
-                                </button>
-                                <button type="button" class="btn btn-success" id="batch-export-selected">
-                                    <i class="bi bi-download"></i> 导出选中
-                                </button>
-                                <button type="button" class="btn btn-danger" id="batch-delete">
-                                    <i class="bi bi-trash"></i> 批量删除
-                                </button>
-                                <button type="button" class="btn btn-secondary" id="clear-selection">
-                                    <i class="bi bi-x-circle"></i> 清除选择
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- 设备列表 -->
-                <div class="card">
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-striped" id="equipment-table">
-                                <thead>
-                                    <tr>
-                                        <th>
-                                            <input type="checkbox" id="select-all" onchange="toggleSelectAll()">
-                                        </th>
-                                        <th style="cursor: pointer;" onclick="sortEquipmentTable('department')">
-                                            使用部门 <i class="bi bi-arrow-down-up"></i>
-                                        </th>
-                                        <th style="cursor: pointer;" onclick="sortEquipmentTable('name')">
-                                            设备名称 <i class="bi bi-arrow-down-up"></i>
-                                        </th>
-                                        <th>型号/规格</th>
-                                        <th>计量编号</th>
-                                        <th style="cursor: pointer;" onclick="sortEquipmentTable('next_calibration_date')">
-                                            有效期至 <i class="bi bi-arrow-down-up"></i>
-                                        </th>
-                                        <th>状态</th>
-                                        <th>附件</th>
-                                        <th>操作</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="equipment-tbody">
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 用户管理 -->
-            <div id="users-section" style="display: none;">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h2><i class="bi bi-people"></i> 用户管理</h2>
-                    <button class="btn btn-primary" id="add-user-btn">
-                        <i class="bi bi-person-plus"></i> 添加用户
-                    </button>
-                </div>
-                <div class="card">
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>用户名</th>
-                                        <th>邮箱</th>
-                                        <th>部门</th>
-                                        <th>角色</th>
-                                        <th>状态</th>
-                                        <th>创建时间</th>
-                                        <th>操作</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="users-tbody">
-                                    <tr>
-                                        <td colspan="7" class="text-center text-muted">
-                                            <i class="bi bi-info-circle"></i> 加载中...
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 设备类别管理 -->
-            <div id="categories-section" style="display: none;">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h2><i class="bi bi-tags"></i> 设备类别管理</h2>
-                    <button class="btn btn-primary" id="add-category-btn">
-                        <i class="bi bi-plus-circle"></i> 添加类别
-                    </button>
-                </div>
-                <div class="card">
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>类别名称</th>
-                                        <th>描述</th>
-                                        <th>设备数量</th>
-                                        <th>创建时间</th>
-                                        <th>操作</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="categories-tbody">
-                                    <tr>
-                                        <td colspan="5" class="text-center text-muted">
-                                            <i class="bi bi-info-circle"></i> 加载中...
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 部门管理 -->
-            <div id="departments-section" style="display: none;">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h2><i class="bi bi-building"></i> 部门管理</h2>
-                    <button class="btn btn-primary" id="add-department-btn">
-                        <i class="bi bi-plus-circle"></i> 添加部门
-                    </button>
-                </div>
-                <div class="card">
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>部门名称</th>
-                                        <th>描述</th>
-                                        <th>负责人</th>
-                                        <th>设备数量</th>
-                                        <th>创建时间</th>
-                                        <th>操作</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="departments-tbody">
-                                    <tr>
-                                        <td colspan="6" class="text-center text-muted">
-                                            <i class="bi bi-info-circle"></i> 加载中...
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 操作日志 -->
-            <div id="audit-section" style="display: none;">
-                <h2><i class="bi bi-journal-text"></i> 操作日志</h2>
-                <div class="card mb-3">
-                    <div class="card-header">
-                        <h5>筛选条件</h5>
-                    </div>
-                    <div class="card-body">
-                        <form id="audit-filter-form" class="row g-3">
-                            <div class="col-md-3">
-                                <label class="form-label">用户</label>
-                                <select class="form-select" id="audit-filter-user">
-                                    <option value="">全部用户</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">操作类型</label>
-                                <select class="form-select" id="audit-filter-action">
-                                    <option value="">全部操作</option>
-                                    <option value="创建">创建</option>
-                                    <option value="更新">更新</option>
-                                    <option value="删除">删除</option>
-                                    <option value="导入">导入</option>
-                                    <option value="导出">导出</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">开始日期</label>
-                                <input type="date" class="form-control" id="audit-filter-start-date">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">结束日期</label>
-                                <input type="date" class="form-control" id="audit-filter-end-date">
-                            </div>
-                            <div class="col-12">
-                                <button type="submit" class="btn btn-primary">筛选</button>
-                                <button type="button" class="btn btn-secondary" id="clear-audit-filter">清除</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>时间</th>
-                                        <th>用户</th>
-                                        <th>操作</th>
-                                        <th>设备</th>
-                                        <th>描述</th>
-                                        <th>IP地址</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="audit-tbody">
-                                    <tr>
-                                        <td colspan="6" class="text-center text-muted">
-                                            <i class="bi bi-info-circle"></i> 加载中...
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                            <div id="audit-pagination"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <!-- 装饰性图标 -->
+    <div class="absolute top-10 right-10 text-white opacity-20">
+        <i class="fas fa-microchip text-6xl float-animation"></i>
     </div>
-
-    <!-- 附件上传模态框 -->
-    <div class="modal fade" id="attachment-upload-modal" tabindex="-1" style="z-index: 1070;">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">上传附件</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="attachment-upload-form">
-                        <input type="hidden" id="attachment-equipment-id">
-                        
-                        <div class="mb-3">
-                            <label for="attachment-file" class="form-label">选择文件</label>
-                            <input type="file" class="form-control" id="attachment-file" 
-                                   accept=".pdf,.jpg,.jpeg,.png,.gif,.bmp,.doc,.docx,.xls,.xlsx,.txt" required>
-                            <div class="form-text">支持的格式：PDF, JPG, PNG, DOC, DOCX, XLS, XLSX, TXT</div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="attachment-description" class="form-label">文件描述</label>
-                            <textarea class="form-control" id="attachment-description" rows="2" 
-                                      placeholder="请输入文件描述..."></textarea>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="attachment-is-certificate">
-                                <label class="form-check-label" for="attachment-is-certificate">
-                                    这是证书文件
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3" id="certificate-type-group" style="display: none;">
-                            <label for="certificate-type" class="form-label">证书类型</label>
-                            <select class="form-select" id="certificate-type">
-                                <option value="">请选择证书类型</option>
-                                <option value="检定证书">检定证书</option>
-                                <option value="校准证书">校准证书</option>
-                            </select>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                    <button type="button" class="btn btn-primary" id="upload-attachment-btn">
-                        <i class="bi bi-upload"></i> 上传
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 附件管理模态框 -->
-    <div class="modal fade" id="attachment-management-modal" tabindex="-1" style="z-index: 1055;">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">附件管理</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h6>设备附件列表</h6>
-                        <button class="btn btn-primary btn-sm" id="add-attachment-btn">
-                            <i class="bi bi-plus-circle"></i> 上传附件
-                        </button>
-                    </div>
-                    
-                    <div class="table-responsive">
-                        <table class="table table-striped table-sm">
-                            <thead>
-                                <tr>
-                                    <th>文件名</th>
-                                    <th>类型</th>
-                                    <th>大小</th>
-                                    <th>上传时间</th>
-                                    <th>描述</th>
-                                    <th>操作</th>
-                                </tr>
-                            </thead>
-                            <tbody id="attachment-list-tbody">
-                                <tr>
-                                    <td colspan="6" class="text-center text-muted">
-                                        <i class="bi bi-info-circle"></i> 暂无附件
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 附件预览模态框 -->
-    <div class="modal fade" id="attachment-preview-modal" tabindex="-1" style="z-index: 1065;">
-        <div class="modal-dialog modal-xl">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">附件预览</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div id="attachment-preview-content" style="min-height: 500px; display: flex; align-items: center; justify-content: center;">
-                        <div class="text-center">
-                            <i class="bi bi-file-earmark" style="font-size: 3rem;"></i>
-                            <p class="mt-2">加载中...</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" id="download-attachment-btn">
-                        <i class="bi bi-download"></i> 下载
-                    </button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Canvas Confetti -->
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-    <!-- 自定义JS -->
-    <script src="/static/js/app.js"></script>
 </body>
 </html>

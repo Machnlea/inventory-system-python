@@ -1,0 +1,2289 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设备管理 - 设备台账管理系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="/static/js/api-client.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .glass-effect {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .sidebar-item {
+            transition: all 0.2s ease;
+        }
+        .sidebar-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
+        .sidebar-item.active {
+            background: rgba(255, 255, 255, 0.2);
+            border-left: 4px solid #667eea;
+        }
+        .status-badge { @apply px-2 inline-flex text-xs leading-5 font-semibold rounded-full; }
+        .status-normal { @apply bg-green-100 text-green-800; }
+        .status-warning { @apply bg-orange-100 text-orange-800; }
+        .status-overdue { @apply bg-red-100 text-red-800; }
+        .status-inactive { @apply bg-gray-100 text-gray-800; }
+        .row-overdue { @apply bg-red-50 !important; }
+        .row-pending { @apply bg-yellow-50 !important; }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: modalSlideIn 0.3s ease-out;
+        }
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        .equipment-row {
+            position: relative;
+        }
+        
+        .equipment-action-btn {
+            opacity: 0.8;
+        }
+        
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- 顶部通知容器 -->
+    <div id="notification-container" class="fixed top-4 right-4 z-[9999] space-y-2 max-w-md"></div>
+    
+    <div class="flex h-screen">
+        <!-- 左侧导航栏 -->
+        <div class="w-64 gradient-bg shadow-xl fixed left-0 top-0 h-full z-10">
+            <div class="flex flex-col h-full">
+                <!-- Logo和标题 -->
+                <div class="flex items-center justify-center h-16 px-4 border-b border-white/20">
+                    <div class="flex items-center">
+                        <i class="fas fa-clipboard-list text-white text-2xl mr-3"></i>
+                        <h1 class="text-white text-lg font-bold">设备台账管理系统</h1>
+                    </div>
+                </div>
+
+                <!-- 导航菜单 -->
+                <nav class="flex-1 px-4 py-6 space-y-2">
+                    <a href="/dashboard" class="sidebar-item flex items-center px-4 py-3 text-white/90 rounded-lg">
+                        <i class="fas fa-home mr-3 text-lg"></i>
+                        <span>仪表盘</span>
+                    </a>
+                    <a href="/equipment" class="sidebar-item active flex items-center px-4 py-3 text-white rounded-lg">
+                        <i class="fas fa-cogs mr-3 text-lg"></i>
+                        <span>设备管理</span>
+                    </a>
+                    <a href="#" class="sidebar-item flex items-center px-4 py-3 text-white/90 rounded-lg" id="maintenance-link">
+                        <i class="fas fa-tools mr-3 text-lg"></i>
+                        <span>维护记录</span>
+                    </a>
+                    <a href="#" class="sidebar-item flex items-center px-4 py-3 text-white/90 rounded-lg" id="reports-link">
+                        <i class="fas fa-chart-bar mr-3 text-lg"></i>
+                        <span>统计报表</span>
+                    </a>
+                    
+                    <!-- 系统管理下拉菜单 -->
+                    <div class="relative">
+                        <button class="sidebar-item flex items-center justify-between w-full px-4 py-3 text-white/90 rounded-lg" id="system-menu-btn">
+                            <div class="flex items-center">
+                                <i class="fas fa-cog mr-3 text-lg"></i>
+                                <span>系统管理</span>
+                            </div>
+                            <i class="fas fa-chevron-down text-sm transition-transform duration-200" id="system-menu-arrow"></i>
+                        </button>
+                        <div class="ml-4 mt-1 space-y-1 hidden" id="system-submenu">
+                            <a href="/categories" class="sidebar-item flex items-center px-4 py-2 text-white/80 rounded-lg text-sm">
+                                <i class="fas fa-tags mr-3"></i>
+                                <span>设备类别</span>
+                            </a>
+                            <a href="/departments" class="sidebar-item flex items-center px-4 py-2 text-white/80 rounded-lg text-sm">
+                                <i class="fas fa-building mr-3"></i>
+                                <span>部门管理</span>
+                            </a>
+                            <a href="#" class="sidebar-item flex items-center px-4 py-2 text-white/80 rounded-lg text-sm" id="audit-link">
+                                <i class="fas fa-history mr-3"></i>
+                                <span>操作日志</span>
+                            </a>
+                            <a href="#" class="sidebar-item flex items-center px-4 py-2 text-white/80 rounded-lg text-sm" id="settings-link">
+                                <i class="fas fa-cog mr-3"></i>
+                                <span>系统设置</span>
+                            </a>
+                        </div>
+                    </div>
+                </nav>
+
+                <!-- 用户信息 -->
+                <div class="border-t border-white/20 p-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <i class="fas fa-user-circle text-white text-xl mr-3"></i>
+                            <div>
+                                <p class="text-white text-sm font-medium" id="current-user">用户</p>
+                                <p class="text-white/70 text-xs">在线</p>
+                            </div>
+                        </div>
+                        <button class="text-white/70 hover:text-white transition-colors" id="logout-btn">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="flex-1 ml-64 overflow-hidden">
+            <div class="h-full overflow-y-auto">
+                <div class="p-8">
+            
+            <!-- 主要内容 -->
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold text-gray-900 mb-2">设备管理</h2>
+                <p class="text-gray-600">管理所有设备信息，包括设备详情、状态监控和维护计划</p>
+            </div>
+
+            <!-- 搜索和筛选 -->
+            <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+                <div class="flex flex-col lg:flex-row gap-4 mb-4">
+                    <div class="flex-1">
+                        <div class="relative">
+                            <input type="text" id="search-input" placeholder="搜索设备名称、型号、编号..." 
+                                   class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- 筛选器 -->
+                    <div class="flex gap-3">
+                        <select id="department-filter" class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="">全部部门</option>
+                        </select>
+                        
+                        <select id="category-filter" class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="">全部类别</option>
+                        </select>
+                        
+                        <select id="status-filter" class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="">全部状态</option>
+                            <option value="在用" selected>在用</option>
+                            <option value="停用">停用</option>
+                            <option value="报废">报废</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- 操作按钮 -->
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <button class="btn-primary text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all duration-200" onclick="addNewEquipment()">
+                        <i class="fas fa-plus mr-2"></i>添加设备
+                    </button>
+                    <button class="bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all duration-200 transform hover:-translate-y-1" onclick="exportEquipmentData()">
+                        <i class="fas fa-file-excel mr-2"></i>导出数据
+                    </button>
+                    <button class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all duration-200 transform hover:-translate-y-1" onclick="importEquipmentData()">
+                        <i class="fas fa-file-import mr-2"></i>导入数据
+                    </button>
+                    
+                    <!-- 批量操作 -->
+                    <div class="relative">
+                        <button id="batchOperationBtn" class="bg-gradient-to-r from-purple-600 to-purple-700 text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all duration-200 transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                            <i class="fas fa-tasks mr-2"></i>批量操作
+                            <i class="fas fa-chevron-down ml-2"></i>
+                        </button>
+                        <div id="batchDropdown" class="hidden absolute top-full left-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
+                            <button class="w-full text-left px-4 py-2 hover:bg-gray-50 rounded-t-lg" onclick="batchOperation('delete')">
+                                <i class="fas fa-trash text-red-500 mr-2"></i>批量删除
+                            </button>
+                            <button class="w-full text-left px-4 py-2 hover:bg-gray-50" onclick="batchOperation('export')">
+                                <i class="fas fa-download text-blue-500 mr-2"></i>批量导出
+                            </button>
+                            <button class="w-full text-left px-4 py-2 hover:bg-gray-50" onclick="batchOperation('move')">
+                                <i class="fas fa-arrows-alt text-green-500 mr-2"></i>批量转移
+                            </button>
+                            <button class="w-full text-left px-4 py-2 hover:bg-gray-50" onclick="batchOperation('status')">
+                                <i class="fas fa-edit text-yellow-500 mr-2"></i>批量状态更新
+                            </button>
+                            <button class="w-full text-left px-4 py-2 hover:bg-gray-50 rounded-b-lg" onclick="batchOperation('calibration')">
+                                <i class="fas fa-calendar-alt text-purple-500 mr-2"></i>批量更新检定日期
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 信息概览卡片 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+                <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                    <div class="flex items-center">
+                        <div class="p-3 rounded-full bg-blue-100">
+                            <i class="fas fa-cogs text-2xl text-blue-600"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-gray-600 text-sm">设备总数</p>
+                            <p class="text-2xl font-bold text-gray-900" id="equipment-total-count">-</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                    <div class="flex items-center">
+                        <div class="p-3 rounded-full bg-green-100">
+                            <i class="fas fa-check-circle text-2xl text-green-600"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-gray-600 text-sm">正常设备</p>
+                            <p class="text-2xl font-bold text-gray-900" id="equipment-active-count">-</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                    <div class="flex items-center">
+                        <div class="p-3 rounded-full bg-yellow-100">
+                            <i class="fas fa-exclamation-triangle text-2xl text-yellow-600"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-gray-600 text-sm">待检设备</p>
+                            <p class="text-2xl font-bold text-gray-900" id="equipment-monthly-due-count">-</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                    <div class="flex items-center">
+                        <div class="p-3 rounded-full bg-red-100">
+                            <i class="fas fa-times-circle text-2xl text-red-600"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-gray-600 text-sm">超期设备</p>
+                            <p class="text-2xl font-bold text-gray-900" id="equipment-overdue-count">-</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                    <div class="flex items-center">
+                        <div class="p-3 rounded-full bg-gray-100">
+                            <i class="fas fa-ban text-2xl text-gray-600"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-gray-600 text-sm">停用报废</p>
+                            <p class="text-2xl font-bold text-gray-900" id="equipment-inactive-count">-</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 设备列表 -->
+            <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-lg font-semibold text-gray-900">设备列表</h3>
+                        <div class="flex items-center gap-4">
+                            <div class="text-sm text-gray-600">
+                                已选择 <span id="selectedCount" class="font-semibold text-gray-900">0</span> 台设备
+                            </div>
+                            <div class="text-sm text-gray-600">
+                                共 <span id="total-equipment-count" class="font-semibold text-gray-900">-</span> 台设备
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                                    <input type="checkbox" id="selectAll" class="rounded border-gray-300" onchange="toggleSelectAll()">
+                                </th>
+                                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">设备信息</th>
+                                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">计量编号</th>
+                                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">使用部门</th>
+                                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">有效期至</th>
+                                <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700 uppercase tracking-wider">设备状态</th>
+                                <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700 uppercase tracking-wider">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200" id="equipment-table-body">
+                            <!-- 动态加载的设备数据 -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- 分页 -->
+                <div class="bg-white px-6 py-3 border-t border-gray-200 flex items-center justify-between">
+                    <div class="flex-1 flex justify-between sm:hidden">
+                        <button id="mobile-prev-btn" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                            上一页
+                        </button>
+                        <button id="mobile-next-btn" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                            下一页
+                        </button>
+                    </div>
+                    <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                        <div>
+                            <p class="text-sm text-gray-700">
+                                显示第 <span id="page-start-item" class="font-medium">1</span> 到 <span id="page-end-item" class="font-medium">10</span> 项，
+                                共 <span id="page-total-items" class="font-medium">0</span> 项结果
+                            </p>
+                        </div>
+                        <div>
+                            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" id="pagination-nav">
+                                <!-- 动态生成分页按钮 -->
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div>
+        </div>
+    </div>
+
+    <!-- 导出选项模态框 -->
+    <div id="exportModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-900">导出选项</h3>
+                <button class="text-gray-400 hover:text-gray-600" onclick="closeExportModal()">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">选择导出范围</label>
+                    <div class="space-y-2">
+                        <label class="flex items-center">
+                            <input type="radio" name="exportType" value="all" class="mr-2" checked>
+                            <span>导出所有设备数据</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="exportType" value="filtered" class="mr-2">
+                            <span>导出当前筛选条件下的设备</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="exportType" value="selected" class="mr-2">
+                            <span>导出选中的设备</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400" onclick="closeExportModal()">
+                        取消
+                    </button>
+                    <button class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700" onclick="performExport()">
+                        <i class="fas fa-download mr-2"></i>开始导出
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 导入数据模态框 -->
+    <div id="importModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-900">导入设备数据</h3>
+                <button class="text-gray-400 hover:text-gray-600" onclick="closeImportModal()">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-6">
+                    <h4 class="text-md font-medium text-gray-900 mb-4">操作说明</h4>
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <ul class="text-sm text-blue-800 space-y-1">
+                            <li>• 请先下载导入模板，按照模板格式填写数据</li>
+                            <li>• 支持Excel格式(.xlsx, .xls)</li>
+                            <li>• 必填字段：使用部门、设备类别、计量器具名称、型号/规格、检定周期、检定(校准)日期、计量编号、检定方式</li>
+                            <li>• 外检设备需要填写证书编号、检定结果、检定机构、证书形式</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">1. 下载导入模板</label>
+                    <button class="w-full bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-4 hover:bg-gray-50 transition-colors" onclick="downloadTemplate()">
+                        <i class="fas fa-download text-gray-600 text-2xl mb-2"></i>
+                        <p class="text-gray-700">点击下载设备台账导入模板</p>
+                    </button>
+                </div>
+                
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">2. 选择Excel文件</label>
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                        <input type="file" id="importFileInput" class="hidden" accept=".xlsx,.xls" onchange="handleFileSelect(event)">
+                        <i class="fas fa-file-excel text-gray-400 text-3xl mb-3"></i>
+                        <p class="text-gray-600 mb-2">点击选择文件或拖拽文件到此处</p>
+                        <p class="text-sm text-gray-500">支持 .xlsx, .xls 格式</p>
+                        <button class="mt-3 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700" onclick="document.getElementById('importFileInput').click()">
+                            选择文件
+                        </button>
+                    </div>
+                    <div id="selectedFileInfo" class="mt-3 hidden">
+                        <div class="bg-green-50 border border-green-200 rounded-lg p-3">
+                            <p class="text-sm text-green-800">
+                                <i class="fas fa-file-excel mr-2"></i>
+                                已选择文件: <span id="selectedFileName"></span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <label class="flex items-center">
+                        <input type="checkbox" id="overwriteExisting" class="mr-2">
+                        <span class="text-sm text-gray-700">覆盖已存在的设备数据（根据计量编号）</span>
+                    </label>
+                </div>
+                
+                <div class="flex justify-end space-x-3">
+                    <button class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400" onclick="closeImportModal()">
+                        取消
+                    </button>
+                    <button id="importBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed" onclick="performImport()" disabled>
+                        <i class="fas fa-upload mr-2"></i>开始导入
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 导入结果模态框 -->
+    <div id="importResultModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-900">导入结果</h3>
+                <button class="text-gray-400 hover:text-gray-600" onclick="closeImportResultModal()">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-6">
+                    <div class="grid grid-cols-4 gap-4">
+                        <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                            <div class="text-2xl font-bold text-green-600" id="successCount">0</div>
+                            <div class="text-sm text-green-700">导入成功</div>
+                        </div>
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                            <div class="text-2xl font-bold text-blue-600" id="updateCount">0</div>
+                            <div class="text-sm text-blue-700">更新成功</div>
+                        </div>
+                        <div class="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+                            <div class="text-2xl font-bold text-red-600" id="errorCount">0</div>
+                            <div class="text-sm text-red-700">导入失败</div>
+                        </div>
+                        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
+                            <div class="text-2xl font-bold text-gray-600" id="totalCount">0</div>
+                            <div class="text-sm text-gray-700">总计处理</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <h4 class="text-md font-medium text-gray-900 mb-3">详细结果</h4>
+                    <div class="border rounded-lg overflow-hidden">
+                        <div class="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                            <div class="grid grid-cols-12 gap-4 text-sm font-medium text-gray-700">
+                                <div class="col-span-1">行号</div>
+                                <div class="col-span-3">计量编号</div>
+                                <div class="col-span-3">设备名称</div>
+                                <div class="col-span-2">状态</div>
+                                <div class="col-span-3">说明</div>
+                            </div>
+                        </div>
+                        <div id="importResultsList" class="divide-y divide-gray-200 max-h-96 overflow-y-auto">
+                            <!-- 动态加载导入结果 -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end">
+                    <button class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700" onclick="closeImportResultModal()">
+                        关闭
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 附件管理模态框 -->
+    <div id="attachmentModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-900">附件管理</h3>
+                <button class="text-gray-400 hover:text-gray-600" onclick="closeAttachmentModal()">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 class="text-md font-medium text-gray-900">设备: <span id="attachment-equipment-name">-</span></h4>
+                        <button class="btn-primary text-white px-4 py-2 rounded-lg text-sm" onclick="uploadAttachment()">
+                            <i class="fas fa-upload mr-2"></i>上传附件
+                        </button>
+                    </div>
+                    <input type="file" id="attachmentFileInput" class="hidden" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" multiple>
+                </div>
+                
+                <div class="border rounded-lg">
+                    <div class="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                        <div class="grid grid-cols-12 gap-4 text-sm font-medium text-gray-700">
+                            <div class="col-span-1">#</div>
+                            <div class="col-span-4">文件名</div>
+                            <div class="col-span-2">文件大小</div>
+                            <div class="col-span-2">上传时间</div>
+                            <div class="col-span-2">文件类型</div>
+                            <div class="col-span-1">操作</div>
+                        </div>
+                    </div>
+                    <div id="attachment-list" class="divide-y divide-gray-200">
+                        <!-- 动态加载附件列表 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 批量状态更新模态框 -->
+    <div id="batchStatusModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-900">批量状态更新</h3>
+                <button class="text-gray-400 hover:text-gray-600" onclick="closeBatchStatusModal()">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-4">
+                    <p class="text-sm text-gray-600 mb-4">已选择 <span id="batchStatusCount" class="font-semibold text-gray-900">0</span> 台设备</p>
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">新状态</label>
+                        <select id="newStatus" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="">请选择状态</option>
+                            <option value="在用">在用</option>
+                            <option value="停用">停用</option>
+                            <option value="报废">报废</option>
+                        </select>
+                    </div>
+                    
+                    <div id="statusChangeDateDiv" class="mb-4 hidden">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">状态变更时间</label>
+                        <input type="date" id="statusChangeDate" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                </div>
+                
+                <div class="flex justify-end space-x-3">
+                    <button class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400" onclick="closeBatchStatusModal()">
+                        取消
+                    </button>
+                    <button id="batchStatusBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed" onclick="performBatchStatusUpdate()" disabled>
+                        <i class="fas fa-check mr-2"></i>确认更新
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 单个设备检定日期更新模态框 -->
+    <div id="singleCalibrationModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-900">更新检定日期</h3>
+                <button class="text-gray-400 hover:text-gray-600" onclick="closeSingleCalibrationModal()">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-4">
+                    <p class="text-sm text-gray-600 mb-4">设备: <span id="singleCalibrationEquipmentName" class="font-semibold text-gray-900">-</span></p>
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">新检定日期</label>
+                        <input type="date" id="singleCalibrationDate" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <p class="text-sm text-blue-800">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            系统将根据设备原有的检定周期自动计算新的有效期
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end space-x-3">
+                    <button class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400" onclick="closeSingleCalibrationModal()">
+                        取消
+                    </button>
+                    <button id="singleCalibrationBtn" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed" onclick="performSingleCalibrationUpdate()" disabled>
+                        <i class="fas fa-calendar-check mr-2"></i>确认更新
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 批量检定日期更新模态框 -->
+    <div id="batchCalibrationModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-900">批量更新检定日期</h3>
+                <button class="text-gray-400 hover:text-gray-600" onclick="closeBatchCalibrationModal()">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-4">
+                    <p class="text-sm text-gray-600 mb-4">已选择 <span id="batchCalibrationCount" class="font-semibold text-gray-900">0</span> 台设备</p>
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">新检定日期</label>
+                        <input type="date" id="newCalibrationDate" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <p class="text-sm text-blue-800">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            系统将根据设备原有的检定周期自动计算新的有效期
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end space-x-3">
+                    <button class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400" onclick="closeBatchCalibrationModal()">
+                        取消
+                    </button>
+                    <button id="batchCalibrationBtn" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed" onclick="performBatchCalibrationUpdate()" disabled>
+                        <i class="fas fa-calendar-check mr-2"></i>确认更新
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let currentPage = 1;
+        let itemsPerPage = 100;
+        let totalItems = 0;
+        let currentFilters = {};
+        let currentSort = { field: 'valid_until', order: 'asc' };
+        let selectedEquipment = [];
+        let departments = [];
+        let categories = [];
+        let currentEquipmentId = null;
+
+        // 检查 API 客户端是否加载完成
+        function checkApiClientLoaded() {
+            return new Promise((resolve) => {
+                const checkInterval = setInterval(() => {
+                    if (window.ImportExportAPI && window.EquipmentAPI && window.DepartmentAPI && window.CategoryAPI && window.DashboardAPI && window.AttachmentAPI) {
+                        clearInterval(checkInterval);
+                        resolve();
+                    }
+                }, 100);
+                
+                // 10秒后超时
+                setTimeout(() => {
+                    clearInterval(checkInterval);
+                    resolve();
+                }, 10000);
+            });
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // 等待 API 客户端加载完成
+                await checkApiClientLoaded();
+                
+                // 再次检查 ImportExportAPI 是否存在
+                if (!window.ImportExportAPI) {
+                    console.error('ImportExportAPI 未定义，请检查 api-client.js 是否正确加载');
+                    showNotification('API 客户端加载失败，请刷新页面重试', 'error');
+                    return;
+                }
+                
+                await initializePage();
+                await loadEquipmentData();
+                setupEventListeners();
+            } catch (error) {
+                console.error('页面初始化失败:', error);
+                showNotification('页面初始化失败，请刷新页面重试', 'error');
+            }
+        });
+
+        // 初始化页面
+        async function initializePage() {
+            try {
+                // 加载部门和类别数据
+                const [departmentsData, categoriesData] = await Promise.all([
+                    DepartmentAPI.getDepartments(),
+                    CategoryAPI.getCategories()
+                ]);
+                
+                departments = departmentsData;
+                categories = categoriesData;
+                
+                // 填充筛选器
+                populateFilters();
+                
+                // 加载仪表盘统计数据
+                await loadDashboardStats();
+                
+                // 延迟更新设备到期背景色，确保DOM已渲染
+                setTimeout(() => {
+                    updateEquipmentExpiryBackground();
+                }, 100);
+                
+            } catch (error) {
+                console.error('初始化失败:', error);
+                showNotification('初始化失败: ' + error.message, 'error');
+            }
+        }
+
+        // 填充筛选器
+        function populateFilters() {
+            const departmentFilter = document.getElementById('department-filter');
+            const categoryFilter = document.getElementById('category-filter');
+            
+            // 清空现有选项
+            departmentFilter.innerHTML = '<option value="">全部部门</option>';
+            categoryFilter.innerHTML = '<option value="">全部类别</option>';
+            
+            // 添加部门选项
+            departments.forEach(dept => {
+                const option = document.createElement('option');
+                option.value = dept.id;
+                option.textContent = dept.name;
+                departmentFilter.appendChild(option);
+            });
+            
+            // 添加类别选项
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.id;
+                option.textContent = cat.name;
+                categoryFilter.appendChild(option);
+            });
+        }
+
+        // 加载仪表盘统计数据
+        async function loadDashboardStats() {
+            try {
+                const stats = await DashboardAPI.getStats();
+                
+                // 更新统计卡片
+                document.getElementById('equipment-total-count').textContent = stats.total_equipment_count;
+                document.getElementById('equipment-active-count').textContent = stats.active_equipment_count;
+                document.getElementById('equipment-monthly-due-count').textContent = stats.monthly_due_count;
+                document.getElementById('equipment-overdue-count').textContent = stats.overdue_count;
+                document.getElementById('equipment-inactive-count').textContent = stats.inactive_count;
+                document.getElementById('total-equipment-count').textContent = stats.total_equipment_count;
+                
+            } catch (error) {
+                console.error('加载统计数据失败:', error);
+                // 显示默认值
+                document.getElementById('equipment-total-count').textContent = '-';
+                document.getElementById('equipment-active-count').textContent = '-';
+                document.getElementById('equipment-monthly-due-count').textContent = '-';
+                document.getElementById('equipment-overdue-count').textContent = '-';
+                document.getElementById('equipment-inactive-count').textContent = '-';
+                document.getElementById('total-equipment-count').textContent = '-';
+            }
+        }
+
+        // 加载设备数据
+        async function loadEquipmentData() {
+            try {
+                showNotification('正在加载设备数据...', 'info');
+                
+                // 构建筛选条件
+                const filters = buildFilters();
+                
+                console.log('=== 设备数据加载调试信息 ===');
+                console.log('当前页码:', currentPage);
+                console.log('每页条数:', itemsPerPage);
+                console.log('筛选条件:', filters);
+                console.log('排序条件:', currentSort);
+                
+                // 确认默认状态筛选器值
+                const statusFilter = document.getElementById('status-filter');
+                console.log('状态筛选器当前值:', statusFilter.value);
+                console.log('状态筛选器是否选择了"在用":', statusFilter.value === '在用');
+                
+                // 获取设备数据
+                let response;
+                if (filters.query) {
+                    // 如果有搜索查询，使用搜索接口
+                    console.log('使用搜索接口');
+                    response = await EquipmentAPI.searchEquipments(filters, {
+                        skip: (currentPage - 1) * itemsPerPage,
+                        limit: itemsPerPage,
+                        sort_field: currentSort.field,
+                        sort_order: currentSort.order
+                    });
+                } else {
+                    // 否则使用筛选接口
+                    console.log('使用筛选接口');
+                    response = await EquipmentAPI.filterEquipments(filters, {
+                        skip: (currentPage - 1) * itemsPerPage,
+                        limit: itemsPerPage,
+                        sort_field: currentSort.field,
+                        sort_order: currentSort.order
+                    });
+                }
+                
+                const { items, total } = response;
+                totalItems = total;
+                
+                console.log('API响应数据:');
+                console.log('- 返回设备数量:', items.length);
+                console.log('- 总设备数量:', total);
+                console.log('- 当前页码范围:', (currentPage - 1) * itemsPerPage + 1, '-', currentPage * itemsPerPage);
+                
+                // 检查是否有本月待检设备
+                const now = new Date();
+                const currentMonth = now.getMonth();
+                const currentYear = now.getFullYear();
+                
+                const monthlyDueEquipments = items.filter(equipment => {
+                    if (!equipment.valid_until) return false;
+                    
+                    const expiryDate = new Date(equipment.valid_until);
+                    return expiryDate.getMonth() === currentMonth && expiryDate.getFullYear() === currentYear;
+                });
+                
+                console.log('本月待检设备检查:');
+                console.log('- 本月待检设备数量:', monthlyDueEquipments.length);
+                console.log('- 当前月份:', currentMonth + 1);
+                console.log('- 当前年份:', currentYear);
+                
+                if (monthlyDueEquipments.length > 0) {
+                    console.log('本月待检设备详情:');
+                    monthlyDueEquipments.forEach((equipment, index) => {
+                        console.log(`  ${index + 1}. ${equipment.name} - 有效期至: ${equipment.valid_until}`);
+                    });
+                }
+                
+                // 渲染设备表格
+                renderEquipmentTable(items);
+                
+                // 更新分页
+                updatePagination();
+                
+                // 更新设备到期背景色
+                updateEquipmentExpiryBackground();
+                
+                showNotification('设备数据加载成功', 'success');
+                
+            } catch (error) {
+                console.error('加载设备数据失败:', error);
+                showNotification('加载设备数据失败: ' + error.message, 'error');
+                renderEquipmentTable([]); // 显示空表格
+            }
+        }
+
+        // 构建筛选条件
+        function buildFilters() {
+            const filters = {};
+            
+            const departmentId = document.getElementById('department-filter').value;
+            const categoryId = document.getElementById('category-filter').value;
+            const status = document.getElementById('status-filter').value;
+            const searchQuery = document.getElementById('search-input').value.trim();
+            
+            console.log('筛选器原始值:');
+            console.log('- 部门ID:', departmentId);
+            console.log('- 类别ID:', categoryId);
+            console.log('- 状态:', status);
+            console.log('- 搜索查询:', searchQuery);
+            
+            if (departmentId) filters.department_id = parseInt(departmentId);
+            if (categoryId) filters.category_id = parseInt(categoryId);
+            if (status) filters.status = status;
+            if (searchQuery) filters.query = searchQuery;
+            
+            console.log('构建的筛选条件:', filters);
+            
+            return filters;
+        }
+
+        // 渲染设备表格
+        function renderEquipmentTable(equipments) {
+            const tableBody = document.getElementById('equipment-table-body');
+            
+            if (!equipments || equipments.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="px-6 py-4 text-center text-gray-500">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            暂无设备数据
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tableBody.innerHTML = equipments.map(equipment => {
+                const departmentName = equipment.department ? equipment.department.name : '未知部门';
+                const categoryName = equipment.category ? equipment.category.name : '其他';
+                const accuracyLevel = equipment.accuracy_level || '未设置';
+                const measurementRange = equipment.measurement_range || '未设置';
+                const calibrationMethod = equipment.calibration_method || '内检';
+                
+                return `
+                    <tr class="hover:bg-gray-50 equipment-row" data-expiry-date="${equipment.valid_until || ''}">
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <input type="checkbox" class="equipment-checkbox rounded border-gray-300" 
+                                   value="${equipment.id}" onchange="updateSelectedCount()">
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-left">
+                            <div class="flex items-center">
+                                <div class="h-10 w-10 flex-shrink-0">
+                                    <div class="h-10 w-10 rounded-full ${getCategoryColor(categoryName)} flex items-center justify-center">
+                                        <i class="fas ${getCategoryIcon(categoryName)} ${getIconColor(categoryName)}"></i>
+                                    </div>
+                                </div>
+                                <div class="ml-4">
+                                    <div class="text-sm font-medium text-gray-900">${equipment.name || '未知设备'}</div>
+                                    <div class="text-sm text-gray-500">型号: ${equipment.model || '未知'}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-left">${equipment.serial_number || '-'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-left">${departmentName}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-left">${formatDate(equipment.valid_until)}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusStyle(equipment.status)}">${equipment.status || '未知'}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2 text-center">
+                            <button class="equipment-action-btn text-gray-600 hover:text-gray-900 relative" title="管理附件" 
+                                    onclick="manageAttachments('${equipment.id}', '${equipment.name || '设备'}')"
+                                    data-equipment-id="${equipment.id}">
+                                <i class="fas fa-paperclip"></i>
+                                <span class="attachment-count absolute -top-2 -right-2 bg-blue-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center loading">-</span>
+                            </button>
+                            <button class="equipment-action-btn text-indigo-600 hover:text-indigo-900" title="查看详情" onclick="viewEquipment('${equipment.id}')">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="equipment-action-btn text-green-600 hover:text-green-900" title="编辑" onclick="editEquipment('${equipment.id}')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="equipment-action-btn text-purple-600 hover:text-purple-900" title="更新检定日期" onclick="updateCalibrationDate('${equipment.id}')">
+                                <i class="fas fa-calendar-alt"></i>
+                            </button>
+                            <button class="equipment-action-btn text-red-600 hover:text-red-900" title="删除" onclick="deleteEquipment('${equipment.id}', '${equipment.name || '设备'}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            
+            // 加载附件数量
+            setTimeout(() => loadEquipmentAttachmentCounts(equipments.map(eq => eq.id)), 200);
+        }
+
+        // 加载设备附件数量
+        async function loadEquipmentAttachmentCounts(equipmentIds) {
+            try {
+                const promises = equipmentIds.map(async (id) => {
+                    try {
+                        const attachments = await AttachmentAPI.getEquipmentAttachments(id);
+                        updateEquipmentAttachmentCount(id, attachments.length);
+                    } catch (error) {
+                        console.error(`加载设备 ${id} 附件数量失败:`, error);
+                        updateEquipmentAttachmentCount(id, 0);
+                    }
+                });
+                
+                await Promise.all(promises);
+            } catch (error) {
+                console.error('批量加载附件数量失败:', error);
+            }
+        }
+
+        // 更新设备附件数量显示
+        function updateEquipmentAttachmentCount(equipmentId, count) {
+            const button = document.querySelector(`button[data-equipment-id="${equipmentId}"] .attachment-count`);
+            if (button) {
+                button.textContent = count;
+                button.classList.remove('loading');
+                
+                // 根据附件数量更新样式
+                if (count === 0) {
+                    button.classList.add('bg-gray-400');
+                    button.classList.remove('bg-blue-500');
+                } else {
+                    button.classList.add('bg-blue-500');
+                    button.classList.remove('bg-gray-400');
+                }
+                
+                // 更新title属性
+                button.parentElement.title = `管理附件 (${count}个文件)`;
+            }
+        }
+
+        // 更新设备到期背景色
+        function updateEquipmentExpiryBackground() {
+            const equipmentRows = document.querySelectorAll('.equipment-row');
+            const now = new Date();
+            const currentMonth = now.getMonth();
+            const currentYear = now.getFullYear();
+            
+            console.log('=== 设备背景色更新调试信息 ===');
+            console.log('当前时间:', now.toLocaleString());
+            console.log('当前月份:', currentMonth + 1);
+            console.log('当前年份:', currentYear);
+            console.log('找到设备行数量:', equipmentRows.length);
+            
+            let overdueCount = 0;
+            let monthlyDueCount = 0;
+            let normalCount = 0;
+            
+            equipmentRows.forEach(row => {
+                const expiryDateStr = row.getAttribute('data-expiry-date');
+                if (!expiryDateStr) {
+                    console.log('设备行没有有效期日期:', row);
+                    return;
+                }
+                
+                // 解析日期，支持多种格式
+                let expiryDate;
+                if (expiryDateStr.includes('T')) {
+                    // ISO格式 (2025-08-07T00:00:00)
+                    expiryDate = new Date(expiryDateStr);
+                } else {
+                    // 简单格式 (2025-08-07)
+                    const [year, month, day] = expiryDateStr.split('-').map(num => parseInt(num, 10));
+                    expiryDate = new Date(year, month - 1, day);
+                }
+                
+                if (isNaN(expiryDate.getTime())) {
+                    console.log('无效的日期格式:', expiryDateStr);
+                    return;
+                }
+                
+                // 获取设备名称用于调试
+                const equipmentName = row.querySelector('td:nth-child(2) .text-sm.font-medium')?.textContent || '未知设备';
+                
+                // 检查设备状态
+                const isOverdue = expiryDate < now;
+                const isMonthlyDue = expiryDate.getMonth() === currentMonth && expiryDate.getFullYear() === currentYear;
+                
+                console.log(`设备: ${equipmentName}`);
+                console.log(`  有效期: ${expiryDate.toLocaleString()}`);
+                console.log(`  是否超期: ${isOverdue}`);
+                console.log(`  是否本月待检: ${isMonthlyDue}`);
+                
+                // 移除现有的背景色类
+                row.classList.remove('bg-red-50', 'bg-yellow-50', 'bg-red-100', 'bg-yellow-100', 'bg-green-100');
+                
+                // 优先级：超期 > 本月待检 > 正常
+                if (isOverdue) {
+                    // 超期未检 - 淡红色背景（最高优先级）
+                    row.classList.add('bg-red-50');
+                    overdueCount++;
+                    console.log(`  -> 标记为超期（红色背景）`);
+                    
+                    // 如果同时也是本月待检，特别标注
+                    if (isMonthlyDue) {
+                        console.log(`  -> 注意：此设备既是超期又是本月待检！`);
+                    }
+                } 
+                else if (isMonthlyDue) {
+                    // 本月待检 - 淡黄色背景
+                    row.classList.add('bg-yellow-50');
+                    monthlyDueCount++;
+                    console.log(`  -> 标记为本月待检（黄色背景）`);
+                } else {
+                    // 正常状态
+                    normalCount++;
+                    console.log(`  -> 正常状态（无背景色）`);
+                }
+            });
+            
+            console.log('=== 背景色统计 ===');
+            console.log(`超期设备: ${overdueCount} 台`);
+            console.log(`本月待检设备: ${monthlyDueCount} 台`);
+            console.log(`正常设备: ${normalCount} 台`);
+            console.log(`总计: ${overdueCount + monthlyDueCount + normalCount} 台`);
+        }
+
+        // 获取设备状态样式
+        function getStatusStyle(status) {
+            switch(status) {
+                case '在用': return 'bg-green-100 text-green-800';
+                case '停用': return 'bg-gray-100 text-gray-800';
+                case '报废': return 'bg-red-100 text-red-800';
+                default: return 'bg-gray-100 text-gray-800';
+            }
+        }
+
+        // 获取设备类别图标
+        function getCategoryIcon(categoryName) {
+            const iconMap = {
+                '压力表': 'fa-gauge',
+                '温度计': 'fa-thermometer-half',
+                '电子秤': 'fa-balance-scale',
+                '卡尺': 'fa-tachometer-alt',
+                '万用表': 'fa-microchip',
+                '游标卡尺': 'fa-tachometer-alt'
+            };
+            return iconMap[categoryName] || 'fa-cogs';
+        }
+
+        // 获取图标颜色
+        function getIconColor(categoryName) {
+            const colorMap = {
+                '压力表': 'text-blue-600',
+                '温度计': 'text-yellow-600',
+                '电子秤': 'text-red-600',
+                '卡尺': 'text-green-600',
+                '万用表': 'text-purple-600',
+                '游标卡尺': 'text-green-600'
+            };
+            return colorMap[categoryName] || 'text-gray-600';
+        }
+
+        // 获取类别背景色
+        function getCategoryColor(categoryName) {
+            const colorMap = {
+                '压力表': 'bg-blue-100',
+                '温度计': 'bg-yellow-100',
+                '电子秤': 'bg-red-100',
+                '卡尺': 'bg-green-100',
+                '万用表': 'bg-purple-100',
+                '游标卡尺': 'bg-green-100'
+            };
+            return colorMap[categoryName] || 'bg-gray-100';
+        }
+
+        // 格式化日期
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            
+            // 如果是ISO 8601格式（包含T），转换为本地时间格式
+            if (dateString.includes('T')) {
+                let date;
+                
+                // 检查是否包含时区信息
+                if (dateString.includes('Z')) {
+                    // UTC时间（带Z后缀）
+                    date = new Date(dateString);
+                } else if (dateString.includes('+')) {
+                    // 带时区偏移的时间
+                    date = new Date(dateString);
+                } else {
+                    // 没有时区信息，假设是UTC时间
+                    date = new Date(dateString + 'Z');
+                }
+                
+                if (isNaN(date.getTime())) return dateString; // 如果日期无效，返回原字符串
+                
+                // 格式化为本地时间：YYYY-MM-DD HH:mm:ss
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                const seconds = String(date.getSeconds()).padStart(2, '0');
+                
+                return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+            }
+            
+            // 如果不是ISO格式，直接返回
+            return dateString;
+        }
+
+        // 更新分页
+        function updatePagination() {
+            const totalPages = Math.ceil(totalItems / itemsPerPage);
+            const startItem = (currentPage - 1) * itemsPerPage + 1;
+            const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+            
+            // 更新分页信息
+            document.getElementById('page-start-item').textContent = totalItems > 0 ? startItem : 0;
+            document.getElementById('page-end-item').textContent = endItem;
+            document.getElementById('page-total-items').textContent = totalItems;
+            
+            // 生成分页按钮
+            const paginationNav = document.getElementById('pagination-nav');
+            paginationNav.innerHTML = '';
+            
+            // 上一页按钮
+            const prevBtn = document.createElement('button');
+            prevBtn.className = `relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 ${currentPage === 1 ? 'cursor-not-allowed opacity-50' : ''}`;
+            prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
+            prevBtn.disabled = currentPage === 1;
+            prevBtn.onclick = () => changePage(currentPage - 1);
+            paginationNav.appendChild(prevBtn);
+            
+            // 页码按钮
+            const maxVisiblePages = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+            let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+            
+            if (endPage - startPage + 1 < maxVisiblePages) {
+                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+            }
+            
+            if (startPage > 1) {
+                const firstBtn = createPageButton(1);
+                paginationNav.appendChild(firstBtn);
+                
+                if (startPage > 2) {
+                    const ellipsis = document.createElement('span');
+                    ellipsis.className = 'relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700';
+                    ellipsis.textContent = '...';
+                    paginationNav.appendChild(ellipsis);
+                }
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                const pageBtn = createPageButton(i);
+                paginationNav.appendChild(pageBtn);
+            }
+            
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    const ellipsis = document.createElement('span');
+                    ellipsis.className = 'relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700';
+                    ellipsis.textContent = '...';
+                    paginationNav.appendChild(ellipsis);
+                }
+                
+                const lastBtn = createPageButton(totalPages);
+                paginationNav.appendChild(lastBtn);
+            }
+            
+            // 下一页按钮
+            const nextBtn = document.createElement('button');
+            nextBtn.className = `relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 ${currentPage === totalPages ? 'cursor-not-allowed opacity-50' : ''}`;
+            nextBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+            nextBtn.disabled = currentPage === totalPages;
+            nextBtn.onclick = () => changePage(currentPage + 1);
+            paginationNav.appendChild(nextBtn);
+        }
+
+        // 创建页码按钮
+        function createPageButton(pageNum) {
+            const button = document.createElement('button');
+            button.className = `relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                pageNum === currentPage 
+                    ? 'z-10 bg-blue-50 border-blue-500 text-blue-600' 
+                    : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+            }`;
+            button.textContent = pageNum;
+            button.onclick = () => changePage(pageNum);
+            return button;
+        }
+
+        // 切换页面
+        async function changePage(page) {
+            const totalPages = Math.ceil(totalItems / itemsPerPage);
+            if (page < 1 || page > totalPages) return;
+            
+            currentPage = page;
+            await loadEquipmentData();
+        }
+
+        // 设置事件监听器
+        function setupEventListeners() {
+            // 搜索输入框
+            let searchTimeout;
+            document.getElementById('search-input').addEventListener('input', function() {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    currentPage = 1;
+                    loadEquipmentData();
+                }, 500);
+            });
+            
+            // 筛选器
+            ['department-filter', 'category-filter', 'status-filter'].forEach(id => {
+                document.getElementById(id).addEventListener('change', function() {
+                    currentPage = 1;
+                    loadEquipmentData();
+                });
+            });
+            
+            // 批量操作下拉菜单
+            const batchOperationBtn = document.getElementById('batchOperationBtn');
+            const batchDropdown = document.getElementById('batchDropdown');
+            
+            batchOperationBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                batchDropdown.classList.toggle('hidden');
+            });
+            
+            // 点击其他地方关闭下拉菜单
+            document.addEventListener('click', function() {
+                batchDropdown.classList.add('hidden');
+            });
+            
+            // 侧边栏导航
+            setupSidebarNavigation();
+        }
+
+        // 设置侧边栏导航
+        function setupSidebarNavigation() {
+            // 系统管理下拉菜单
+            const systemMenuBtn = document.getElementById('system-menu-btn');
+            const systemSubmenu = document.getElementById('system-submenu');
+            const systemMenuArrow = document.getElementById('system-menu-arrow');
+            
+            if (systemMenuBtn) {
+                systemMenuBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    systemSubmenu.classList.toggle('hidden');
+                    
+                    if (systemSubmenu.classList.contains('hidden')) {
+                        systemMenuArrow.style.transform = 'rotate(0deg)';
+                    } else {
+                        systemMenuArrow.style.transform = 'rotate(180deg)';
+                    }
+                });
+            }
+            
+            // 退出登录
+            const logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', function() {
+                    if (confirm('确定要退出登录吗？')) {
+                        localStorage.removeItem('access_token');
+                        localStorage.removeItem('refresh_token');
+                        localStorage.removeItem('user_info');
+                        window.location.href = '/login';
+                    }
+                });
+            }
+            
+            // 检查登录状态
+            const userInfo = localStorage.getItem('user_info');
+            if (userInfo) {
+                const user = JSON.parse(userInfo);
+                const currentUserElement = document.getElementById('current-user');
+                if (currentUserElement) {
+                    currentUserElement.textContent = user.username || '用户';
+                }
+            }
+        }
+
+        // 全选/取消全选
+        function toggleSelectAll() {
+            const selectAllCheckbox = document.getElementById('selectAll');
+            const equipmentCheckboxes = document.querySelectorAll('.equipment-checkbox');
+            
+            equipmentCheckboxes.forEach(checkbox => {
+                checkbox.checked = selectAllCheckbox.checked;
+            });
+            
+            updateSelectedCount();
+        }
+
+        // 更新选中数量
+        function updateSelectedCount() {
+            const selectedCheckboxes = document.querySelectorAll('.equipment-checkbox:checked');
+            const selectedCount = selectedCheckboxes.length;
+            
+            document.getElementById('selectedCount').textContent = selectedCount;
+            
+            // 更新批量操作按钮状态
+            const batchOperationBtn = document.getElementById('batchOperationBtn');
+            batchOperationBtn.disabled = selectedCount === 0;
+            
+            // 更新全选框状态
+            const totalCheckboxes = document.querySelectorAll('.equipment-checkbox');
+            const selectAllCheckbox = document.getElementById('selectAll');
+            
+            if (selectedCount === 0) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = false;
+            } else if (selectedCount === totalCheckboxes.length) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = true;
+            } else {
+                selectAllCheckbox.indeterminate = true;
+            }
+        }
+
+        // 添加新设备
+        function addNewEquipment() {
+            window.location.href = '/equipment/edit?mode=add';
+        }
+
+        // 查看设备详情
+        function viewEquipment(equipmentId) {
+            window.location.href = `/equipment/view?id=${equipmentId}`;
+        }
+
+        // 编辑设备
+        function editEquipment(equipmentId) {
+            window.location.href = `/equipment/edit?id=${equipmentId}`;
+        }
+
+        // 更新检定日期
+        function updateCalibrationDate(equipmentId) {
+            // 打开单个设备检定日期更新模态框
+            openSingleCalibrationModal(equipmentId);
+        }
+
+        // 删除设备
+        function deleteEquipment(equipmentId, equipmentName) {
+            if (confirm(`确定要删除设备 "${equipmentName}" 吗？此操作不可恢复。`)) {
+                showNotification(`正在删除设备 ${equipmentName}...`, 'info');
+                
+                EquipmentAPI.deleteEquipment(equipmentId)
+                    .then(async () => {
+                        showNotification(`设备 ${equipmentName} 删除成功`, 'success');
+                        loadEquipmentData(); // 重新加载数据
+                        await loadDashboardStats(); // 刷新统计数据
+                    })
+                    .catch(error => {
+                        console.error('删除设备失败:', error);
+                        showNotification('删除设备失败: ' + error.message, 'error');
+                    });
+            }
+        }
+
+        // 批量操作
+        function batchOperation(operation) {
+            const selectedCheckboxes = document.querySelectorAll('.equipment-checkbox:checked');
+            const selectedIds = Array.from(selectedCheckboxes).map(cb => parseInt(cb.value));
+            
+            if (selectedIds.length === 0) {
+                showNotification('请先选择要操作的设备', 'warning');
+                return;
+            }
+            
+            switch (operation) {
+                case 'delete':
+                    if (confirm(`确定要删除选中的 ${selectedIds.length} 台设备吗？此操作不可恢复。`)) {
+                        performBatchDelete(selectedIds);
+                    }
+                    break;
+                case 'export':
+                    performBatchExport(selectedIds);
+                    break;
+                case 'move':
+                    showNotification('批量转移功能开发中...', 'info');
+                    break;
+                case 'status':
+                    openBatchStatusModal(selectedIds);
+                    break;
+                case 'calibration':
+                    openBatchCalibrationModal(selectedIds);
+                    break;
+            }
+        }
+
+        // 执行批量删除
+        async function performBatchDelete(equipmentIds) {
+            try {
+                showNotification('正在批量删除设备...', 'info');
+                
+                await EquipmentAPI.batchDelete({ equipment_ids: equipmentIds });
+                
+                showNotification(`成功删除 ${equipmentIds.length} 台设备`, 'success');
+                loadEquipmentData(); // 重新加载数据
+                await loadDashboardStats(); // 刷新统计数据
+                
+            } catch (error) {
+                console.error('批量删除失败:', error);
+                showNotification('批量删除失败: ' + error.message, 'error');
+            }
+        }
+
+        // 执行批量导出
+        async function performBatchExport(equipmentIds) {
+            try {
+                showNotification('正在批量导出设备数据...', 'info');
+                
+                await EquipmentAPI.batchExport({ equipment_ids: equipmentIds });
+                
+                showNotification('设备数据导出成功', 'success');
+                
+            } catch (error) {
+                console.error('批量导出失败:', error);
+                showNotification('批量导出失败: ' + error.message, 'error');
+            }
+        }
+
+        // 打开批量状态更新模态框
+        function openBatchStatusModal(equipmentIds) {
+            document.getElementById('batchStatusCount').textContent = equipmentIds.length;
+            document.getElementById('newStatus').value = '';
+            
+            // 设置默认日期为今天
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('statusChangeDate').value = today;
+            
+            document.getElementById('statusChangeDateDiv').classList.add('hidden');
+            document.getElementById('batchStatusBtn').disabled = true;
+            document.getElementById('batchStatusModal').classList.add('show');
+            
+            // 存储选中的设备ID
+            window.batchStatusEquipmentIds = equipmentIds;
+        }
+
+        // 关闭批量状态更新模态框
+        function closeBatchStatusModal() {
+            document.getElementById('batchStatusModal').classList.remove('show');
+            window.batchStatusEquipmentIds = null;
+        }
+
+        // 执行批量状态更新
+        async function performBatchStatusUpdate() {
+            const newStatus = document.getElementById('newStatus').value;
+            const statusChangeDate = document.getElementById('statusChangeDate').value;
+            
+            if (!newStatus) {
+                showNotification('请选择新状态', 'warning');
+                return;
+            }
+            
+            if ((newStatus === '停用' || newStatus === '报废') && !statusChangeDate) {
+                showNotification('停用或报废状态必须填写状态变更时间', 'warning');
+                return;
+            }
+            
+            try {
+                showNotification('正在批量更新设备状态...', 'info');
+                document.getElementById('batchStatusBtn').disabled = true;
+                
+                const requestData = {
+                    equipment_ids: window.batchStatusEquipmentIds,
+                    status: newStatus
+                };
+                
+                if (statusChangeDate) {
+                    requestData.status_change_date = statusChangeDate;
+                }
+                
+                await EquipmentAPI.batchChangeStatus(requestData);
+                
+                showNotification(`成功更新 ${window.batchStatusEquipmentIds.length} 台设备状态`, 'success');
+                closeBatchStatusModal();
+                loadEquipmentData(); // 重新加载数据
+                await loadDashboardStats(); // 刷新统计数据
+                
+            } catch (error) {
+                console.error('批量状态更新失败:', error);
+                showNotification('批量状态更新失败: ' + error.message, 'error');
+                document.getElementById('batchStatusBtn').disabled = false;
+            }
+        }
+
+        // 打开批量检定日期更新模态框
+        function openBatchCalibrationModal(equipmentIds) {
+            document.getElementById('batchCalibrationCount').textContent = equipmentIds.length;
+            
+            // 设置默认日期为今天
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('newCalibrationDate').value = today;
+            
+            document.getElementById('batchCalibrationBtn').disabled = false;
+            document.getElementById('batchCalibrationModal').classList.add('show');
+            
+            // 存储选中的设备ID
+            window.batchCalibrationEquipmentIds = equipmentIds;
+        }
+
+        // 关闭批量检定日期更新模态框
+        function closeBatchCalibrationModal() {
+            document.getElementById('batchCalibrationModal').classList.remove('show');
+            window.batchCalibrationEquipmentIds = null;
+        }
+
+        // 打开单个设备检定日期更新模态框
+        function openSingleCalibrationModal(equipmentId) {
+            // 获取设备信息
+            const equipmentRow = document.querySelector(`input[value="${equipmentId}"]`).closest('tr');
+            const equipmentName = equipmentRow.querySelector('.text-sm.font-medium.text-gray-900').textContent;
+            
+            document.getElementById('singleCalibrationEquipmentName').textContent = equipmentName;
+            
+            // 设置默认日期为今天
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('singleCalibrationDate').value = today;
+            
+            document.getElementById('singleCalibrationBtn').disabled = false;
+            document.getElementById('singleCalibrationModal').classList.add('show');
+            
+            // 存储设备ID
+            window.singleCalibrationEquipmentId = equipmentId;
+        }
+
+        // 关闭单个设备检定日期更新模态框
+        function closeSingleCalibrationModal() {
+            document.getElementById('singleCalibrationModal').classList.remove('show');
+            window.singleCalibrationEquipmentId = null;
+        }
+
+        // 执行单个设备检定日期更新
+        async function performSingleCalibrationUpdate() {
+            const newCalibrationDate = document.getElementById('singleCalibrationDate').value;
+            
+            if (!newCalibrationDate) {
+                showNotification('请选择新检定日期', 'warning');
+                return;
+            }
+            
+            try {
+                showNotification('正在更新检定日期...', 'info');
+                document.getElementById('singleCalibrationBtn').disabled = true;
+                
+                const requestData = {
+                    equipment_ids: [window.singleCalibrationEquipmentId],
+                    calibration_date: newCalibrationDate
+                };
+                
+                await EquipmentAPI.batchUpdateCalibration(requestData);
+                
+                showNotification('检定日期更新成功', 'success');
+                closeSingleCalibrationModal();
+                loadEquipmentData(); // 重新加载数据
+                await loadDashboardStats(); // 刷新统计数据
+                
+            } catch (error) {
+                console.error('检定日期更新失败:', error);
+                showNotification('检定日期更新失败: ' + error.message, 'error');
+                document.getElementById('singleCalibrationBtn').disabled = false;
+            }
+        }
+
+        // 执行批量检定日期更新
+        async function performBatchCalibrationUpdate() {
+            const newCalibrationDate = document.getElementById('newCalibrationDate').value;
+            
+            if (!newCalibrationDate) {
+                showNotification('请选择新检定日期', 'warning');
+                return;
+            }
+            
+            try {
+                showNotification('正在批量更新检定日期...', 'info');
+                document.getElementById('batchCalibrationBtn').disabled = true;
+                
+                const requestData = {
+                    equipment_ids: window.batchCalibrationEquipmentIds,
+                    calibration_date: newCalibrationDate
+                };
+                
+                await EquipmentAPI.batchUpdateCalibration(requestData);
+                
+                showNotification(`成功更新 ${window.batchCalibrationEquipmentIds.length} 台设备检定日期`, 'success');
+                closeBatchCalibrationModal();
+                loadEquipmentData(); // 重新加载数据
+                await loadDashboardStats(); // 刷新统计数据
+                
+            } catch (error) {
+                console.error('批量检定日期更新失败:', error);
+                showNotification('批量检定日期更新失败: ' + error.message, 'error');
+                document.getElementById('batchCalibrationBtn').disabled = false;
+            }
+        }
+
+        // 管理附件
+        function manageAttachments(equipmentId, equipmentName) {
+            currentEquipmentId = equipmentId;
+            document.getElementById('attachment-equipment-name').textContent = equipmentName;
+            document.getElementById('attachmentModal').classList.add('show');
+            loadAttachmentsForModal(equipmentId);
+        }
+
+        // 关闭附件管理模态框
+        function closeAttachmentModal() {
+            document.getElementById('attachmentModal').classList.remove('show');
+            currentEquipmentId = null;
+        }
+
+        // 加载附件列表
+        async function loadAttachments(equipmentId) {
+            try {
+                const attachments = await AttachmentAPI.getEquipmentAttachments(equipmentId);
+                renderAttachmentList(attachments);
+            } catch (error) {
+                console.error('加载附件失败:', error);
+                renderAttachmentList([]);
+            }
+        }
+
+        // 加载附件列表（模态框专用）
+        async function loadAttachmentsForModal(equipmentId) {
+            try {
+                const attachments = await AttachmentAPI.getEquipmentAttachments(equipmentId);
+                renderModalAttachmentList(attachments);
+            } catch (error) {
+                console.error('加载附件失败:', error);
+                renderModalAttachmentList([]);
+            }
+        }
+
+        // 渲染附件列表
+        function renderAttachmentList(attachments) {
+            const attachmentList = document.getElementById('attachment-list');
+            
+            if (!attachments || attachments.length === 0) {
+                attachmentList.innerHTML = `
+                    <div class="px-4 py-8 text-center text-gray-500">
+                        <i class="fas fa-paperclip text-4xl mb-4"></i>
+                        <p>暂无附件</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            attachmentList.innerHTML = attachments.map((attachment, index) => `
+                <div class="grid grid-cols-12 gap-4 px-4 py-3 items-center">
+                    <div class="col-span-1 text-sm text-gray-500">${index + 1}</div>
+                    <div class="col-span-4">
+                        <div class="flex items-center">
+                            <i class="fas ${getFileIcon(attachment.file_type)} text-blue-500 mr-2"></i>
+                            <span class="text-sm font-medium text-gray-900">${attachment.original_filename}</span>
+                        </div>
+                    </div>
+                    <div class="col-span-2 text-sm text-gray-500">${formatFileSize(attachment.file_size)}</div>
+                    <div class="col-span-2 text-sm text-gray-500">${formatDate(attachment.created_at)}</div>
+                    <div class="col-span-2">
+                        <span class="px-2 py-1 text-xs font-medium rounded-full ${getFileTypeStyle(attachment.file_type)}">
+                            ${attachment.file_type ? attachment.file_type.toUpperCase() : 'UNKNOWN'}
+                        </span>
+                    </div>
+                    <div class="col-span-1 flex justify-center space-x-2">
+                        ${isPreviewable(attachment.file_type) ? `
+                        <button class="text-green-600 hover:text-green-900" title="预览" onclick="previewAttachment(${attachment.id}, '${attachment.original_filename}', '${attachment.file_type}')">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        ` : ''}
+                        <button class="text-blue-600 hover:text-blue-900" title="下载" onclick="downloadAttachment(${attachment.id}, '${attachment.original_filename}')">
+                            <i class="fas fa-download"></i>
+                        </button>
+                        <button class="text-red-600 hover:text-red-900" title="删除" onclick="deleteAttachment(${attachment.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 渲染附件列表（模态框专用）
+        function renderModalAttachmentList(attachments) {
+            const attachmentList = document.getElementById('attachment-list');
+            
+            if (!attachments || attachments.length === 0) {
+                attachmentList.innerHTML = `
+                    <div class="px-4 py-8 text-center text-gray-500">
+                        <i class="fas fa-paperclip text-4xl mb-4"></i>
+                        <p>暂无附件</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            attachmentList.innerHTML = attachments.map((attachment, index) => `
+                <div class="grid grid-cols-12 gap-4 px-4 py-3 items-center">
+                    <div class="col-span-1 text-sm text-gray-500">${index + 1}</div>
+                    <div class="col-span-4">
+                        <div class="flex items-center">
+                            <i class="fas ${getFileIcon(attachment.file_type)} text-blue-500 mr-2"></i>
+                            <span class="text-sm font-medium text-gray-900">${attachment.original_filename}</span>
+                        </div>
+                    </div>
+                    <div class="col-span-2 text-sm text-gray-500">${formatFileSize(attachment.file_size)}</div>
+                    <div class="col-span-2 text-sm text-gray-500">${formatDate(attachment.created_at)}</div>
+                    <div class="col-span-2">
+                        <span class="px-2 py-1 text-xs font-medium rounded-full ${getFileTypeStyle(attachment.file_type)}">
+                            ${attachment.file_type ? attachment.file_type.toUpperCase() : 'UNKNOWN'}
+                        </span>
+                    </div>
+                    <div class="col-span-1 flex justify-center space-x-2">
+                        ${isPreviewable(attachment.file_type) ? `
+                        <button class="text-green-600 hover:text-green-900" title="预览" onclick="previewAttachment(${attachment.id}, '${attachment.original_filename}', '${attachment.file_type}')">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        ` : ''}
+                        <button class="text-blue-600 hover:text-blue-900" title="下载" onclick="downloadAttachment(${attachment.id}, '${attachment.original_filename}')">
+                            <i class="fas fa-download"></i>
+                        </button>
+                        <button class="text-red-600 hover:text-red-900" title="删除" onclick="deleteAttachment(${attachment.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 获取文件图标
+        function getFileIcon(fileType) {
+            const iconMap = {
+                'pdf': 'fa-file-pdf',
+                'jpg': 'fa-file-image',
+                'jpeg': 'fa-file-image',
+                'png': 'fa-file-image',
+                'doc': 'fa-file-word',
+                'docx': 'fa-file-word',
+                'xls': 'fa-file-excel',
+                'xlsx': 'fa-file-excel'
+            };
+            return iconMap[fileType.toLowerCase()] || 'fa-file';
+        }
+
+        // 获取文件类型样式
+        function getFileTypeStyle(fileType) {
+            const styleMap = {
+                'pdf': 'bg-red-100 text-red-800',
+                'jpg': 'bg-green-100 text-green-800',
+                'jpeg': 'bg-green-100 text-green-800',
+                'png': 'bg-green-100 text-green-800',
+                'doc': 'bg-blue-100 text-blue-800',
+                'docx': 'bg-blue-100 text-blue-800',
+                'xls': 'bg-yellow-100 text-yellow-800',
+                'xlsx': 'bg-yellow-100 text-yellow-800'
+            };
+            return styleMap[fileType.toLowerCase()] || 'bg-gray-100 text-gray-800';
+        }
+
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (!bytes) return '-';
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(1024));
+            return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+        }
+        // 检查文件类型是否支持预览
+        function isPreviewable(fileType) {
+            if (!fileType) return false;
+            const previewableTypes = ['PDF', 'JPG', 'JPEG', 'PNG', 'GIF'];
+            return previewableTypes.includes(fileType.toUpperCase());
+        }
+        // 预览附件
+        async function previewAttachment(attachmentId, filename, fileType) {
+            try {
+                const previewUrl = await AttachmentAPI.previewAttachment(attachmentId);
+                
+                // 创建预览模态框
+                const modal = document.createElement('div');
+                modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[2000]';
+                modal.innerHTML = `
+                    <div class="bg-white rounded-lg max-w-4xl max-h-[90vh] w-full mx-4 flex flex-col">
+                        <div class="flex items-center justify-between p-4 border-b">
+                            <h3 class="text-lg font-semibold">预览: ${filename}</h3>
+                            <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+                        <div class="flex-1 p-4 overflow-auto">
+                            ${fileType.toUpperCase() === 'PDF' ? 
+                                `<iframe src="${previewUrl}" class="w-full h-full min-h-[600px] border-none"></iframe>` :
+                                `<img src="${previewUrl}" class="max-w-full max-h-full mx-auto" alt="${filename}" />`
+                            }
+                        </div>
+                        <div class="p-4 border-t bg-gray-50">
+                            <div class="flex justify-end space-x-2">
+                                <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">
+                                    关闭
+                                </button>
+                                <button onclick="downloadAttachment(${attachmentId}, '${filename}'); this.closest('.fixed').remove();" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                                    下载
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(modal);
+                
+                // 点击背景关闭
+                modal.addEventListener('click', function(e) {
+                    if (e.target === modal) {
+                        modal.remove();
+                    }
+                });
+                
+            } catch (error) {
+                console.error('预览失败:', error);
+                showNotification('预览失败: ' + error.message, 'error');
+            }
+        }
+
+        // 上传附件
+        function uploadAttachment() {
+            document.getElementById('attachmentFileInput').click();
+        }
+
+        // 处理文件上传
+        document.getElementById('attachmentFileInput').addEventListener('change', async function(e) {
+            const files = e.target.files;
+            if (!files || files.length === 0) return;
+            
+            try {
+                showNotification('正在上传附件...', 'info');
+                
+                const uploadPromises = Array.from(files).map(file => {
+                    return AttachmentAPI.uploadAttachment(currentEquipmentId, file);
+                });
+                
+                await Promise.all(uploadPromises);
+                
+                showNotification('附件上传成功', 'success');
+                loadAttachmentsForModal(currentEquipmentId); // 重新加载模态框附件列表
+                
+                // 更新附件数量显示
+                const attachments = await AttachmentAPI.getEquipmentAttachments(currentEquipmentId);
+                updateEquipmentAttachmentCount(currentEquipmentId, attachments.length);
+                
+            } catch (error) {
+                console.error('附件上传失败:', error);
+                showNotification('附件上传失败: ' + error.message, 'error');
+            }
+            
+            // 清空文件输入框
+            e.target.value = '';
+        });
+
+        // 下载附件
+        function downloadAttachment(attachmentId, filename) {
+            AttachmentAPI.downloadAttachment(attachmentId, filename)
+                .then(() => {
+                    showNotification('附件下载成功', 'success');
+                })
+                .catch(error => {
+                    console.error('附件下载失败:', error);
+                    showNotification('附件下载失败: ' + error.message, 'error');
+                });
+        }
+
+        // 删除附件
+        async function deleteAttachment(attachmentId) {
+            if (confirm('确定要删除这个附件吗？')) {
+                try {
+                    await AttachmentAPI.deleteAttachment(attachmentId);
+                    showNotification('附件删除成功', 'success');
+                    loadAttachmentsForModal(currentEquipmentId); // 重新加载模态框附件列表
+                    
+                    // 更新附件数量显示
+                    const attachments = await AttachmentAPI.getEquipmentAttachments(currentEquipmentId);
+                    updateEquipmentAttachmentCount(currentEquipmentId, attachments.length);
+                } catch (error) {
+                    console.error('附件删除失败:', error);
+                    showNotification('附件删除失败: ' + error.message, 'error');
+                }
+            }
+        }
+
+        // 点击模态框外部关闭
+        document.getElementById('attachmentModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeAttachmentModal();
+            }
+        });
+
+        // ESC键关闭模态框
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeAttachmentModal();
+                closeExportModal();
+                closeImportModal();
+                closeImportResultModal();
+                closeBatchStatusModal();
+                closeBatchCalibrationModal();
+                closeSingleCalibrationModal();
+            }
+        });
+
+        // 批量状态更新模态框事件监听
+        document.getElementById('newStatus').addEventListener('change', function() {
+            const newStatus = this.value;
+            const statusChangeDateDiv = document.getElementById('statusChangeDateDiv');
+            const batchStatusBtn = document.getElementById('batchStatusBtn');
+            
+            if (newStatus === '停用' || newStatus === '报废') {
+                statusChangeDateDiv.classList.remove('hidden');
+                // 只有当状态变更时间也填写时才启用按钮
+                batchStatusBtn.disabled = !document.getElementById('statusChangeDate').value;
+            } else {
+                statusChangeDateDiv.classList.add('hidden');
+                batchStatusBtn.disabled = false;
+            }
+        });
+
+        document.getElementById('statusChangeDate').addEventListener('change', function() {
+            const newStatus = document.getElementById('newStatus').value;
+            const batchStatusBtn = document.getElementById('batchStatusBtn');
+            
+            if (newStatus === '停用' || newStatus === '报废') {
+                batchStatusBtn.disabled = !this.value;
+            }
+        });
+
+        // 单个设备检定日期更新模态框事件监听
+        document.getElementById('singleCalibrationDate').addEventListener('change', function() {
+            const singleCalibrationBtn = document.getElementById('singleCalibrationBtn');
+            singleCalibrationBtn.disabled = !this.value;
+        });
+
+        // 批量检定日期更新模态框事件监听
+        document.getElementById('newCalibrationDate').addEventListener('change', function() {
+            const batchCalibrationBtn = document.getElementById('batchCalibrationBtn');
+            batchCalibrationBtn.disabled = !this.value;
+        });
+
+        // 导出设备数据
+        function exportEquipmentData() {
+            document.getElementById('exportModal').classList.add('show');
+        }
+
+        // 关闭导出模态框
+        function closeExportModal() {
+            document.getElementById('exportModal').classList.remove('show');
+        }
+
+        // 执行导出操作
+        async function performExport() {
+            const exportType = document.querySelector('input[name="exportType"]:checked').value;
+            
+            try {
+                showNotification('正在准备导出数据...', 'info');
+                closeExportModal();
+                
+                const filters = buildFilters();
+                
+                switch (exportType) {
+                    case 'all':
+                        await ImportExportAPI.exportAll();
+                        break;
+                    case 'filtered':
+                        await ImportExportAPI.exportFiltered(filters);
+                        break;
+                    case 'selected':
+                        const selectedCheckboxes = document.querySelectorAll('.equipment-checkbox:checked');
+                        const selectedIds = Array.from(selectedCheckboxes).map(cb => parseInt(cb.value));
+                        
+                        if (selectedIds.length === 0) {
+                            showNotification('请先选择要导出的设备', 'warning');
+                            return;
+                        }
+                        
+                        // 构建包含选中设备ID的筛选条件
+                        const selectedFilters = { ...filters, equipment_ids: selectedIds };
+                        await ImportExportAPI.exportFiltered(selectedFilters);
+                        break;
+                }
+                
+                showNotification('设备数据导出成功', 'success');
+                
+            } catch (error) {
+                console.error('导出失败:', error);
+                showNotification('导出失败: ' + error.message, 'error');
+            }
+        }
+
+        // 导入设备数据
+        function importEquipmentData() {
+            document.getElementById('importModal').classList.add('show');
+        }
+
+        // 关闭导入模态框
+        function closeImportModal() {
+            document.getElementById('importModal').classList.remove('show');
+            // 重置表单
+            document.getElementById('importFileInput').value = '';
+            document.getElementById('selectedFileInfo').classList.add('hidden');
+            document.getElementById('importBtn').disabled = true;
+            document.getElementById('overwriteExisting').checked = false;
+        }
+
+        // 处理文件选择
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                document.getElementById('selectedFileName').textContent = file.name;
+                document.getElementById('selectedFileInfo').classList.remove('hidden');
+                document.getElementById('importBtn').disabled = false;
+            }
+        }
+
+        // 下载导入模板
+        async function downloadTemplate() {
+            try {
+                showNotification('正在下载导入模板...', 'info');
+                await ImportExportAPI.downloadTemplate();
+                showNotification('导入模板下载成功', 'success');
+            } catch (error) {
+                console.error('模板下载失败:', error);
+                showNotification('模板下载失败: ' + error.message, 'error');
+            }
+        }
+
+        // 执行导入操作
+        async function performImport() {
+            const fileInput = document.getElementById('importFileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showNotification('请选择要导入的Excel文件', 'warning');
+                return;
+            }
+            
+            const overwrite = document.getElementById('overwriteExisting').checked;
+            
+            try {
+                showNotification('正在导入数据，请稍候...', 'info');
+                document.getElementById('importBtn').disabled = true;
+                
+                const result = await ImportExportAPI.uploadImportFile(file, overwrite);
+                showImportResult(result);
+                closeImportModal();
+                
+                // 重新加载设备数据
+                await loadEquipmentData();
+                await loadDashboardStats(); // 刷新统计数据
+                
+            } catch (error) {
+                console.error('导入失败:', error);
+                showNotification('导入失败: ' + error.message, 'error');
+                document.getElementById('importBtn').disabled = false;
+            }
+        }
+
+        // 显示导入结果
+        function showImportResult(result) {
+            document.getElementById('successCount').textContent = result.success_count;
+            document.getElementById('updateCount').textContent = result.update_count;
+            document.getElementById('errorCount').textContent = result.error_count;
+            document.getElementById('totalCount').textContent = result.summary.total_rows;
+            
+            const resultsList = document.getElementById('importResultsList');
+            resultsList.innerHTML = result.detailed_results.map(item => `
+                <div class="grid grid-cols-12 gap-4 px-4 py-3 items-center">
+                    <div class="col-span-1 text-sm text-gray-500">${item.row}</div>
+                    <div class="col-span-3 text-sm font-medium text-gray-900">${item.serial_number}</div>
+                    <div class="col-span-3 text-sm text-gray-900">${item.name}</div>
+                    <div class="col-span-2">
+                        <span class="px-2 py-1 text-xs font-medium rounded-full ${getResultStatusStyle(item.status)}">
+                            ${item.status}
+                        </span>
+                    </div>
+                    <div class="col-span-3 text-sm text-gray-600">${item.message}</div>
+                </div>
+            `).join('');
+            
+            document.getElementById('importResultModal').classList.add('show');
+        }
+
+        // 获取结果状态样式
+        function getResultStatusStyle(status) {
+            switch (status) {
+                case '成功':
+                case '更新':
+                    return 'bg-green-100 text-green-800';
+                case '失败':
+                    return 'bg-red-100 text-red-800';
+                case '跳过':
+                    return 'bg-yellow-100 text-yellow-800';
+                default:
+                    return 'bg-gray-100 text-gray-800';
+            }
+        }
+
+        // 关闭导入结果模态框
+        function closeImportResultModal() {
+            document.getElementById('importResultModal').classList.remove('show');
+        }
+
+        // 点击模态框外部关闭
+        document.getElementById('exportModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeExportModal();
+            }
+        });
+
+        document.getElementById('importModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeImportModal();
+            }
+        });
+
+        document.getElementById('importResultModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeImportResultModal();
+            }
+        });
+
+        // 批量状态更新模态框点击外部关闭
+        document.getElementById('batchStatusModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeBatchStatusModal();
+            }
+        });
+
+        // 单个设备检定日期更新模态框点击外部关闭
+        document.getElementById('singleCalibrationModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeSingleCalibrationModal();
+            }
+        });
+
+        // 批量检定日期更新模态框点击外部关闭
+        document.getElementById('batchCalibrationModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeBatchCalibrationModal();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -29,12 +29,24 @@ def update_category(db: Session, category_id: int, category: EquipmentCategoryCr
     return db_category
 
 def delete_category(db: Session, category_id: int):
-    db_category = db.query(EquipmentCategory).filter(EquipmentCategory.id == category_id).first()
-    if db_category:
-        db.delete(db_category)
-        db.commit()
-        return True
-    return False
+    from app.models.models import Equipment
+    
+    try:
+        # 检查该类别下是否有设备
+        equipment_exists = db.query(Equipment).filter(Equipment.category_id == category_id).first()
+        
+        if equipment_exists:
+            return False, "无法删除该类别，该类别下还有设备"
+        
+        db_category = db.query(EquipmentCategory).filter(EquipmentCategory.id == category_id).first()
+        if db_category:
+            db.delete(db_category)
+            db.commit()
+            return True, "类别删除成功"
+        return False, "类别不存在"
+    except Exception as e:
+        db.rollback()
+        return False, f"删除类别时发生错误: {str(e)}"
 
 def get_category_with_equipment_count(db: Session, skip: int = 0, limit: int = 100):
     """获取设备类别及其设备数量"""

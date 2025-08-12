@@ -51,7 +51,8 @@ def update_category(category_id: int, category: EquipmentCategoryCreate,
 def delete_category(category_id: int,
                    db: Session = Depends(get_db),
                    current_user = Depends(get_current_admin_user)):
-    success = categories.delete_category(db, category_id=category_id)
-    if not success:
-        raise HTTPException(status_code=404, detail="Category not found")
-    return {"message": "Category deleted successfully"}
+    success, message = categories.delete_category(db, category_id=category_id)
+    if success:
+        return {"message": message}
+    else:
+        raise HTTPException(status_code=400, detail=message)

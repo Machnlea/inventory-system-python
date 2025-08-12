@@ -317,7 +317,11 @@ def batch_update_calibration(
             
             # 更新检定日期
             from app.schemas.schemas import EquipmentUpdate
-            equipment_update = EquipmentUpdate(calibration_date=calibration_date)
+            from datetime import datetime
+            
+            # 将字符串转换为date对象
+            calibration_date_obj = datetime.strptime(calibration_date, '%Y-%m-%d').date()
+            equipment_update = EquipmentUpdate(calibration_date=calibration_date_obj)
             equipment.update_equipment(db, equipment_id=equipment_id, equipment_update=equipment_update)
             
             # 记录操作日志
@@ -385,9 +389,13 @@ def batch_change_status(
             
             # 更新设备状态
             from app.schemas.schemas import EquipmentUpdate
+            from datetime import datetime
+            
             update_data = {"status": new_status}
             if status_change_date:
-                update_data["status_change_date"] = status_change_date
+                # 将字符串转换为date对象
+                status_change_date_obj = datetime.strptime(status_change_date, '%Y-%m-%d').date()
+                update_data["status_change_date"] = status_change_date_obj
             
             equipment_update = EquipmentUpdate(**update_data)
             equipment.update_equipment(db, equipment_id=equipment_id, equipment_update=equipment_update)

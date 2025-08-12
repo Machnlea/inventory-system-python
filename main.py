@@ -42,6 +42,38 @@ async def favicon():
 async def root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
+@app.get("/login", response_class=HTMLResponse)
+async def login(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
+
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard(request: Request):
+    return templates.TemplateResponse("dashboard.html", {"request": request})
+
+@app.get("/equipment", response_class=HTMLResponse)
+async def equipment(request: Request):
+    return templates.TemplateResponse("equipment_management.html", {"request": request})
+
+@app.get("/equipment/edit", response_class=HTMLResponse)
+async def equipment_edit(request: Request):
+    return templates.TemplateResponse("equipment_edit.html", {"request": request})
+
+@app.get("/equipment/view", response_class=HTMLResponse)
+async def equipment_view(request: Request):
+    return templates.TemplateResponse("equipment_view.html", {"request": request})
+
+@app.get("/categories", response_class=HTMLResponse)
+async def categories(request: Request):
+    return templates.TemplateResponse("categories.html", {"request": request})
+
+@app.get("/departments", response_class=HTMLResponse)
+async def departments(request: Request):
+    return templates.TemplateResponse("departments.html", {"request": request})
+
+@app.get("/simple_login_test", response_class=HTMLResponse)
+async def simple_login_test(request: Request):
+    return templates.TemplateResponse("simple_login_test.html", {"request": request})
+
 @app.get("/api", response_class=RedirectResponse)
 async def api_docs():
     return RedirectResponse(url="/docs")

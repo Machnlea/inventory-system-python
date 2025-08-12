@@ -1,0 +1,31 @@
+{
+  "name": "inventory-system-python",
+  "version": "1.0.0",
+  "description": "<div align=\"center\">",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build:css": "tailwindcss -i ./app/static/css/src/main.css -o ./app/static/css/style.css",
+    "watch:css": "tailwindcss -i ./app/static/css/src/main.css -o ./app/static/css/style.css --watch",
+    "build": "npm run build:css",
+    "dev": "npm run watch:css"
+  },
+
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Machnlea/inventory-system-python/issues"
+  },
+  "homepage": "https://github.com/Machnlea/inventory-system-python#readme",
+  "devDependencies": {
+    "@tailwindcss/typography": "^0.5.16",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.17"
+  }
+}

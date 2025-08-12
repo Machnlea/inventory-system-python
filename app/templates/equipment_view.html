@@ -987,17 +987,30 @@
                         </div>
                     `;
                 } else if (['jpg', 'jpeg', 'png'].includes(fileType)) {
-                    // 使用真实的预览API
-                    const previewUrl = `/api/attachments/${attachmentId}/preview`;
-                    previewContent.innerHTML = `
-                        <div class="text-center">
-                            <img src="${previewUrl}" 
-                                 alt="${attachment.original_filename || attachment.filename}" 
-                                 class="max-w-full max-h-96 mx-auto rounded-lg shadow-lg">
-                            <p class="mt-4 text-sm text-gray-500">文件名: ${attachment.original_filename || attachment.filename}</p>
-                            <p class="text-sm text-gray-500">文件大小: ${formatFileSize(attachment.file_size)}</p>
-                        </div>
-                    `;
+                    // 使用API客户端获取预览URL
+                    try {
+                        const previewUrl = await AttachmentAPI.previewAttachment(attachmentId);
+                        previewContent.innerHTML = `
+                            <div class="text-center">
+                                <img src="${previewUrl}" 
+                                     alt="${attachment.original_filename || attachment.filename}" 
+                                     class="max-w-full max-h-96 mx-auto rounded-lg shadow-lg">
+                                <p class="mt-4 text-sm text-gray-500">文件名: ${attachment.original_filename || attachment.filename}</p>
+                                <p class="text-sm text-gray-500">文件大小: ${formatFileSize(attachment.file_size)}</p>
+                            </div>
+                        `;
+                    } catch (error) {
+                        previewContent.innerHTML = `
+                            <div class="bg-gray-100 p-8 rounded-lg text-center">
+                                <i class="fas fa-exclamation-triangle text-yellow-500 text-6xl mb-4"></i>
+                                <p class="text-gray-600 mb-4">图片预览失败</p>
+                                <p class="text-sm text-gray-500 mb-4">错误信息: ${error.message}</p>
+                                <button class="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors btn-click-effect" onclick="downloadCurrentAttachment()">
+                                    <i class="fas fa-download mr-2"></i>下载文件
+                                </button>
+                            </div>
+                        `;
+                    }
                 } else if (fileType === 'docx') {
                     previewContent.innerHTML = `
                         <div class="bg-gray-100 p-8 rounded-lg">

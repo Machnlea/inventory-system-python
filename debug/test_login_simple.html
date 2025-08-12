@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录功能测试</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/static/js/api-client.js"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
+        <h1 class="text-2xl font-bold mb-4">登录功能测试</h1>
+        
+        <form id="login-form" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">用户名</label>
+                <input type="text" id="username" value="admin" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700">密码</label>
+                <input type="password" id="password" value="admin123" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md">
+            </div>
+            
+            <button type="submit" class="w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600">
+                登录测试
+            </button>
+        </form>
+        
+        <div id="result" class="mt-4 p-4 bg-gray-50 rounded-md"></div>
+        
+        <div id="debug-info" class="mt-4 p-4 bg-yellow-50 rounded-md text-sm"></div>
+    </div>
+
+    <script>
+        // 调试信息
+        const debugInfo = document.getElementById('debug-info');
+        
+        function logDebug(message) {
+            console.log(message);
+            debugInfo.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${message}</div>`;
+        }
+        
+        // 检查API对象
+        logDebug('检查API对象...');
+        if (typeof api !== 'undefined') {
+            logDebug('✓ API对象已定义');
+            logDebug(`API baseURL: ${api.baseURL}`);
+            logDebug(`API token: ${api.token ? '已设置' : '未设置'}`);
+        } else {
+            logDebug('✗ API对象未定义');
+        }
+        
+        // 检查showNotification函数
+        if (typeof showNotification !== 'undefined') {
+            logDebug('✓ showNotification函数已定义');
+        } else {
+            logDebug('✗ showNotification函数未定义');
+        }
+        
+        // 表单提交处理
+        document.getElementById('login-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const resultDiv = document.getElementById('result');
+            
+            logDebug(`开始登录: ${username}`);
+            resultDiv.innerHTML = '<div class="text-blue-500">登录中...</div>';
+            
+            try {
+                const response = await api.post('/api/auth/login/json', {
+                    username: username,
+                    password: password
+                });
+                
+                logDebug('登录响应: ' + JSON.stringify(response));
+                resultDiv.innerHTML = `
+                    <div class="text-green-500">
+                        <h3 class="font-bold">登录成功！</h3>
+                        <pre class="text-xs mt-2">${JSON.stringify(response, null, 2)}</pre>
+                    </div>
+                `;
+                
+            } catch (error) {
+                logDebug('登录失败: ' + error.message);
+                resultDiv.innerHTML = `
+                    <div class="text-red-500">
+                        <h3 class="font-bold">登录失败</h3>
+                        <p>错误: ${error.message}</p>
+                    </div>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>

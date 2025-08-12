@@ -29,12 +29,24 @@ def update_department(db: Session, department_id: int, department: DepartmentCre
     return db_department
 
 def delete_department(db: Session, department_id: int):
-    db_department = db.query(Department).filter(Department.id == department_id).first()
-    if db_department:
-        db.delete(db_department)
-        db.commit()
-        return True
-    return False
+    from app.models.models import Equipment
+    
+    try:
+        # 检查该部门下是否有设备
+        equipment_exists = db.query(Equipment).filter(Equipment.department_id == department_id).first()
+        
+        if equipment_exists:
+            return False, "无法删除该部门，该部门下还有设备"
+        
+        db_department = db.query(Department).filter(Department.id == department_id).first()
+        if db_department:
+            db.delete(db_department)
+            db.commit()
+            return True, "部门删除成功"
+        return False, "部门不存在"
+    except Exception as e:
+        db.rollback()
+        return False, f"删除部门时发生错误: {str(e)}"
 
 def get_department_with_equipment_count(db: Session, skip: int = 0, limit: int = 100):
     """获取部门及其设备数量"""

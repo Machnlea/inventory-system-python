@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录测试</title>
+    <script src="/static/js/api-client.js"></script>
+</head>
+<body>
+    <h1>登录测试</h1>
+    <form id="login-form">
+        <input type="text" id="username" value="admin" placeholder="用户名">
+        <input type="password" id="password" value="admin123" placeholder="密码">
+        <button type="submit">登录</button>
+    </form>
+    <div id="result"></div>
+
+    <script>
+        // 表单提交处理
+        document.getElementById('login-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const resultDiv = document.getElementById('result');
+            
+            resultDiv.innerHTML = '登录中...';
+            
+            try {
+                console.log('开始登录...');
+                const response = await api.post('/api/auth/login/json', {
+                    username: username,
+                    password: password
+                });
+                
+                console.log('登录响应:', response);
+                resultDiv.innerHTML = '登录成功！' + JSON.stringify(response);
+                
+            } catch (error) {
+                console.error('登录失败:', error);
+                resultDiv.innerHTML = '登录失败：' + error.message;
+            }
+        });
+    </script>
+</body>
+</html>

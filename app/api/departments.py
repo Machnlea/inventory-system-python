@@ -51,7 +51,8 @@ def update_department(department_id: int, department: DepartmentCreate,
 def delete_department(department_id: int,
                      db: Session = Depends(get_db),
                      current_user = Depends(get_current_admin_user)):
-    success = departments.delete_department(db, department_id=department_id)
-    if not success:
-        raise HTTPException(status_code=404, detail="Department not found")
-    return {"message": "Department deleted successfully"}
+    success, message = departments.delete_department(db, department_id=department_id)
+    if success:
+        return {"message": message}
+    else:
+        raise HTTPException(status_code=400, detail=message)

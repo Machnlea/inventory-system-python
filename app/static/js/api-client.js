@@ -324,15 +324,67 @@ const EquipmentAPI = {
 
 // 部门API
 const DepartmentAPI = {
+    // 获取所有部门
     async getDepartments() {
         return api.get('/api/departments/');
+    },
+
+    // 获取部门及其设备数量
+    async getDepartmentsWithCounts() {
+        return api.get('/api/departments/with-counts');
+    },
+
+    // 获取单个部门
+    async getDepartment(id) {
+        return api.get(`/api/departments/${id}`);
+    },
+
+    // 创建部门
+    async createDepartment(data) {
+        return api.post('/api/departments/', data);
+    },
+
+    // 更新部门
+    async updateDepartment(id, data) {
+        return api.put(`/api/departments/${id}`, data);
+    },
+
+    // 删除部门
+    async deleteDepartment(id) {
+        return api.delete(`/api/departments/${id}`);
     }
 };
 
 // 设备类别API
 const CategoryAPI = {
+    // 获取所有类别
     async getCategories() {
         return api.get('/api/categories/');
+    },
+
+    // 获取类别及其设备数量
+    async getCategoriesWithCounts() {
+        return api.get('/api/categories/with-counts');
+    },
+
+    // 获取单个类别
+    async getCategory(id) {
+        return api.get(`/api/categories/${id}`);
+    },
+
+    // 创建类别
+    async createCategory(data) {
+        return api.post('/api/categories/', data);
+    },
+
+    // 更新类别
+    async updateCategory(id, data) {
+        return api.put(`/api/categories/${id}`, data);
+    },
+
+    // 删除类别
+    async deleteCategory(id) {
+        return api.delete(`/api/categories/${id}`);
     }
 };
 
@@ -352,6 +404,11 @@ const AttachmentAPI = {
     // 获取设备附件
     async getEquipmentAttachments(equipmentId) {
         return api.get(`/api/attachments/equipment/${equipmentId}/attachments`);
+    },
+
+    // 获取单个附件信息
+    async getAttachment(attachmentId) {
+        return api.get(`/api/attachments/${attachmentId}`);
     },
 
     // 上传附件
@@ -402,6 +459,75 @@ const AttachmentAPI = {
     }
 };
 
+// 导入导出API
+const ImportExportAPI = {
+    // 导出所有数据
+    async exportAll() {
+        return api.downloadFile('/api/import/export/all', '设备台账数据.xlsx');
+    },
+
+    // 导出筛选后的数据
+    async exportFiltered(filters) {
+        const response = await fetch('/api/import/export/filtered', {
+            method: 'POST',
+            headers: api.getHeaders(),
+            body: JSON.stringify(filters)
+        });
+
+        if (response.status === 401) {
+            api.handleUnauthorized();
+            throw new Error('登录已过期, 请重新登录');
+        }
+
+        if (!response.ok) {
+            throw new Error(`导出失败: ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = '设备台账数据_筛选.xlsx';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(downloadUrl);
+    },
+
+    // 下载导入模板
+    async downloadTemplate() {
+        return api.downloadFile('/api/import/template/download', '设备台账导入模板.xlsx');
+    },
+
+    // 上传导入文件
+    async uploadImportFile(file, overwrite = false) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('overwrite', overwrite);
+
+        const response = await fetch('/api/import/upload', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${api.token}`
+            },
+            body: formData
+        });
+
+        if (response.status === 401) {
+            api.handleUnauthorized();
+            throw new Error('登录已过期, 请重新登录');
+        }
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || `上传失败: ${response.status}`);
+        }
+
+        return await response.json();
+    }
+};
+
 // 通知工具
 function showNotification(message, type = 'info') {
     const container = document.getElementById('notification-container') || 
@@ -417,7 +543,7 @@ function showNotification(message, type = 'info') {
                 type === 'error' ? 'exclamation-circle' : 
                 type === 'warning' ? 'exclamation-triangle' : 'info-circle';
     
-    notification.className = `${bgColor} text-white px-6 py-4 rounded-lg shadow-lg transform transition-all duration-300 translate-x-full fixed right-4 z-[9999] max-w-md`;
+    notification.className = `${bgColor} text-white px-6 py-4 rounded-lg shadow-lg transform transition-all duration-300 translate-x-full fixed right-4 z-[99999] max-w-md`;
     notification.style.marginBottom = '8px'; // 通知之间的间距
     
     notification.innerHTML = `
@@ -454,7 +580,7 @@ function showNotification(message, type = 'info') {
 // 重新计算通知位置
 function repositionNotifications() {
     const container = document.getElementById('notification-container') || document.body;
-    const notifications = Array.from(container.querySelectorAll('.fixed.right-4.z-\\[9999\\]')).reverse();
+    const notifications = Array.from(container.querySelectorAll('.fixed.right-4.z-\\[99999\\]')).reverse();
     
     let topPosition = 16; // 初始位置距离顶部16px
     
@@ -516,4 +642,5 @@ window.DepartmentAPI = DepartmentAPI;
 window.CategoryAPI = CategoryAPI;
 window.DashboardAPI = DashboardAPI;
 window.AttachmentAPI = AttachmentAPI;
+window.ImportExportAPI = ImportExportAPI;
 window.showNotification = showNotification;

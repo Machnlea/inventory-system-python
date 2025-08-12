@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>筛选器测试</title>
+</head>
+<body>
+    <h1>筛选器默认值测试</h1>
+    
+    <label for="status-filter">设备状态：</label>
+    <select id="status-filter" class="px-4 py-3 border border-gray-300 rounded-lg">
+        <option value="">全部状态</option>
+        <option value="在用" selected>在用</option>
+        <option value="停用">停用</option>
+        <option value="报废">报废</option>
+    </select>
+    
+    <div id="result"></div>
+    
+    <script>
+        // 测试默认值
+        const statusFilter = document.getElementById('status-filter');
+        const result = document.getElementById('result');
+        
+        result.innerHTML = `
+            <p>当前选中值: "${statusFilter.value}"</p>
+            <p>是否选择了"在用": ${statusFilter.value === '在用'}</p>
+            <p>选中的选项文本: "${statusFilter.options[statusFilter.selectedIndex].text}"</p>
+        `;
+        
+        // 测试事件监听
+        statusFilter.addEventListener('change', function() {
+            result.innerHTML += `<p>更改后值: "${this.value}"</p>`;
+        });
+    </script>
+</body>
+</html>

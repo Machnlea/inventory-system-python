@@ -12,7 +12,15 @@ if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
         SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
     )
 else:
-    engine = create_engine(SQLALCHEMY_DATABASE_URL)
+    # PostgreSQL 优化配置
+    engine = create_engine(
+        SQLALCHEMY_DATABASE_URL,
+        pool_size=20,
+        max_overflow=0,
+        pool_pre_ping=True,
+        pool_recycle=300,
+        echo=False  # 设置为 True 可以查看 SQL 调试信息
+    )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -25,3 +33,13 @@ def get_db():
         yield db
     finally:
         db.close()
+
+# 数据库连接测试函数
+def test_database_connection():
+    """测试数据库连接"""
+    try:
+        with engine.connect() as conn:
+            conn.execute("SELECT 1")
+        return True, "数据库连接成功"
+    except Exception as e:
+        return False, f"数据库连接失败: {str(e)}"

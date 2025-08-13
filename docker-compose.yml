@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  inventory-system:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./inventory.db
+      - SECRET_KEY=your-secret-key-change-this-in-production
+    volumes:
+      - ./data:/app/data
+      - ./app/static/uploads:/app/static/uploads
+    restart: unless-stopped
+    
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./app/static:/app/static
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - inventory-system
+    restart: unless-stopped
+
+  # 可选：使用PostgreSQL
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=inventory_system
+      - POSTGRES_USER=inventory_user
+      - POSTGRES_PASSWORD=your_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

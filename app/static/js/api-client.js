@@ -634,6 +634,24 @@ document.addEventListener('visibilitychange', function() {
     }
 });
 
+// 系统设置API
+const SystemAPI = {
+    // 获取系统设置
+    async getSettings() {
+        return api.get('/api/settings');
+    },
+
+    // 更新系统设置
+    async updateSettings(settings) {
+        return api.put('/api/settings', settings);
+    },
+
+    // 重置系统设置
+    async resetSettings() {
+        return api.post('/api/settings/reset');
+    }
+};
+
 // 导出全局对象
 window.ApiClient = ApiClient;
 window.api = api;
@@ -643,4 +661,5 @@ window.CategoryAPI = CategoryAPI;
 window.DashboardAPI = DashboardAPI;
 window.AttachmentAPI = AttachmentAPI;
 window.ImportExportAPI = ImportExportAPI;
+window.SystemAPI = SystemAPI;
 window.showNotification = showNotification;

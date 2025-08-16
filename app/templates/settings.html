@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统设置 - 设备台账管理系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="/static/js/session-manager.js"></script>
+    <script src="/static/js/api-client.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .glass-effect {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        .sidebar-item {
+            transition: all 0.2s ease;
+        }
+        .sidebar-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
+        .sidebar-item.active {
+            background: rgba(255, 255, 255, 0.2);
+            border-left: 4px solid #667eea;
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            min-width: 300px;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+        .notification.show {
+            transform: translateX(0);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- 通知组件 -->
+    <div id="notification" class="notification hidden">
+        <div class="bg-white rounded-lg shadow-lg border-l-4 p-4">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <i id="notification-icon" class="text-xl"></i>
+                </div>
+                <div class="ml-3">
+                    <p id="notification-message" class="text-sm font-medium text-gray-900"></p>
+                </div>
+                <div class="ml-auto pl-3">
+                    <button onclick="hideNotification()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主容器 -->
+    <div class="flex h-screen">
+        <!-- 左侧导航栏 -->
+        <div class="w-64 gradient-bg shadow-xl fixed left-0 top-0 h-full z-10">
+            <div class="flex flex-col h-full">
+                <!-- Logo和标题 -->
+                <div class="flex items-center justify-center h-16 px-4 border-b border-white/20">
+                    <div class="flex items-center">
+                        <i class="fas fa-clipboard-list text-white text-2xl mr-3"></i>
+                        <h1 class="text-white text-lg font-bold">设备台账管理系统</h1>
+                    </div>
+                </div>
+
+                <!-- 导航菜单 -->
+                <nav class="flex-1 px-4 py-6 space-y-2">
+                    <a href="/dashboard" class="sidebar-item flex items-center px-4 py-3 text-white/90 rounded-lg">
+                        <i class="fas fa-home mr-3 text-lg"></i>
+                        <span>仪表盘</span>
+                    </a>
+                    <a href="/equipment" class="sidebar-item flex items-center px-4 py-3 text-white/90 rounded-lg">
+                        <i class="fas fa-cogs mr-3 text-lg"></i>
+                        <span>设备管理</span>
+                    </a>
+                    <a href="#" class="sidebar-item flex items-center px-4 py-3 text-white/90 rounded-lg" id="maintenance-link">
+                        <i class="fas fa-tools mr-3 text-lg"></i>
+                        <span>维护记录</span>
+                    </a>
+                    <a href="#" class="sidebar-item flex items-center px-4 py-3 text-white/90 rounded-lg" id="reports-link">
+                        <i class="fas fa-chart-bar mr-3 text-lg"></i>
+                        <span>统计报表</span>
+                    </a>
+                    
+                    <!-- 系统管理下拉菜单 -->
+                    <div class="relative">
+                        <button class="sidebar-item flex items-center justify-between w-full px-4 py-3 text-white/90 rounded-lg" id="system-menu-btn" aria-label="展开系统管理菜单" aria-expanded="false">
+                            <div class="flex items-center">
+                                <i class="fas fa-cog mr-3 text-lg"></i>
+                                <span>系统管理</span>
+                            </div>
+                            <i class="fas fa-chevron-down text-sm transition-transform duration-200" id="system-menu-arrow"></i>
+                        </button>
+                        <div class="ml-4 mt-1 space-y-1 hidden" id="system-submenu">
+                            <a href="/categories" class="sidebar-item flex items-center px-4 py-2 text-white/80 rounded-lg text-sm" id="categories-link">
+                                <i class="fas fa-tags mr-3"></i>
+                                <span>设备类别</span>
+                            </a>
+                            <a href="/departments" class="sidebar-item flex items-center px-4 py-2 text-white/80 rounded-lg text-sm">
+                                <i class="fas fa-building mr-3"></i>
+                                <span>部门管理</span>
+                            </a>
+                            <a href="/users" class="sidebar-item flex items-center px-4 py-2 text-white/80 rounded-lg text-sm">
+                                <i class="fas fa-users mr-3"></i>
+                                <span>用户管理</span>
+                            </a>
+                            <a href="/audit" class="sidebar-item flex items-center px-4 py-2 text-white/80 rounded-lg text-sm" id="audit-link">
+                                <i class="fas fa-history mr-3"></i>
+                                <span>操作日志</span>
+                            </a>
+                            <a href="/settings" class="sidebar-item flex items-center px-4 py-2 text-white rounded-lg text-sm" id="settings-link">
+                                <i class="fas fa-cog mr-3"></i>
+                                <span>系统设置</span>
+                            </a>
+                        </div>
+                    </div>
+                </nav>
+
+                <!-- 用户信息 -->
+                <div class="border-t border-white/20 p-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <i class="fas fa-user-circle text-white text-xl mr-3"></i>
+                            <div>
+                                <p class="text-white text-sm font-medium" id="current-user">用户</p>
+                                <p class="text-white/70 text-xs">在线</p>
+                            </div>
+                        </div>
+                        <button class="text-white/70 hover:text-white transition-colors" id="logout-btn" aria-label="退出登录">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主内容区域 -->
+        <div class="flex-1 flex flex-col overflow-hidden ml-64">
+            <!-- 顶部导航 -->
+            <header class="bg-white shadow-sm border-b border-gray-200">
+                <div class="flex items-center justify-between px-6 py-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900">系统设置</h2>
+                        <p class="text-gray-600 mt-1">管理系统配置和参数</p>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <span class="text-gray-600">管理员</span>
+                        <img src="https://ui-avatars.com/api/?name=admin&background=667eea&color=fff" alt="用户头像" class="w-8 h-8 rounded-full">
+                    </div>
+                </div>
+            </header>
+
+            <!-- 设置内容 -->
+            <main class="flex-1 overflow-y-auto bg-gray-50 p-6">
+                <div class="max-w-4xl mx-auto">
+                    <!-- 基本设置 -->
+                    <div class="bg-white rounded-lg shadow-sm mb-6 fade-in">
+                        <div class="px-6 py-4 border-b border-gray-200">
+                            <h3 class="text-lg font-semibold text-gray-900">
+                                <i class="fas fa-sliders-h mr-2 text-blue-600"></i>
+                                基本设置
+                            </h3>
+                        </div>
+                        <div class="p-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">系统名称</label>
+                                    <input type="text" id="systemName" value="设备台账管理系统" 
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">默认语言</label>
+                                    <select id="defaultLanguage" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        <option value="zh-CN" selected>简体中文</option>
+                                        <option value="zh-TW">繁体中文</option>
+                                        <option value="en">English</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">时区设置</label>
+                                    <select id="timezone" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        <option value="Asia/Shanghai" selected>北京时间 (UTC+8)</option>
+                                        <option value="Asia/Taipei">台北时间 (UTC+8)</option>
+                                        <option value="UTC">UTC</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">每页显示条数</label>
+                                    <input type="number" id="pageSize" value="10" min="5" max="100"
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 安全设置 -->
+                    <div class="bg-white rounded-lg shadow-sm mb-6 fade-in">
+                        <div class="px-6 py-4 border-b border-gray-200">
+                            <h3 class="text-lg font-semibold text-gray-900">
+                                <i class="fas fa-shield-alt mr-2 text-green-600"></i>
+                                安全设置
+                            </h3>
+                        </div>
+                        <div class="p-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">会话超时时间（小时）</label>
+                                    <input type="number" id="sessionTimeout" value="2" min="1" max="24"
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">密码最小长度</label>
+                                    <input type="number" id="minPasswordLength" value="6" min="4" max="20"
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="flex items-center">
+                                        <input type="checkbox" id="enableTwoFactor" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                        <span class="ml-2 text-sm text-gray-700">启用双因素认证</span>
+                                    </label>
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="flex items-center">
+                                        <input type="checkbox" id="enableLoginLog" checked class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                        <span class="ml-2 text-sm text-gray-700">记录登录日志</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 通知设置 -->
+                    <div class="bg-white rounded-lg shadow-sm mb-6 fade-in">
+                        <div class="px-6 py-4 border-b border-gray-200">
+                            <h3 class="text-lg font-semibold text-gray-900">
+                                <i class="fas fa-bell mr-2 text-yellow-600"></i>
+                                通知设置
+                            </h3>
+                        </div>
+                        <div class="p-6">
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" id="enableEmailNotification" checked class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                        <span class="ml-2 text-sm text-gray-700">启用邮件通知</span>
+                                    </label>
+                                </div>
+                                <div>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" id="enableExpirationReminder" checked class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                        <span class="ml-2 text-sm text-gray-700">设备到期提醒</span>
+                                    </label>
+                                </div>
+                                <div>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" id="enableCalibrationReminder" checked class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                        <span class="ml-2 text-sm text-gray-700">检定提醒</span>
+                                    </label>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">提醒提前天数</label>
+                                        <input type="number" id="reminderDays" value="7" min="1" max="30"
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">SMTP服务器</label>
+                                        <input type="text" id="smtpServer" placeholder="smtp.example.com"
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 数据备份设置 -->
+                    <div class="bg-white rounded-lg shadow-sm mb-6 fade-in">
+                        <div class="px-6 py-4 border-b border-gray-200">
+                            <h3 class="text-lg font-semibold text-gray-900">
+                                <i class="fas fa-database mr-2 text-purple-600"></i>
+                                数据备份设置
+                            </h3>
+                        </div>
+                        <div class="p-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" id="enableAutoBackup" checked class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                        <span class="ml-2 text-sm text-gray-700">启用自动备份</span>
+                                    </label>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">备份频率</label>
+                                    <select id="backupFrequency" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        <option value="daily">每日</option>
+                                        <option value="weekly" selected>每周</option>
+                                        <option value="monthly">每月</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">备份保留天数</label>
+                                    <input type="number" id="backupRetention" value="30" min="7" max="365"
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">备份路径</label>
+                                    <input type="text" id="backupPath" value="./backups"
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 操作按钮 -->
+                    <div class="flex justify-end space-x-4">
+                        <button onclick="resetSettings()" class="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors">
+                            <i class="fas fa-undo mr-2"></i>
+                            重置默认
+                        </button>
+                        <button onclick="saveSettings()" class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                            <i class="fas fa-save mr-2"></i>
+                            保存设置
+                        </button>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        // 显示通知
+        function showNotification(message, type = 'info') {
+            const notification = document.getElementById('notification');
+            const icon = document.getElementById('notification-icon');
+            const messageEl = document.getElementById('notification-message');
+            
+            messageEl.textContent = message;
+            
+            // 设置图标和颜色
+            const colors = {
+                success: 'text-green-600',
+                error: 'text-red-600',
+                warning: 'text-yellow-600',
+                info: 'text-blue-600'
+            };
+            
+            const icons = {
+                success: 'fas fa-check-circle',
+                error: 'fas fa-exclamation-circle',
+                warning: 'fas fa-exclamation-triangle',
+                info: 'fas fa-info-circle'
+            };
+            
+            icon.className = `${icons[type]} ${colors[type]} text-xl`;
+            notification.classList.remove('hidden');
+            setTimeout(() => notification.classList.add('show'), 100);
+            
+            // 3秒后自动隐藏
+            setTimeout(() => hideNotification(), 3000);
+        }
+
+        // 隐藏通知
+        function hideNotification() {
+            const notification = document.getElementById('notification');
+            notification.classList.remove('show');
+            setTimeout(() => notification.classList.add('hidden'), 300);
+        }
+
+        // 加载设置
+        async function loadSettings() {
+            try {
+                const response = await SystemAPI.getSettings();
+                const settings = response.data || response;
+                
+                // 填充表单
+                document.getElementById('systemName').value = settings.systemName || '设备台账管理系统';
+                document.getElementById('defaultLanguage').value = settings.defaultLanguage || 'zh-CN';
+                document.getElementById('timezone').value = settings.timezone || 'Asia/Shanghai';
+                document.getElementById('pageSize').value = settings.pageSize || 10;
+                document.getElementById('sessionTimeout').value = settings.sessionTimeout || 2;
+                document.getElementById('minPasswordLength').value = settings.minPasswordLength || 6;
+                document.getElementById('enableTwoFactor').checked = settings.enableTwoFactor || false;
+                document.getElementById('enableLoginLog').checked = settings.enableLoginLog !== false;
+                document.getElementById('enableEmailNotification').checked = settings.enableEmailNotification !== false;
+                document.getElementById('enableExpirationReminder').checked = settings.enableExpirationReminder !== false;
+                document.getElementById('enableCalibrationReminder').checked = settings.enableCalibrationReminder !== false;
+                document.getElementById('reminderDays').value = settings.reminderDays || 7;
+                document.getElementById('smtpServer').value = settings.smtpServer || '';
+                document.getElementById('enableAutoBackup').checked = settings.enableAutoBackup !== false;
+                document.getElementById('backupFrequency').value = settings.backupFrequency || 'weekly';
+                document.getElementById('backupRetention').value = settings.backupRetention || 30;
+                document.getElementById('backupPath').value = settings.backupPath || './backups';
+                
+                showNotification('设置加载成功', 'success');
+                
+            } catch (error) {
+                console.error('加载设置失败:', error);
+                showNotification('加载设置失败: ' + (error.message || '网络错误'), 'error');
+            }
+        }
+
+        // 保存设置
+        async function saveSettings() {
+            try {
+                const settings = {
+                    systemName: document.getElementById('systemName').value,
+                    defaultLanguage: document.getElementById('defaultLanguage').value,
+                    timezone: document.getElementById('timezone').value,
+                    pageSize: parseInt(document.getElementById('pageSize').value),
+                    sessionTimeout: parseInt(document.getElementById('sessionTimeout').value),
+                    minPasswordLength: parseInt(document.getElementById('minPasswordLength').value),
+                    enableTwoFactor: document.getElementById('enableTwoFactor').checked,
+                    enableLoginLog: document.getElementById('enableLoginLog').checked,
+                    enableEmailNotification: document.getElementById('enableEmailNotification').checked,
+                    enableExpirationReminder: document.getElementById('enableExpirationReminder').checked,
+                    enableCalibrationReminder: document.getElementById('enableCalibrationReminder').checked,
+                    reminderDays: parseInt(document.getElementById('reminderDays').value),
+                    smtpServer: document.getElementById('smtpServer').value,
+                    enableAutoBackup: document.getElementById('enableAutoBackup').checked,
+                    backupFrequency: document.getElementById('backupFrequency').value,
+                    backupRetention: parseInt(document.getElementById('backupRetention').value),
+                    backupPath: document.getElementById('backupPath').value
+                };
+
+                const response = await SystemAPI.updateSettings(settings);
+                showNotification('设置保存成功', 'success');
+                
+            } catch (error) {
+                console.error('保存设置失败:', error);
+                const errorMessage = error.response?.data?.detail || error.message || '保存设置失败';
+                showNotification('保存设置失败: ' + errorMessage, 'error');
+            }
+        }
+
+        // 重置设置
+        async function resetSettings() {
+            if (confirm('确定要重置所有设置为默认值吗？此操作不可撤销。')) {
+                try {
+                    const response = await SystemAPI.resetSettings();
+                    const defaultSettings = response.data || response.settings;
+                    
+                    // 重新加载页面以应用默认设置
+                    await loadSettings();
+                    showNotification('设置已重置为默认值', 'success');
+                    
+                } catch (error) {
+                    console.error('重置设置失败:', error);
+                    const errorMessage = error.response?.data?.detail || error.message || '重置设置失败';
+                    showNotification('重置设置失败: ' + errorMessage, 'error');
+                }
+            }
+        }
+
+        // 添加输入验证
+        function addInputValidation() {
+            // 页面大小验证
+            const pageSizeInput = document.getElementById('pageSize');
+            pageSizeInput.addEventListener('input', function() {
+                const value = parseInt(this.value);
+                if (value < 5 || value > 100) {
+                    this.setCustomValidity('每页显示条数必须在5-100之间');
+                } else {
+                    this.setCustomValidity('');
+                }
+            });
+
+            // 会话超时验证
+            const sessionTimeoutInput = document.getElementById('sessionTimeout');
+            sessionTimeoutInput.addEventListener('input', function() {
+                const value = parseInt(this.value);
+                if (value < 1 || value > 24) {
+                    this.setCustomValidity('会话超时时间必须在1-24小时之间');
+                } else {
+                    this.setCustomValidity('');
+                }
+            });
+
+            // 密码长度验证
+            const minPasswordLengthInput = document.getElementById('minPasswordLength');
+            minPasswordLengthInput.addEventListener('input', function() {
+                const value = parseInt(this.value);
+                if (value < 4 || value > 20) {
+                    this.setCustomValidity('密码最小长度必须在4-20之间');
+                } else {
+                    this.setCustomValidity('');
+                }
+            });
+
+            // 提醒天数验证
+            const reminderDaysInput = document.getElementById('reminderDays');
+            reminderDaysInput.addEventListener('input', function() {
+                const value = parseInt(this.value);
+                if (value < 1 || value > 30) {
+                    this.setCustomValidity('提醒提前天数必须在1-30之间');
+                } else {
+                    this.setCustomValidity('');
+                }
+            });
+
+            // 备份保留天数验证
+            const backupRetentionInput = document.getElementById('backupRetention');
+            backupRetentionInput.addEventListener('input', function() {
+                const value = parseInt(this.value);
+                if (value < 7 || value > 365) {
+                    this.setCustomValidity('备份保留天数必须在7-365之间');
+                } else {
+                    this.setCustomValidity('');
+                }
+            });
+        }
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            addInputValidation();
+            loadSettings();
+            setupSidebarNavigation();
+            setCurrentPageActive();
+        });
+
+        // 设置侧边栏导航
+        function setupSidebarNavigation() {
+            // 系统管理下拉菜单
+            const systemMenuBtn = document.getElementById('system-menu-btn');
+            const systemSubmenu = document.getElementById('system-submenu');
+            const systemMenuArrow = document.getElementById('system-menu-arrow');
+            
+            if (systemMenuBtn) {
+                systemMenuBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    // 切换子菜单显示
+                    systemSubmenu.classList.toggle('hidden');
+                    
+                    // 旋转箭头
+                    if (systemSubmenu.classList.contains('hidden')) {
+                        systemMenuArrow.style.transform = 'rotate(0deg)';
+                    } else {
+                        systemMenuArrow.style.transform = 'rotate(180deg)';
+                    }
+                });
+            }
+            
+            // 退出登录
+            const logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', function() {
+                    if (confirm('确定要退出登录吗？')) {
+                        // 清除本地存储
+                        localStorage.removeItem('access_token');
+                        localStorage.removeItem('refresh_token');
+                        localStorage.removeItem('user_info');
+                        
+                        // 跳转到登录页面
+                        window.location.href = '/login';
+                    }
+                });
+            }
+            
+            // 检查登录状态
+            const userInfo = localStorage.getItem('user_info');
+            if (userInfo) {
+                const user = JSON.parse(userInfo);
+                const currentUserElement = document.getElementById('current-user');
+                if (currentUserElement) {
+                    currentUserElement.textContent = user.username || '用户';
+                }
+            }
+        }
+
+        // 设置当前页面激活状态
+        function setCurrentPageActive() {
+            // 展开系统管理下拉菜单
+            const systemSubmenu = document.getElementById('system-submenu');
+            const systemMenuArrow = document.getElementById('system-menu-arrow');
+            const systemMenuBtn = document.getElementById('system-menu-btn');
+            
+            if (systemSubmenu && systemMenuArrow) {
+                systemSubmenu.classList.remove('hidden');
+                systemMenuArrow.style.transform = 'rotate(180deg)';
+            }
+            
+            // 激活系统管理菜单
+            if (systemMenuBtn) {
+                systemMenuBtn.classList.add('active');
+            }
+            
+            // 激活系统设置子菜单项
+            const settingsLink = document.getElementById('settings-link');
+            if (settingsLink) {
+                settingsLink.classList.add('active');
+            }
+        }
+    </script>
+</body>
+</html>

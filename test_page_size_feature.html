@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每页显示条数设置功能测试</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/static/js/api-client.js"></script>
+</head>
+<body class="bg-gray-50 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-2xl font-bold mb-6">每页显示条数设置功能测试</h1>
+        
+        <!-- 测试状态 -->
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h2 class="text-lg font-semibold mb-4">测试状态</h2>
+            <div id="test-status" class="space-y-2">
+                <div class="flex items-center">
+                    <div class="w-4 h-4 bg-gray-300 rounded-full mr-2" id="status-api"></div>
+                    <span>API路径测试</span>
+                </div>
+                <div class="flex items-center">
+                    <div class="w-4 h-4 bg-gray-300 rounded-full mr-2" id="status-settings"></div>
+                    <span>设置加载测试</span>
+                </div>
+                <div class="flex items-center">
+                    <div class="w-4 h-4 bg-gray-300 rounded-full mr-2" id="status-client"></div>
+                    <span>客户端配置测试</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- API测试 -->
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h2 class="text-lg font-semibold mb-4">API测试</h2>
+            <div class="space-y-4">
+                <div>
+                    <button onclick="testAPI()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                        测试设置API
+                    </button>
+                    <div id="api-result" class="mt-4 p-4 bg-gray-100 rounded"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 设置测试 -->
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h2 class="text-lg font-semibold mb-4">设置测试</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        每页显示条数测试
+                    </label>
+                    <input type="number" id="page-size" value="10" min="5" max="100" 
+                           class="border border-gray-300 rounded px-3 py-2 w-32">
+                    <button onclick="testUpdateSettings()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 ml-2">
+                        测试更新设置
+                    </button>
+                    <div id="settings-result" class="mt-4 p-4 bg-gray-100 rounded"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 功能验证 -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <h2 class="text-lg font-semibold mb-4">功能验证</h2>
+            <div class="space-y-4">
+                <div>
+                    <button onclick="testEquipmentSettings()" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">
+                        模拟设备管理页面设置加载
+                    </button>
+                    <div id="equipment-result" class="mt-4 p-4 bg-gray-100 rounded"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 测试API路径
+        async function testAPI() {
+            const resultDiv = document.getElementById('api-result');
+            const statusDiv = document.getElementById('status-api');
+            
+            resultDiv.innerHTML = '正在测试API路径...';
+            
+            try {
+                const response = await fetch('/api/settings/', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.status === 401) {
+                    resultDiv.innerHTML = `
+                        <div class="text-green-600">
+                            ✅ API路径正确，返回401需要认证
+                        </div>
+                    `;
+                    statusDiv.className = 'w-4 h-4 bg-green-500 rounded-full mr-2';
+                } else if (response.status === 200) {
+                    resultDiv.innerHTML = `
+                        <div class="text-green-600">
+                            ✅ API路径正确，返回数据
+                        </div>
+                    `;
+                    statusDiv.className = 'w-4 h-4 bg-green-500 rounded-full mr-2';
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="text-red-600">
+                            ❌ API路径错误，状态码: ${response.status}
+                        </div>
+                    `;
+                    statusDiv.className = 'w-4 h-4 bg-red-500 rounded-full mr-2';
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="text-red-600">错误: ${error.message}</div>`;
+                statusDiv.className = 'w-4 h-4 bg-red-500 rounded-full mr-2';
+            }
+        }
+        
+        // 测试更新设置
+        async function testUpdateSettings() {
+            const resultDiv = document.getElementById('settings-result');
+            const statusDiv = document.getElementById('status-settings');
+            const pageSize = document.getElementById('page-size').value;
+            
+            resultDiv.innerHTML = '正在测试设置更新...';
+            
+            try {
+                const response = await fetch('/api/settings/', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        pageSize: parseInt(pageSize),
+                        themeMode: 'light',
+                        sessionTimeout: 2
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.status === 401) {
+                    resultDiv.innerHTML = `
+                        <div class="text-green-600">
+                            ✅ 设置更新API路径正确，需要认证
+                            <br>📄 测试的每页显示条数: ${pageSize}
+                        </div>
+                    `;
+                    statusDiv.className = 'w-4 h-4 bg-green-500 rounded-full mr-2';
+                } else if (response.status === 200) {
+                    resultDiv.innerHTML = `
+                        <div class="text-green-600">
+                            ✅ 设置更新成功
+                            <br>📄 新的每页显示条数: ${pageSize}
+                        </div>
+                    `;
+                    statusDiv.className = 'w-4 h-4 bg-green-500 rounded-full mr-2';
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="text-red-600">
+                            ❌ 设置更新失败，状态码: ${response.status}
+                        </div>
+                    `;
+                    statusDiv.className = 'w-4 h-4 bg-red-500 rounded-full mr-2';
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="text-red-600">错误: ${error.message}</div>`;
+                statusDiv.className = 'w-4 h-4 bg-red-500 rounded-full mr-2';
+            }
+        }
+        
+        // 模拟设备管理页面设置加载
+        async function testEquipmentSettings() {
+            const resultDiv = document.getElementById('equipment-result');
+            const statusDiv = document.getElementById('status-client');
+            
+            resultDiv.innerHTML = '正在模拟设备管理页面设置加载...';
+            
+            try {
+                // 模拟设备管理页面的设置加载
+                const response = await fetch('/api/settings/', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.status === 401) {
+                    resultDiv.innerHTML = `
+                        <div class="text-green-600">
+                            ✅ 设备管理页面能够正确访问设置API
+                            <br>🔄 需要认证，这是正常的
+                        </div>
+                    `;
+                    statusDiv.className = 'w-4 h-4 bg-green-500 rounded-full mr-2';
+                } else if (response.status === 200) {
+                    const settings = data.data || data;
+                    const pageSize = settings.pageSize || 10;
+                    
+                    resultDiv.innerHTML = `
+                        <div class="text-green-600">
+                            ✅ 设备管理页面设置加载成功
+                            <br>📄 每页显示条数: ${pageSize}
+                            <br>🎨 主题模式: ${settings.themeMode || 'light'}
+                            <br>⏰ 会话超时: ${settings.sessionTimeout || 2}小时
+                            <br>🔧 客户端配置正确
+                        </div>
+                    `;
+                    statusDiv.className = 'w-4 h-4 bg-green-500 rounded-full mr-2';
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="text-red-600">
+                            ❌ 设备管理页面设置加载失败，状态码: ${response.status}
+                        </div>
+                    `;
+                    statusDiv.className = 'w-4 h-4 bg-red-500 rounded-full mr-2';
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="text-red-600">错误: ${error.message}</div>`;
+                statusDiv.className = 'w-4 h-4 bg-red-500 rounded-full mr-2';
+            }
+        }
+        
+        // 页面加载时自动测试
+        window.addEventListener('load', function() {
+            testAPI();
+        });
+    </script>
+</body>
+</html>

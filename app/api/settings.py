@@ -146,13 +146,17 @@ async def update_settings(
             if frequency not in ["daily", "weekly", "monthly"]:
                 raise HTTPException(status_code=400, detail="备份频率必须是daily、weekly或monthly")
         
-          
+        # 合并现有设置，避免丢失其他设置
+        existing_settings = load_settings()
+        merged_settings = existing_settings.copy()
+        merged_settings.update(settings_data)
+        
         # 保存设置
-        success = save_settings(settings_data)
+        success = save_settings(merged_settings)
         if not success:
             raise HTTPException(status_code=500, detail="保存系统设置失败")
         
-        return {"success": True, "data": settings_data, "message": "系统设置更新成功"}
+        return {"success": True, "data": merged_settings, "message": "系统设置更新成功"}
     
     except HTTPException:
         raise

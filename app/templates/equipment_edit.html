@@ -218,11 +218,13 @@
                                 <option value="6个月">6个月</option>
                                 <option value="12个月">12个月</option>
                                 <option value="24个月">24个月</option>
+                                <option value="36个月">36个月</option>
+                                <option value="随坏随换">随坏随换</option>
                             </select>
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label required-field" for="calibrationDate">检定(校准)日期</label>
+                            <label class="form-label required-field" for="calibrationDate" id="calibrationDateLabel">检定(校准)日期</label>
                             <input type="date" id="calibrationDate" name="calibrationDate" class="form-input" 
                                    required onchange="calculateValidDate()">
                         </div>
@@ -583,8 +585,8 @@
             const calibrationMethod = document.getElementById('calibrationMethod').value;
 
             // 计算有效期
-            let validUntil = '';
-            if (calibrationDate && calibrationPeriod) {
+            let validUntil = null;
+            if (calibrationPeriod !== '随坏随换' && calibrationDate) {
                 const date = new Date(calibrationDate);
                 const months = parseInt(calibrationPeriod.replace('个月', ''));
                 date.setMonth(date.getMonth() + months);
@@ -600,7 +602,7 @@
                 accuracy_level: document.getElementById('accuracy').value,
                 measurement_range: document.getElementById('measureRange').value || null,
                 calibration_cycle: calibrationPeriod,
-                calibration_date: calibrationDate,
+                calibration_date: calibrationPeriod !== '随坏随换' ? calibrationDate : null,
                 calibration_method: calibrationMethod,
                 serial_number: document.getElementById('equipmentCode').value,
                 installation_location: document.getElementById('installLocation').value || null,
@@ -631,11 +633,16 @@
 
         // 表单验证
         function validateForm() {
-            const requiredFields = [
+            let requiredFields = [
                 'department', 'category', 'equipmentName', 'model',
-                'equipmentCode', 'calibrationPeriod', 'calibrationDate', 
-                'calibrationMethod', 'equipmentStatus'
+                'equipmentCode', 'calibrationPeriod', 'calibrationMethod', 'equipmentStatus'
             ];
+
+            // 检查是否需要检定日期
+            const calibrationPeriod = document.getElementById('calibrationPeriod').value;
+            if (calibrationPeriod !== '随坏随换') {
+                requiredFields.push('calibrationDate');
+            }
 
             let isValid = true;
             
@@ -731,15 +738,31 @@
             const calibrationDate = document.getElementById('calibrationDate').value;
             const calibrationPeriod = document.getElementById('calibrationPeriod').value;
             const validUntilInput = document.getElementById('validUntil');
+            const calibrationDateLabel = document.getElementById('calibrationDateLabel');
+            const calibrationDateInput = document.getElementById('calibrationDate');
             
-            if (calibrationDate && calibrationPeriod) {
-                const date = new Date(calibrationDate);
-                const months = parseInt(calibrationPeriod.replace('个月', ''));
-                date.setMonth(date.getMonth() + months);
-                date.setDate(date.getDate() - 1); // 减去一天，因为到期当天不算有效
-                validUntilInput.value = date.toISOString().split('T')[0];
-            } else {
+            if (calibrationPeriod === '随坏随换') {
+                // 随坏随换设备不需要检定日期和有效期
                 validUntilInput.value = '';
+                calibrationDateInput.value = '';
+                calibrationDateInput.required = false;
+                calibrationDateLabel.classList.remove('required-field');
+                validUntilInput.placeholder = '随坏随换设备无有效期';
+            } else {
+                // 其他周期需要检定日期
+                calibrationDateInput.required = true;
+                calibrationDateLabel.classList.add('required-field');
+                validUntilInput.placeholder = '';
+                
+                if (calibrationDate && calibrationPeriod) {
+                    const date = new Date(calibrationDate);
+                    const months = parseInt(calibrationPeriod.replace('个月', ''));
+                    date.setMonth(date.getMonth() + months);
+                    date.setDate(date.getDate() - 1); // 减去一天，因为到期当天不算有效
+                    validUntilInput.value = date.toISOString().split('T')[0];
+                } else {
+                    validUntilInput.value = '';
+                }
             }
         }
 

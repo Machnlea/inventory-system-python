@@ -7,10 +7,14 @@ from typing import List, Optional
 
 def calculate_valid_until(calibration_date: date, calibration_cycle: str) -> date:
     """计算有效期至"""
-    if calibration_cycle == "12个月":
+    if calibration_cycle == "随坏随换":
+        return None  # 随坏随换不需要计算有效期
+    elif calibration_cycle == "12个月":
         next_date = calibration_date.replace(year=calibration_date.year + 1)
     elif calibration_cycle == "24个月":
         next_date = calibration_date.replace(year=calibration_date.year + 2)
+    elif calibration_cycle == "36个月":
+        next_date = calibration_date.replace(year=calibration_date.year + 3)
     elif calibration_cycle == "6个月":
         # 增加6个月
         if calibration_date.month + 6 > 12:
@@ -18,7 +22,7 @@ def calculate_valid_until(calibration_date: date, calibration_cycle: str) -> dat
         else:
             next_date = calibration_date.replace(month=calibration_date.month + 6)
     else:
-        raise ValueError("检定周期必须是'6个月'、'12个月'或'24个月'")
+        raise ValueError("检定周期必须是'6个月'、'12个月'、'24个月'、'36个月'或'随坏随换'")
     
     # 减去1天
     return next_date - timedelta(days=1)
@@ -106,15 +110,12 @@ def get_equipment(db: Session, equipment_id: int, user_id: Optional[int] = None,
     return query.first()
 
 def create_equipment(db: Session, equipment: EquipmentCreate):
-    # 验证证书形式字段
-    if equipment.calibration_method == "外检" and equipment.certificate_form:
-        if equipment.certificate_form not in ["校准证书", "检定证书"]:
-            raise ValueError("证书形式必须是'校准证书'或'检定证书'")
-    
-    # 自动计算有效期至
-    valid_until = calculate_valid_until(
-        equipment.calibration_date, equipment.calibration_cycle
-    )
+    # 自动计算有效期至（如果检定周期不是"随坏随换"）
+    valid_until = None
+    if equipment.calibration_cycle != "随坏随换" and equipment.calibration_date:
+        valid_until = calculate_valid_until(
+            equipment.calibration_date, equipment.calibration_cycle
+        )
     
     # 准备设备数据
     equipment_data = equipment.dict()
@@ -125,8 +126,8 @@ def create_equipment(db: Session, equipment: EquipmentCreate):
         equipment_data["management_level"] = "-"
     
     # 处理状态变更时间
-    if hasattr(equipment, 'status') and equipment.status in ["停用", "报废"]:
-        if hasattr(equipment, 'status_change_date') and equipment.status_change_date:
+    if equipment.status in ["停用", "报废"]:
+        if equipment.status_change_date:
             # 如果提供了状态变更时间，使用提供的日期
             equipment_data["status_change_date"] = equipment.status_change_date
         else:
@@ -144,20 +145,18 @@ def update_equipment(db: Session, equipment_id: int, equipment_update: Equipment
     if db_equipment:
         update_data = equipment_update.dict(exclude_unset=True)
         
-        # 验证证书形式字段
-        if "certificate_form" in update_data:
-            calibration_method = update_data.get("calibration_method", db_equipment.calibration_method)
-            if calibration_method == "外检" and update_data["certificate_form"]:
-                if update_data["certificate_form"] not in ["校准证书", "检定证书"]:
-                    raise ValueError("证书形式必须是'校准证书'或'检定证书'")
-        
         # 如果更新了检定日期或检定周期，重新计算有效期至
         if "calibration_date" in update_data or "calibration_cycle" in update_data:
             calibration_date = update_data.get("calibration_date", db_equipment.calibration_date)
             calibration_cycle = update_data.get("calibration_cycle", db_equipment.calibration_cycle)
-            update_data["valid_until"] = calculate_valid_until(
-                calibration_date, calibration_cycle
-            )
+            
+            # 只有当检定周期不是"随坏随换"且有检定日期时才计算有效期
+            if calibration_cycle != "随坏随换" and calibration_date:
+                update_data["valid_until"] = calculate_valid_until(
+                    calibration_date, calibration_cycle
+                )
+            else:
+                update_data["valid_until"] = None
         
         # 处理管理级别：如果检定方式为外检，管理级别设为"-"
         if "calibration_method" in update_data and update_data["calibration_method"] == "外检":

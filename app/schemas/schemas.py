@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator, model_validator
 from datetime import datetime, date
 from typing import Optional, List
 
@@ -60,8 +60,8 @@ class EquipmentBase(BaseModel):
     model: str
     accuracy_level: str
     measurement_range: Optional[str] = None
-    calibration_cycle: str  # "6个月", "12个月" 或 "24个月"
-    calibration_date: date
+    calibration_cycle: str  # "6个月", "12个月", "24个月", "36个月" 或 "随坏随换"
+    calibration_date: Optional[date] = None  # 当检定周期不是"随坏随换"时必填
     calibration_method: str
     
     # 外检相关字段
@@ -79,6 +79,36 @@ class EquipmentBase(BaseModel):
     status: str = "在用"
     status_change_date: Optional[date] = None  # 状态变更时间
     notes: Optional[str] = None
+    
+    @model_validator(mode='after')
+    def validate_equipment_fields(self):
+        # 验证检定周期
+        valid_cycles = ["6个月", "12个月", "24个月", "36个月", "随坏随换"]
+        if self.calibration_cycle not in valid_cycles:
+            raise ValueError(f"检定周期必须是: {', '.join(valid_cycles)}")
+        
+        # 验证检定日期：当检定周期不是"随坏随换"时必填
+        if self.calibration_cycle != "随坏随换" and not self.calibration_date:
+            raise ValueError("当检定周期不是'随坏随换'时，检定日期为必填项")
+        
+        # 验证外检字段：当检定方式为"外检"时必填
+        if self.calibration_method == "外检":
+            if not self.certificate_form:
+                raise ValueError("外检设备必须填写证书形式")
+            if self.certificate_form not in ["校准证书", "检定证书"]:
+                raise ValueError("证书形式必须是'校准证书'或'检定证书'")
+            if not self.certificate_number:
+                raise ValueError("外检设备必须填写证书编号")
+            if not self.verification_result:
+                raise ValueError("外检设备必须填写检定结果")
+            if not self.verification_agency:
+                raise ValueError("外检设备必须填写检定机构")
+        
+        # 验证状态变更时间：当状态为"停用"或"报废"时必填
+        if self.status in ["停用", "报废"] and not self.status_change_date:
+            raise ValueError("当设备状态为'停用'或'报废'时，状态变更时间为必填项")
+        
+        return self
 
 class EquipmentCreate(EquipmentBase):
     pass
@@ -107,10 +137,41 @@ class EquipmentUpdate(BaseModel):
     status: Optional[str] = None
     status_change_date: Optional[date] = None  # 状态变更时间
     notes: Optional[str] = None
+    
+    @model_validator(mode='after')
+    def validate_equipment_update_fields(self):
+        # 验证检定周期（如果提供）
+        if self.calibration_cycle:
+            valid_cycles = ["6个月", "12个月", "24个月", "36个月", "随坏随换"]
+            if self.calibration_cycle not in valid_cycles:
+                raise ValueError(f"检定周期必须是: {', '.join(valid_cycles)}")
+        
+        # 验证检定日期：当检定周期不是"随坏随换"时必填
+        if self.calibration_cycle and self.calibration_cycle != "随坏随换" and not self.calibration_date:
+            raise ValueError("当检定周期不是'随坏随换'时，检定日期为必填项")
+        
+        # 验证外检字段：当检定方式为"外检"时必填
+        if self.calibration_method == "外检":
+            if not self.certificate_form:
+                raise ValueError("外检设备必须填写证书形式")
+            if self.certificate_form not in ["校准证书", "检定证书"]:
+                raise ValueError("证书形式必须是'校准证书'或'检定证书'")
+            if not self.certificate_number:
+                raise ValueError("外检设备必须填写证书编号")
+            if not self.verification_result:
+                raise ValueError("外检设备必须填写检定结果")
+            if not self.verification_agency:
+                raise ValueError("外检设备必须填写检定机构")
+        
+        # 验证状态变更时间：当状态为"停用"或"报废"时必填
+        if self.status in ["停用", "报废"] and not self.status_change_date:
+            raise ValueError("当设备状态为'停用'或'报废'时，状态变更时间为必填项")
+        
+        return self
 
 class Equipment(EquipmentBase):
     id: int
-    valid_until: date
+    valid_until: Optional[date] = None
     status_change_date: Optional[date] = None
     created_at: datetime
     updated_at: Optional[datetime] = None

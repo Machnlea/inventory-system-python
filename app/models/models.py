@@ -63,9 +63,9 @@ class Equipment(Base):
     measurement_range = Column(String(100))  # 测量范围
     
     # 检定信息
-    calibration_cycle = Column(String(10), nullable=False)  # 检定周期(6个月/12个月/24个月)
-    calibration_date = Column(Date, nullable=False)  # 检定日期
-    valid_until = Column(Date, nullable=False)  # 有效期至
+    calibration_cycle = Column(String(10), nullable=False)  # 检定周期(6个月/12个月/24个月/随坏随换)
+    calibration_date = Column(Date)  # 检定日期(当检定周期不是"随坏随换"时必填)
+    valid_until = Column(Date)  # 有效期至(根据检定周期自动计算)
     calibration_method = Column(String(50), nullable=False)  # 检定方式
     
     # 外检相关字段

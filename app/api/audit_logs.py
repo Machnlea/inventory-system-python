@@ -18,7 +18,7 @@ def get_audit_logs(skip: int = 0, limit: int = 100,
                   db: Session = Depends(get_db),
                   current_user = Depends(get_current_admin_user)):
     """获取操作日志（仅管理员）"""
-    query = db.query(AuditLogModel).join(User, AuditLogModel.user_id == User.id)
+    query = db.query(AuditLogModel).join(User, AuditLogModel.user_id == User.id).outerjoin(Equipment, AuditLogModel.equipment_id == Equipment.id)
     
     # 应用筛选条件
     if user_id:

@@ -208,6 +208,7 @@ class AuditLog(AuditLogBase):
     equipment_id: Optional[int] = None
     created_at: datetime
     user: User
+    equipment: Optional[Equipment] = None
     
     class Config:
         from_attributes = True

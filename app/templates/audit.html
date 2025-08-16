@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>操作日志 - 设备台账管理系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="/static/js/session-manager.js"></script>
+    <script>
+        // 简化的API客户端，直接内嵌到页面中
+        const AuditLogAPI = {
+            async getAuditLogs(params = {}) {
+                const queryParams = new URLSearchParams();
+                
+                if (params.skip) queryParams.append('skip', params.skip);
+                if (params.limit) queryParams.append('limit', params.limit);
+                if (params.user_id) queryParams.append('user_id', params.user_id);
+                if (params.action) queryParams.append('action', params.action);
+                if (params.start_date) queryParams.append('start_date', params.start_date);
+                if (params.end_date) queryParams.append('end_date', params.end_date);
+                
+                const endpoint = `/api/audit/${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+                return apiRequest(endpoint);
+            },
+
+            async getAuditUsers() {
+                return apiRequest('/api/audit/users');
+            }
+        };
+
+        // 简化的API请求函数
+        async function apiRequest(endpoint) {
+            const token = localStorage.getItem('access_token');
+            const url = endpoint;
+            
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+            
+            const response = await fetch(url, { headers });
+            
+            if (response.status === 401) {
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('user_info');
+                window.location.href = '/login';
+                throw new Error('登录已过期, 请重新登录');
+            }
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.detail || `请求失败: ${response.status}`);
+            }
+            
+            return await response.json();
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .glass-effect {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        .sidebar-item {
+            transition: all 0.2s ease;
+        }
+        .sidebar-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
+        .sidebar-item.active {
+            background: rgba(255, 255, 255, 0.2);
+            border-left: 4px solid #667eea;
+        }
+        .log-row:hover {
+            background-color: rgba(102, 126, 234, 0.05);
+        }
+        .action-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+        }
+        .action-create { background-color: #10b981; color: white; }
+        .action-update { background-color: #3b82f6; color: white; }
+        .action-delete { background-color: #ef4444; color: white; }
+        .action-login { background-color: #8b5cf6; color: white; }
+        .action-logout { background-color: #6b7280; color: white; }
+        .action-other { background-color: #f59e0b; color: white; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="flex h-screen">
+        <!-- 左侧导航栏 -->
+        <div class="w-64 gradient-bg shadow-xl fixed left-0 top-0 h-full z-10">
+            <div class="flex flex-col h-full">
+                <!-- Logo和标题 -->
+                <div class="flex items-center justify-center h-16 px-4 border-b border-white/20">
+                    <div class="flex items-center">
+                        <i class="fas fa-clipboard-list text-white text-2xl mr-3"></i>
+                        <h1 class="text-white text-lg font-bold">设备台账管理系统</h1>
+                    </div>
+                </div>
+
+                <!-- 导航菜单 -->
+                <nav class="flex-1 px-4 py-6 space-y-2">
+                    <a href="/dashboard" class="sidebar-item flex items-center px-4 py-3 text-white/90 rounded-lg" id="dashboard-link">
+                        <i class="fas fa-home mr-3 text-lg"></i>
+                        <span>仪表盘</span>
+                    </a>
+                    <a href="/equipment" class="sidebar-item flex items-center px-4 py-3 text-white/90 rounded-lg" id="equipment-link">
+                        <i class="fas fa-cogs mr-3 text-lg"></i>
+                        <span>设备管理</span>
+                    </a>
+                    <a href="#" class="sidebar-item flex items-center px-4 py-3 text-white/90 rounded-lg" id="maintenance-link">
+                        <i class="fas fa-tools mr-3 text-lg"></i>
+                        <span>维护记录</span>
+                    </a>
+                    <a href="#" class="sidebar-item flex items-center px-4 py-3 text-white/90 rounded-lg" id="reports-link">
+                        <i class="fas fa-chart-bar mr-3 text-lg"></i>
+                        <span>统计报表</span>
+                    </a>
+                    
+                    <!-- 系统管理下拉菜单 -->
+                    <div class="relative">
+                        <button class="sidebar-item active flex items-center justify-between w-full px-4 py-3 text-white/90 rounded-lg" id="system-menu-btn">
+                            <div class="flex items-center">
+                                <i class="fas fa-cog mr-3 text-lg"></i>
+                                <span>系统管理</span>
+                            </div>
+                            <i class="fas fa-chevron-down text-sm transition-transform duration-200 rotate-180" id="system-menu-arrow"></i>
+                        </button>
+                        <div class="ml-4 mt-1 space-y-1" id="system-submenu">
+                            <a href="/categories" class="sidebar-item flex items-center px-4 py-2 text-white/80 rounded-lg text-sm">
+                                <i class="fas fa-tags mr-3"></i>
+                                <span>设备类别</span>
+                            </a>
+                            <a href="/users" class="sidebar-item flex items-center px-4 py-2 text-white/80 rounded-lg text-sm">
+                                <i class="fas fa-users mr-3"></i>
+                                <span>用户管理</span>
+                            </a>
+                            <a href="/departments" class="sidebar-item flex items-center px-4 py-2 text-white/80 rounded-lg text-sm">
+                                <i class="fas fa-building mr-3"></i>
+                                <span>部门管理</span>
+                            </a>
+                            <a href="/audit" class="sidebar-item active flex items-center px-4 py-2 text-white/80 rounded-lg text-sm bg-white/10" id="audit-link">
+                                <i class="fas fa-history mr-3"></i>
+                                <span>操作日志</span>
+                            </a>
+                            <a href="#" class="sidebar-item flex items-center px-4 py-2 text-white/80 rounded-lg text-sm" id="settings-link">
+                                <i class="fas fa-cog mr-3"></i>
+                                <span>系统设置</span>
+                            </a>
+                        </div>
+                    </div>
+                </nav>
+
+                <!-- 用户信息 -->
+                <div class="border-t border-white/20 p-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <i class="fas fa-user-circle text-white text-xl mr-3"></i>
+                            <div>
+                                <p class="text-white text-sm font-medium" id="current-user">用户</p>
+                                <p class="text-white/70 text-xs">在线</p>
+                            </div>
+                        </div>
+                        <button class="text-white/70 hover:text-white transition-colors" id="logout-btn">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="flex-1 ml-64 overflow-hidden">
+            <div class="h-full overflow-y-auto">
+            <!-- 顶部通知容器 -->
+            <div id="notification-container" class="fixed top-4 right-4 z-[99999] space-y-2 max-w-md"></div>
+            
+            <!-- 主要内容 -->
+            <div class="p-8">
+                <!-- 页面标题 -->
+                <div class="mb-8">
+                    <h1 class="text-3xl font-bold text-gray-900 mb-2">操作日志</h1>
+                    <p class="text-gray-600">查看系统操作记录和审计信息</p>
+                </div>
+
+                <!-- 筛选区域 -->
+                <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">操作用户</label>
+                            <select id="filter-user" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">所有用户</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">操作类型</label>
+                            <select id="filter-action" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">所有操作</option>
+                                <option value="创建">创建</option>
+                                <option value="修改">修改</option>
+                                <option value="删除">删除</option>
+                                <option value="登录">登录</option>
+                                <option value="登出">登出</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">开始日期</label>
+                            <input type="date" id="filter-start-date" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">结束日期</label>
+                            <input type="date" id="filter-end-date" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    <div class="flex justify-end space-x-3 mt-4">
+                        <button id="reset-filters" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors">
+                            <i class="fas fa-undo mr-2"></i>重置
+                        </button>
+                        <button id="apply-filters" class="btn-primary text-white px-4 py-2 rounded-md hover:shadow-lg transition-all duration-200">
+                            <i class="fas fa-filter mr-2"></i>应用筛选
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 日志统计 -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-white rounded-lg shadow p-4">
+                        <div class="flex items-center">
+                            <div class="p-2 bg-blue-100 rounded-lg">
+                                <i class="fas fa-list text-blue-600"></i>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm text-gray-600">总日志数</p>
+                                <p class="text-lg font-semibold text-gray-900" id="total-logs">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-4">
+                        <div class="flex items-center">
+                            <div class="p-2 bg-green-100 rounded-lg">
+                                <i class="fas fa-plus text-green-600"></i>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm text-gray-600">今日新增</p>
+                                <p class="text-lg font-semibold text-gray-900" id="today-logs">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-4">
+                        <div class="flex items-center">
+                            <div class="p-2 bg-purple-100 rounded-lg">
+                                <i class="fas fa-users text-purple-600"></i>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm text-gray-600">活跃用户</p>
+                                <p class="text-lg font-semibold text-gray-900" id="active-users">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-4">
+                        <div class="flex items-center">
+                            <div class="p-2 bg-orange-100 rounded-lg">
+                                <i class="fas fa-cog text-orange-600"></i>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm text-gray-600">设备操作</p>
+                                <p class="text-lg font-semibold text-gray-900" id="equipment-ops">0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 日志列表 -->
+                <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                    <div class="p-6 border-b border-gray-200">
+                        <div class="flex justify-between items-center">
+                            <h2 class="text-xl font-semibold text-gray-900">操作日志列表</h2>
+                            <div class="flex space-x-2">
+                                <button id="refresh-btn" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors">
+                                    <i class="fas fa-sync-alt mr-2"></i>刷新
+                                </button>
+                                <button id="export-btn" class="px-4 py-2 bg-green-100 text-green-700 rounded-md hover:bg-green-200 transition-colors">
+                                    <i class="fas fa-download mr-2"></i>导出
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作时间</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作用户</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作类型</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作对象</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作描述</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">详细信息</th>
+                                </tr>
+                            </thead>
+                            <tbody id="audit-logs-tbody" class="bg-white divide-y divide-gray-200">
+                                <!-- 日志数据将在这里动态加载 -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- 分页控件 -->
+                    <div class="px-6 py-4 border-t border-gray-200">
+                        <div class="flex justify-between items-center">
+                            <div class="text-sm text-gray-700">
+                                显示 <span id="page-info">0-0</span> 条，共 <span id="total-count">0</span> 条
+                            </div>
+                            <div class="flex space-x-2">
+                                <button id="prev-page" class="px-3 py-1 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    上一页
+                                </button>
+                                <span id="page-numbers" class="flex space-x-1"></span>
+                                <button id="next-page" class="px-3 py-1 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    下一页
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 日志详情模态框 -->
+    <div id="logDetailModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-200">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-xl font-semibold text-gray-900">操作日志详情</h3>
+                    <button onclick="closeLogDetailModal()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="p-6" id="log-detail-content">
+                <!-- 详情内容将在这里动态加载 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let currentPage = 1;
+        let pageSize = 20;
+        let totalLogs = 0;
+        let totalPages = 0;
+        let currentUser = null;
+        let auditLogs = [];
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('📄 DOM loaded, starting initialization...');
+            
+            try {
+                initializePage();
+                setupEventListeners();
+                loadAuditUsers();
+                loadAuditLogs();
+                updateAuditStats();
+                console.log('✅ Page initialization completed');
+            } catch (error) {
+                console.error('❌ 页面初始化失败:', error);
+                showNotification('页面初始化失败，请刷新页面重试: ' + error.message, 'error');
+            }
+        });
+
+        // 初始化页面
+        function initializePage() {
+            // 设置系统管理菜单展开状态
+            const systemSubmenu = document.getElementById('system-submenu');
+            const systemMenuArrow = document.getElementById('system-menu-arrow');
+            if (systemSubmenu && systemMenuArrow) {
+                systemSubmenu.classList.remove('hidden');
+                systemMenuArrow.style.transform = 'rotate(180deg)';
+            }
+
+            // 获取当前用户信息
+            const userInfo = localStorage.getItem('user_info');
+            if (userInfo) {
+                currentUser = JSON.parse(userInfo);
+                document.getElementById('current-user').textContent = currentUser.username;
+            }
+
+            // 不设置默认日期范围，显示所有日志
+            // 用户可以通过筛选器选择特定的日期范围
+        }
+
+        // 设置事件监听器
+        function setupEventListeners() {
+            // 系统管理下拉菜单
+            const systemMenuBtn = document.getElementById('system-menu-btn');
+            const systemSubmenu = document.getElementById('system-submenu');
+            const systemMenuArrow = document.getElementById('system-menu-arrow');
+            
+            if (systemMenuBtn) {
+                systemMenuBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    // 切换子菜单显示
+                    systemSubmenu.classList.toggle('hidden');
+                    systemMenuArrow.style.transform = systemSubmenu.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+                });
+            }
+
+            // 登出按钮
+            document.getElementById('logout-btn').addEventListener('click', function() {
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('current_user');
+                window.location.href = '/login';
+            });
+
+            // 筛选按钮
+            document.getElementById('apply-filters').addEventListener('click', function() {
+                currentPage = 1;
+                loadAuditLogs();
+            });
+
+            document.getElementById('reset-filters').addEventListener('click', function() {
+                document.getElementById('filter-user').value = '';
+                document.getElementById('filter-action').value = '';
+                document.getElementById('filter-start-date').value = '';
+                document.getElementById('filter-end-date').value = '';
+                currentPage = 1;
+                loadAuditLogs();
+            });
+
+            // 刷新按钮
+            document.getElementById('refresh-btn').addEventListener('click', function() {
+                loadAuditLogs();
+                updateAuditStats();
+            });
+
+            // 导出按钮
+            document.getElementById('export-btn').addEventListener('click', exportAuditLogs);
+
+            // 分页按钮
+            document.getElementById('prev-page').addEventListener('click', function() {
+                if (currentPage > 1) {
+                    currentPage--;
+                    loadAuditLogs();
+                }
+            });
+
+            document.getElementById('next-page').addEventListener('click', function() {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    loadAuditLogs();
+                }
+            });
+        }
+
+        // 加载操作日志
+        async function loadAuditLogs() {
+            try {
+                console.log('开始加载操作日志...');
+                console.log('当前页码:', currentPage);
+                console.log('每页大小:', pageSize);
+                
+                // 检查API是否可用
+                if (typeof AuditLogAPI === 'undefined') {
+                    throw new Error('AuditLogAPI 未定义，请刷新页面重试');
+                }
+                
+                showNotification('正在加载操作日志...', 'info');
+
+                // 构建请求参数
+                const params = {
+                    skip: (currentPage - 1) * pageSize,
+                    limit: pageSize
+                };
+
+                // 添加筛选条件
+                const userId = document.getElementById('filter-user').value;
+                const action = document.getElementById('filter-action').value;
+                const startDate = document.getElementById('filter-start-date').value;
+                const endDate = document.getElementById('filter-end-date').value;
+
+                if (userId) params.user_id = parseInt(userId);
+                if (action) params.action = action;
+                if (startDate) params.start_date = startDate;
+                if (endDate) params.end_date = endDate;
+
+                console.log('API参数:', params);
+
+                const data = await AuditLogAPI.getAuditLogs(params);
+                console.log('API响应数据:', data);
+                
+                if (!data || !data.items) {
+                    throw new Error('API返回数据格式错误');
+                }
+                
+                auditLogs = data.items;
+                totalLogs = data.total;
+                totalPages = Math.ceil(totalLogs / pageSize);
+
+                renderAuditLogsTable(auditLogs);
+                updatePagination();
+                
+                showNotification('操作日志加载成功', 'success');
+                
+            } catch (error) {
+                console.error('加载操作日志失败:', error);
+                showNotification('加载操作日志失败: ' + error.message, 'error');
+                renderAuditLogsTable([]);
+            }
+        }
+
+        // 渲染操作日志表格
+        function renderAuditLogsTable(logs) {
+            const tbody = document.getElementById('audit-logs-tbody');
+            
+            if (!logs || logs.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+                            <i class="fas fa-inbox text-4xl mb-4 block"></i>
+                            <p>暂无操作日志</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = logs.map(log => `
+                <tr class="log-row cursor-pointer" onclick="showLogDetail(${log.id})">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        ${formatDateTime(log.created_at)}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <div class="flex items-center">
+                            <i class="fas fa-user-circle text-gray-400 mr-2"></i>
+                            ${log.user.username}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="action-badge action-${getActionClass(log.action)}">
+                            ${log.action}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        ${log.equipment ? log.equipment.name : (log.equipment_id ? `设备ID: ${log.equipment_id}` : '系统')}
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-900 max-w-xs">
+                        <div class="truncate" title="${log.description}">
+                            ${log.description}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <button class="text-blue-600 hover:text-blue-800" onclick="event.stopPropagation(); showLogDetail(${log.id})">
+                            <i class="fas fa-eye"></i> 查看
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // 获取操作类型样式类
+        function getActionClass(action) {
+            const actionMap = {
+                '创建': 'create',
+                '修改': 'update', 
+                '删除': 'delete',
+                '登录': 'login',
+                '登出': 'logout'
+            };
+            return actionMap[action] || 'other';
+        }
+
+        // 显示日志详情
+        function showLogDetail(logId) {
+            const log = auditLogs.find(l => l.id === logId);
+            if (!log) return;
+
+            const content = document.getElementById('log-detail-content');
+            content.innerHTML = `
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">操作时间</label>
+                            <p class="text-sm text-gray-900">${formatDateTime(log.created_at)}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">操作用户</label>
+                            <p class="text-sm text-gray-900">${log.user.username}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">操作类型</label>
+                            <p class="text-sm text-gray-900">
+                                <span class="action-badge action-${getActionClass(log.action)}">
+                                    ${log.action}
+                                </span>
+                            </p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">操作对象</label>
+                            <p class="text-sm text-gray-900">
+                                ${log.equipment ? log.equipment.name : (log.equipment_id ? `设备ID: ${log.equipment_id}` : '系统')}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">操作描述</label>
+                        <p class="text-sm text-gray-900 bg-gray-50 p-3 rounded-md">${log.description}</p>
+                    </div>
+                    
+                    ${(log.old_value || log.new_value) ? `
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            ${log.old_value ? `
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">修改前</label>
+                                    <p class="text-sm text-gray-900 bg-red-50 p-3 rounded-md font-mono text-xs">${log.old_value}</p>
+                                </div>
+                            ` : ''}
+                            ${log.new_value ? `
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">修改后</label>
+                                    <p class="text-sm text-gray-900 bg-green-50 p-3 rounded-md font-mono text-xs">${log.new_value}</p>
+                                </div>
+                            ` : ''}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            document.getElementById('logDetailModal').classList.remove('hidden');
+        }
+
+        // 关闭日志详情模态框
+        function closeLogDetailModal() {
+            document.getElementById('logDetailModal').classList.add('hidden');
+        }
+
+        // 加载用户列表
+        async function loadAuditUsers() {
+            try {
+                // 检查API是否可用
+                if (typeof AuditLogAPI === 'undefined') {
+                    throw new Error('AuditLogAPI 未定义，请刷新页面重试');
+                }
+                
+                const users = await AuditLogAPI.getAuditUsers();
+                const userSelect = document.getElementById('filter-user');
+                
+                if (!userSelect) {
+                    console.error('用户选择器元素未找到');
+                    return;
+                }
+                
+                // 保留第一个选项，清空其他选项
+                userSelect.innerHTML = '<option value="">所有用户</option>';
+                
+                if (users && Array.isArray(users)) {
+                    users.forEach(user => {
+                        const option = document.createElement('option');
+                        option.value = user.id;
+                        option.textContent = user.username;
+                        userSelect.appendChild(option);
+                    });
+                }
+                
+            } catch (error) {
+                console.error('加载用户列表失败:', error);
+                // 不显示错误通知，避免干扰用户
+            }
+        }
+
+        // 更新操作日志统计
+        async function updateAuditStats() {
+            try {
+                // 这里可以添加统计API调用
+                // 暂时使用现有数据统计
+                const today = new Date().toDateString();
+                const todayLogs = auditLogs.filter(log => 
+                    new Date(log.created_at).toDateString() === today
+                ).length;
+                
+                const uniqueUsers = new Set(auditLogs.map(log => log.user.username)).size;
+                const equipmentOps = auditLogs.filter(log => log.equipment_id).length;
+
+                document.getElementById('total-logs').textContent = totalLogs;
+                document.getElementById('today-logs').textContent = todayLogs;
+                document.getElementById('active-users').textContent = uniqueUsers;
+                document.getElementById('equipment-ops').textContent = equipmentOps;
+                
+            } catch (error) {
+                console.error('更新统计失败:', error);
+            }
+        }
+
+        // 更新分页信息
+        function updatePagination() {
+            const startItem = (currentPage - 1) * pageSize + 1;
+            const endItem = Math.min(currentPage * pageSize, totalLogs);
+            
+            document.getElementById('page-info').textContent = `${startItem}-${endItem}`;
+            document.getElementById('total-count').textContent = totalLogs;
+            
+            // 更新分页按钮状态
+            document.getElementById('prev-page').disabled = currentPage === 1;
+            document.getElementById('next-page').disabled = currentPage === totalPages;
+            
+            // 生成页码
+            const pageNumbers = document.getElementById('page-numbers');
+            pageNumbers.innerHTML = '';
+            
+            const maxVisiblePages = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+            let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+            
+            if (endPage - startPage + 1 < maxVisiblePages) {
+                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                const pageBtn = document.createElement('button');
+                pageBtn.className = `px-3 py-1 border rounded-md ${i === currentPage ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`;
+                pageBtn.textContent = i;
+                pageBtn.onclick = () => {
+                    currentPage = i;
+                    loadAuditLogs();
+                };
+                pageNumbers.appendChild(pageBtn);
+            }
+        }
+
+        // 导出操作日志
+        function exportAuditLogs() {
+            try {
+                let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+                csvContent += "操作时间,操作用户,操作类型,操作对象,操作描述\n";
+                
+                auditLogs.forEach(log => {
+                    const row = [
+                        formatDateTime(log.created_at),
+                        log.user.username,
+                        log.action,
+                        log.equipment ? log.equipment.name : (log.equipment_id ? `设备ID: ${log.equipment_id}` : '系统'),
+                        `"${log.description.replace(/"/g, '""')}"`
+                    ].join(',');
+                    csvContent += row + "\n";
+                });
+                
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", `操作日志_${new Date().toISOString().split('T')[0]}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                showNotification('操作日志导出成功', 'success');
+            } catch (error) {
+                console.error('导出失败:', error);
+                showNotification('导出失败: ' + error.message, 'error');
+            }
+        }
+
+        // 格式化日期时间为北京时间
+        function formatDateTime(dateTimeString) {
+            if (!dateTimeString) return '-';
+            
+            const date = new Date(dateTimeString);
+            if (isNaN(date.getTime())) return dateTimeString;
+            
+            // 数据库返回的是UTC时间，直接转换为北京时间 (UTC+8)
+            const beijingOffset = 8 * 60 * 60 * 1000; // 北京时间偏移量（毫秒）
+            const beijingDate = new Date(date.getTime() + beijingOffset);
+            
+            return beijingDate.toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+        }
+
+        // 显示通知
+        function showNotification(message, type = 'info') {
+            const container = document.getElementById('notification-container');
+            const notification = document.createElement('div');
+            
+            const bgColor = {
+                'success': 'bg-green-500',
+                'error': 'bg-red-500',
+                'warning': 'bg-yellow-500',
+                'info': 'bg-blue-500'
+            }[type] || 'bg-blue-500';
+            
+            const icon = {
+                'success': 'fa-check-circle',
+                'error': 'fa-exclamation-circle',
+                'warning': 'fa-exclamation-triangle',
+                'info': 'fa-info-circle'
+            }[type] || 'fa-info-circle';
+            
+            notification.className = `${bgColor} text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-2 transform transition-all duration-300 translate-x-full`;
+            notification.innerHTML = `
+                <i class="fas ${icon}"></i>
+                <span>${message}</span>
+            `;
+            
+            container.appendChild(notification);
+            
+            // 动画显示
+            setTimeout(() => {
+                notification.classList.remove('translate-x-full');
+            }, 100);
+            
+            // 自动隐藏
+            setTimeout(() => {
+                notification.classList.add('translate-x-full');
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

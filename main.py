@@ -74,6 +74,10 @@ async def departments(request: Request):
 async def users(request: Request):
     return templates.TemplateResponse("users.html", {"request": request})
 
+@app.get("/audit", response_class=HTMLResponse)
+async def audit(request: Request):
+    return templates.TemplateResponse("audit.html", {"request": request})
+
 @app.get("/simple_login_test", response_class=HTMLResponse)
 async def simple_login_test(request: Request):
     return templates.TemplateResponse("simple_login_test.html", {"request": request})

@@ -1,0 +1,23 @@
+{
+  "themeMode": "light",
+  "pageSize": 10,
+  "sessionTimeout": 2,
+  "minPasswordLength": 6,
+  "enableTwoFactor": false,
+  "enableLoginLog": true,
+  "equipmentNumberRule": "auto",
+  "equipmentNumberPrefix": "EQ",
+  "enableAutoCalibration": true,
+  "enableEquipmentStatus": true,
+  "calibrationCycle": 12,
+  "enableEmailNotification": true,
+  "enableExpirationReminder": true,
+  "enableCalibrationReminder": true,
+  "reminderDays": 7,
+  "smtpServer": "",
+  "enableAutoBackup": true,
+  "enableAutoCleanup": false,
+  "backupFrequency": "weekly",
+  "backupRetention": 30,
+  "backupPath": "./backups"
+}

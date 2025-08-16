@@ -14,20 +14,33 @@ SETTINGS_FILE = Path(__file__).parent.parent.parent / "data" / "system_settings.
 
 # 默认系统设置
 DEFAULT_SETTINGS = {
-    "systemName": "设备台账管理系统",
-    "defaultLanguage": "zh-CN",
-    "timezone": "Asia/Shanghai",
+    # 界面设置
+    "themeMode": "light",
     "pageSize": 10,
+    
+    # 安全设置
     "sessionTimeout": 2,
     "minPasswordLength": 6,
     "enableTwoFactor": False,
     "enableLoginLog": True,
+    
+    # 设备管理设置
+    "equipmentNumberRule": "auto",
+    "equipmentNumberPrefix": "EQ",
+    "enableAutoCalibration": True,
+    "enableEquipmentStatus": True,
+    "calibrationCycle": 12,
+    
+    # 通知设置
     "enableEmailNotification": True,
     "enableExpirationReminder": True,
     "enableCalibrationReminder": True,
     "reminderDays": 7,
     "smtpServer": "",
+    
+    # 数据管理设置
     "enableAutoBackup": True,
+    "enableAutoCleanup": False,
     "backupFrequency": "weekly",
     "backupRetention": 30,
     "backupPath": "./backups"
@@ -79,7 +92,7 @@ async def update_settings(
             raise HTTPException(status_code=400, detail="设置数据格式错误")
         
         # 验证必要字段
-        required_fields = ["systemName", "defaultLanguage", "timezone", "pageSize"]
+        required_fields = ["pageSize"]
         for field in required_fields:
             if field not in settings_data:
                 raise HTTPException(status_code=400, detail=f"缺少必要字段: {field}")
@@ -110,6 +123,30 @@ async def update_settings(
             if not isinstance(retention, int) or retention < 7 or retention > 365:
                 raise HTTPException(status_code=400, detail="备份保留天数必须在7-365之间")
         
+        # 验证界面设置
+        if "themeMode" in settings_data:
+            theme = settings_data["themeMode"]
+            if theme not in ["light", "dark", "auto"]:
+                raise HTTPException(status_code=400, detail="主题模式必须是light、dark或auto")
+        
+        # 验证设备管理设置
+        if "equipmentNumberRule" in settings_data:
+            rule = settings_data["equipmentNumberRule"]
+            if rule not in ["auto", "manual", "category_prefix"]:
+                raise HTTPException(status_code=400, detail="设备编号规则必须是auto、manual或category_prefix")
+        
+        if "calibrationCycle" in settings_data:
+            cycle = settings_data["calibrationCycle"]
+            if not isinstance(cycle, int) or cycle < 1 or cycle > 60:
+                raise HTTPException(status_code=400, detail="设备检定周期必须在1-60个月之间")
+        
+        # 验证数据管理设置
+        if "backupFrequency" in settings_data:
+            frequency = settings_data["backupFrequency"]
+            if frequency not in ["daily", "weekly", "monthly"]:
+                raise HTTPException(status_code=400, detail="备份频率必须是daily、weekly或monthly")
+        
+          
         # 保存设置
         success = save_settings(settings_data)
         if not success:

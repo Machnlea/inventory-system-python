@@ -87,6 +87,10 @@ async def settings(request: Request):
 async def simple_login_test(request: Request):
     return templates.TemplateResponse("simple_login_test.html", {"request": request})
 
+@app.get("/test_settings", response_class=HTMLResponse)
+async def test_settings(request: Request):
+    return templates.TemplateResponse("test_settings.html", {"request": request})
+
 @app.get("/api", response_class=RedirectResponse)
 async def api_docs():
     return RedirectResponse(url="/docs")

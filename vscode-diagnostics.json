@@ -1,42 +1,26 @@
 [
   {
-    "file": "/home/ming/my_project/inventory-system-python/app/templates/equipment_management.html",
+    "file": "/home/ming/my_project/inventory-system-python/pyproject.toml",
     "diagnostics": []
   },
   {
-    "file": "/home/ming/my_project/inventory-system-python/tailwind.config.js",
+    "file": "/home/ming/my_project/inventory-system-python/templates/equipment_edit.html",
     "diagnostics": []
   },
   {
-    "file": "/home/ming/my_project/inventory-system-python/test_batch_calibration.py",
+    "file": "/home/ming/my_project/inventory-system-python/app/templates/equipment_edit.html",
     "diagnostics": []
   },
   {
-    "file": "/home/ming/my_project/inventory-system-python/test.html",
+    "file": "/home/ming/my_project/inventory-system-python/app/templates/equipment_edit copy.html",
     "diagnostics": []
   },
   {
-    "file": "/home/ming/my_project/inventory-system-python/frontend/postcss.config.js",
+    "file": "/home/ming/my_project/inventory-system-python/app/templates/users.html",
     "diagnostics": []
   },
   {
-    "file": "/home/ming/my_project/inventory-system-python/frontend/tailwind.config.js",
-    "diagnostics": []
-  },
-  {
-    "file": "/home/ming/my_project/inventory-system-python/scripts/init_db.py",
-    "diagnostics": []
-  },
-  {
-    "file": "/home/ming/my_project/inventory-system-python/init_db.py",
-    "diagnostics": []
-  },
-  {
-    "file": "/home/ming/my_project/inventory-system-python/Dockerfile",
-    "diagnostics": []
-  },
-  {
-    "file": "/home/ming/my_project/inventory-system-python/main.py",
+    "file": "/home/ming/my_project/inventory-system-python/users.html",
     "diagnostics": []
   }
 ]

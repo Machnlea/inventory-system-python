@@ -70,6 +70,10 @@ async def categories(request: Request):
 async def departments(request: Request):
     return templates.TemplateResponse("departments.html", {"request": request})
 
+@app.get("/users", response_class=HTMLResponse)
+async def users(request: Request):
+    return templates.TemplateResponse("users.html", {"request": request})
+
 @app.get("/simple_login_test", response_class=HTMLResponse)
 async def simple_login_test(request: Request):
     return templates.TemplateResponse("simple_login_test.html", {"request": request})

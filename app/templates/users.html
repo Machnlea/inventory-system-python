@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户管理 - 设备台账管理系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="/static/js/session-manager.js"></script>
+    <script src="/static/js/api-client.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-text-size-adjust: 100%;
+            text-size-adjust: 100%;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .glass-effect {
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        .sidebar-item {
+            transition: all 0.2s ease;
+        }
+        .sidebar-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
+        .sidebar-item.active {
+            background: rgba(255, 255, 255, 0.2);
+            border-left: 4px solid #667eea;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            -webkit-backdrop-filter: blur(4px);
+            backdrop-filter: blur(4px);
+        }
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: modalSlideIn 0.3s ease-out;
+        }
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- 顶部通知容器 -->
+    <div id="notification-container" class="fixed top-4 right-4 z-[9999] space-y-2 max-w-md"></div>
+    
+    <div class="flex h-screen">
+        <!-- 左侧导航栏 -->
+        <div class="w-64 gradient-bg shadow-xl fixed left-0 top-0 h-full z-10">
+            <div class="flex flex-col h-full">
+                <!-- Logo和标题 -->
+                <div class="flex items-center justify-center h-16 px-4 border-b border-white/20">
+                    <div class="flex items-center">
+                        <i class="fas fa-clipboard-list text-white text-2xl mr-3"></i>
+                        <h1 class="text-white text-lg font-bold">设备台账管理系统</h1>
+                    </div>
+                </div>
+
+                <!-- 导航菜单 -->
+                <nav class="flex-1 px-4 py-6 space-y-2">
+                    <a href="/dashboard" class="sidebar-item flex items-center px-4 py-3 text-white/90 rounded-lg">
+                        <i class="fas fa-home mr-3 text-lg"></i>
+                        <span>仪表盘</span>
+                    </a>
+                    <a href="/equipment" class="sidebar-item flex items-center px-4 py-3 text-white/90 rounded-lg">
+                        <i class="fas fa-cogs mr-3 text-lg"></i>
+                        <span>设备管理</span>
+                    </a>
+                    <a href="#" class="sidebar-item flex items-center px-4 py-3 text-white/90 rounded-lg" id="maintenance-link">
+                        <i class="fas fa-tools mr-3 text-lg"></i>
+                        <span>维护记录</span>
+                    </a>
+                    <a href="#" class="sidebar-item flex items-center px-4 py-3 text-white/90 rounded-lg" id="reports-link">
+                        <i class="fas fa-chart-bar mr-3 text-lg"></i>
+                        <span>统计报表</span>
+                    </a>
+                    
+                    <!-- 系统管理下拉菜单 -->
+                    <div class="relative">
+                        <button class="sidebar-item flex items-center justify-between w-full px-4 py-3 text-white/90 rounded-lg" id="system-menu-btn" aria-label="展开系统管理菜单" aria-expanded="false">
+                            <div class="flex items-center">
+                                <i class="fas fa-cog mr-3 text-lg"></i>
+                                <span>系统管理</span>
+                            </div>
+                            <i class="fas fa-chevron-down text-sm transition-transform duration-200" id="system-menu-arrow"></i>
+                        </button>
+                        <div class="ml-4 mt-1 space-y-1 hidden" id="system-submenu">
+                            <a href="/categories" class="sidebar-item flex items-center px-4 py-2 text-white/80 rounded-lg text-sm">
+                                <i class="fas fa-tags mr-3"></i>
+                                <span>设备类别</span>
+                            </a>
+                            <a href="/departments" class="sidebar-item flex items-center px-4 py-2 text-white/80 rounded-lg text-sm">
+                                <i class="fas fa-building mr-3"></i>
+                                <span>部门管理</span>
+                            </a>
+                            <a href="/users" class="sidebar-item active flex items-center px-4 py-2 text-white/80 rounded-lg text-sm">
+                                <i class="fas fa-users mr-3"></i>
+                                <span>用户管理</span>
+                            </a>
+                            <a href="/audit" class="sidebar-item flex items-center px-4 py-2 text-white/80 rounded-lg text-sm" id="audit-link">
+                                <i class="fas fa-history mr-3"></i>
+                                <span>操作日志</span>
+                            </a>
+                            <a href="#" class="sidebar-item flex items-center px-4 py-2 text-white/80 rounded-lg text-sm" id="settings-link">
+                                <i class="fas fa-cog mr-3"></i>
+                                <span>系统设置</span>
+                            </a>
+                        </div>
+                    </div>
+                </nav>
+
+                <!-- 用户信息 -->
+                <div class="border-t border-white/20 p-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <i class="fas fa-user-circle text-white text-xl mr-3"></i>
+                            <div>
+                                <p class="text-white text-sm font-medium" id="current-user">用户</p>
+                                <p class="text-white/70 text-xs">在线</p>
+                            </div>
+                        </div>
+                        <button class="text-white/70 hover:text-white transition-colors" id="logout-btn" aria-label="退出登录">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="flex-1 ml-64 overflow-hidden">
+            <div class="h-full overflow-y-auto">
+                <div class="p-8">
+            
+            <!-- 主要内容 -->
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold text-gray-900 mb-2">用户管理</h2>
+                <p class="text-gray-600">管理系统用户账户、权限和访问控制</p>
+            </div>
+
+            <!-- 操作栏 -->
+            <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+                <div class="flex flex-col sm:flex-row gap-4 justify-between items-center">
+                    <div class="flex-1">
+                        <div class="relative">
+                            <input type="text" id="search-input" placeholder="搜索用户名..." 
+                                   class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- 操作按钮 -->
+                    <div class="flex gap-3">
+                        <button class="btn-primary text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all duration-200" onclick="openCreateUserModal()" aria-label="创建新用户">
+                            <i class="fas fa-plus mr-2"></i>创建用户
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 统计卡片 -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                    <div class="flex items-center">
+                        <div class="p-3 rounded-full bg-blue-100">
+                            <i class="fas fa-users text-2xl text-blue-600"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-gray-600 text-sm">用户总数</p>
+                            <p class="text-2xl font-bold text-gray-900" id="total-users-count">-</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                    <div class="flex items-center">
+                        <div class="p-3 rounded-full bg-green-100">
+                            <i class="fas fa-user-shield text-2xl text-green-600"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-gray-600 text-sm">管理员用户</p>
+                            <p class="text-2xl font-bold text-gray-900" id="admin-users-count">-</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                    <div class="flex items-center">
+                        <div class="p-3 rounded-full bg-purple-100">
+                            <i class="fas fa-user text-2xl text-purple-600"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-gray-600 text-sm">普通用户</p>
+                            <p class="text-2xl font-bold text-gray-900" id="normal-users-count">-</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 用户列表 -->
+            <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-lg font-semibold text-gray-900">用户列表</h3>
+                        <div class="text-sm text-gray-600">
+                            共 <span id="users-total-count" class="font-semibold text-gray-900">-</span> 个用户
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">用户信息</th>
+                                <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700 uppercase tracking-wider">权限等级</th>
+                                <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700 uppercase tracking-wider">管理类别</th>
+                                <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700 uppercase tracking-wider">创建时间</th>
+                                <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700 uppercase tracking-wider">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200" id="users-table-body">
+                            <!-- 动态加载的用户数据 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        </div>
+        </div>
+    </div>
+
+    <!-- 创建/编辑用户模态框 -->
+    <div id="userModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-900" id="modal-title">创建用户</h3>
+                <button class="text-gray-400 hover:text-gray-600" onclick="closeUserModal()" aria-label="关闭对话框">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <form id="user-form">
+                    <div class="mb-4">
+                        <label for="user-username" class="block text-sm font-medium text-gray-700 mb-2">用户名</label>
+                        <input type="text" id="user-username" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="请输入用户名" required>
+                    </div>
+                    
+                    <div class="mb-4" id="password-field">
+                        <label for="user-password" class="block text-sm font-medium text-gray-700 mb-2">密码</label>
+                        <input type="password" id="user-password" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="请输入密码" required>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <label for="user-is-admin" class="flex items-center">
+                            <input type="checkbox" id="user-is-admin" class="mr-2 rounded border-gray-300">
+                            <span class="text-sm text-gray-700">管理员权限</span>
+                        </label>
+                        <p class="text-xs text-gray-500 mt-1">管理员拥有系统的完整访问权限</p>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400" onclick="closeUserModal()">
+                            取消
+                        </button>
+                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700" id="save-user-btn">
+                            <i class="fas fa-save mr-2"></i>保存
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 确认删除模态框 -->
+    <div id="deleteUserModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">确认删除</h3>
+            </div>
+            <div class="p-6">
+                <div class="flex items-center mb-4">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-triangle text-4xl text-red-500"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-gray-700">您确定要删除用户 <span id="delete-user-name" class="font-semibold"></span> 吗？</p>
+                        <p class="text-sm text-gray-500 mt-1">此操作不可恢复。</p>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end space-x-3">
+                    <button type="button" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400" onclick="closeDeleteUserModal()">
+                        取消
+                    </button>
+                    <button type="button" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700" onclick="confirmDeleteUser()">
+                        <i class="fas fa-trash mr-2"></i>删除
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 管理用户设备类别模态框 -->
+    <div id="userCategoriesModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 max-h-[80vh] overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-900">管理用户设备类别权限</h3>
+                <button class="text-gray-400 hover:text-gray-600" onclick="closeUserCategoriesModal()" aria-label="关闭对话框">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-4">
+                    <p class="text-sm text-gray-600 mb-2">用户: <span id="category-user-name" class="font-semibold"></span></p>
+                    <p class="text-xs text-gray-500">选择该用户可以管理的设备类别</p>
+                </div>
+                
+                <div class="mb-6">
+                    <div class="flex justify-between items-center mb-3">
+                        <label class="block text-sm font-medium text-gray-700">设备类别</label>
+                        <button type="button" class="text-xs text-blue-600 hover:text-blue-800" onclick="selectAllCategories()">
+                            全选
+                        </button>
+                    </div>
+                    <div class="border border-gray-200 rounded-lg p-3 max-h-64 overflow-y-auto bg-gray-50" id="categories-checkboxes">
+                        <!-- 动态加载的设备类别复选框 -->
+                    </div>
+                </div>
+                
+                <div class="flex justify-end space-x-3">
+                    <button type="button" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400" onclick="closeUserCategoriesModal()">
+                        取消
+                    </button>
+                    <button type="button" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700" onclick="saveUserCategories()">
+                        <i class="fas fa-save mr-2"></i>保存
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let currentUsers = [];
+        let editingUserId = null;
+        let deletingUserId = null;
+        let managingCategoriesUserId = null;
+        let allCategories = [];
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                initializePage();
+                setupEventListeners();
+                loadUsersData();
+                loadCategories();
+            } catch (error) {
+                console.error('页面初始化失败:', error);
+                showNotification('页面初始化失败，请刷新页面重试', 'error');
+            }
+        });
+
+        // 初始化页面
+        function initializePage() {
+            // 设置系统管理菜单展开状态
+            const systemSubmenu = document.getElementById('system-submenu');
+            const systemMenuArrow = document.getElementById('system-menu-arrow');
+            if (systemSubmenu && systemMenuArrow) {
+                systemSubmenu.classList.remove('hidden');
+                systemMenuArrow.style.transform = 'rotate(180deg)';
+            }
+        }
+
+        // 设置事件监听器
+        function setupEventListeners() {
+            // 搜索输入框
+            let searchTimeout;
+            document.getElementById('search-input').addEventListener('input', function() {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    filterUsers();
+                }, 300);
+            });
+
+            // 用户表单提交
+            document.getElementById('user-form').addEventListener('submit', handleUserFormSubmit);
+
+            // 侧边栏导航
+            setupSidebarNavigation();
+
+            // ESC键关闭模态框
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    closeUserModal();
+                    closeDeleteUserModal();
+                }
+            });
+
+            // 点击模态框外部关闭
+            document.getElementById('userModal').addEventListener('click', function(e) {
+                if (e.target === this) closeUserModal();
+            });
+
+            document.getElementById('deleteUserModal').addEventListener('click', function(e) {
+                if (e.target === this) closeDeleteUserModal();
+            });
+        }
+
+        // 设置侧边栏导航
+        function setupSidebarNavigation() {
+            // 系统管理下拉菜单
+            const systemMenuBtn = document.getElementById('system-menu-btn');
+            const systemSubmenu = document.getElementById('system-submenu');
+            const systemMenuArrow = document.getElementById('system-menu-arrow');
+            
+            if (systemMenuBtn) {
+                systemMenuBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    systemSubmenu.classList.toggle('hidden');
+                    
+                    if (systemSubmenu.classList.contains('hidden')) {
+                        systemMenuArrow.style.transform = 'rotate(0deg)';
+                    } else {
+                        systemMenuArrow.style.transform = 'rotate(180deg)';
+                    }
+                });
+            }
+            
+            // 退出登录
+            const logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', function() {
+                    if (confirm('确定要退出登录吗？')) {
+                        localStorage.removeItem('access_token');
+                        localStorage.removeItem('refresh_token');
+                        localStorage.removeItem('user_info');
+                        window.location.href = '/login';
+                    }
+                });
+            }
+            
+            // 检查登录状态
+            const userInfo = localStorage.getItem('user_info');
+            if (userInfo) {
+                const user = JSON.parse(userInfo);
+                const currentUserElement = document.getElementById('current-user');
+                if (currentUserElement) {
+                    currentUserElement.textContent = user.username || '用户';
+                }
+            }
+        }
+
+        // 加载用户数据
+        async function loadUsersData() {
+            try {
+                showNotification('正在加载用户数据...', 'info');
+                
+                const response = await fetch('/api/users/', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const users = await response.json();
+                currentUsers = users;
+                
+                renderUsersTable(users);
+                updateUsersStats(users);
+                
+                // 加载每个用户的设备类别
+                for (const user of users) {
+                    loadUserCategories(user.id);
+                }
+                
+                showNotification('用户数据加载成功', 'success');
+                
+            } catch (error) {
+                console.error('加载用户数据失败:', error);
+                showNotification('加载用户数据失败: ' + error.message, 'error');
+                renderUsersTable([]);
+            }
+        }
+
+        // 加载所有设备类别
+        async function loadCategories() {
+            try {
+                const response = await fetch('/api/categories/', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                allCategories = await response.json();
+                
+            } catch (error) {
+                console.error('加载设备类别失败:', error);
+                showNotification('加载设备类别失败: ' + error.message, 'error');
+            }
+        }
+
+        // 加载用户的设备类别
+        async function loadUserCategories(userId) {
+            try {
+                const response = await fetch(`/api/users/${userId}/categories`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const userCategories = await response.json();
+                updateUserCategoriesDisplay(userId, userCategories);
+                
+            } catch (error) {
+                console.error('加载用户设备类别失败:', error);
+                const categoryElement = document.getElementById(`user-categories-${userId}`);
+                if (categoryElement) {
+                    categoryElement.innerHTML = '<span class="text-gray-400">加载失败</span>';
+                }
+            }
+        }
+
+        // 更新用户设备类别显示
+        function updateUserCategoriesDisplay(userId, userCategories) {
+            const categoryElement = document.getElementById(`user-categories-${userId}`);
+            if (!categoryElement) return;
+            
+            // 查找该用户是否为管理员
+            const user = currentUsers.find(u => u.id === userId);
+            const isAdmin = user && user.is_admin;
+            
+            if (isAdmin) {
+                // 管理员显示所有权限
+                categoryElement.innerHTML = '<span class="text-sm text-purple-600 font-medium">全部权限</span>';
+            } else if (!userCategories || userCategories.length === 0) {
+                categoryElement.innerHTML = '<span class="text-gray-400">无权限</span>';
+            } else {
+                const categoryNames = userCategories.map(uc => uc.category.name).slice(0, 2);
+                const displayText = categoryNames.join(', ');
+                
+                if (userCategories.length > 2) {
+                    categoryElement.innerHTML = `
+                        <span class="text-sm text-gray-900">${displayText}</span>
+                        <span class="text-xs text-gray-500 ml-1">+${userCategories.length - 2}</span>
+                    `;
+                } else {
+                    categoryElement.innerHTML = `<span class="text-sm text-gray-900">${displayText}</span>`;
+                }
+            }
+            
+            // 更新删除按钮状态
+            updateUserDeleteButton(userId);
+        }
+
+        // 更新用户删除按钮状态
+        function updateUserDeleteButton(userId) {
+            const user = currentUsers.find(u => u.id === userId);
+            if (!user) return;
+            
+            // 找到该用户行的操作列
+            const userRow = document.querySelector(`#user-categories-${userId}`).closest('tr');
+            if (!userRow) return;
+            
+            const actionCell = userRow.querySelector('td:last-child');
+            if (!actionCell) return;
+            
+            // 重新生成删除按钮
+            const deleteButtonHTML = getUserDeleteButton(user);
+            
+            // 替换操作列的内容（保持其他按钮不变）
+            const buttons = actionCell.querySelectorAll('button');
+            if (buttons.length >= 3) {
+                // 替换最后一个按钮（删除按钮）
+                buttons[2].outerHTML = deleteButtonHTML;
+            }
+        }
+
+        // 渲染用户表格
+        function renderUsersTable(users) {
+            const tableBody = document.getElementById('users-table-body');
+            
+            if (!users || users.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="px-6 py-4 text-center text-gray-500">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            暂无用户数据
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tableBody.innerHTML = users.map(user => `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="h-10 w-10 flex-shrink-0">
+                                <div class="h-10 w-10 rounded-full ${user.is_admin ? 'bg-purple-100' : 'bg-blue-100'} flex items-center justify-center">
+                                    <i class="fas ${user.is_admin ? 'fa-user-shield text-purple-600' : 'fa-user text-blue-600'}"></i>
+                                </div>
+                            </div>
+                            <div class="ml-4">
+                                <div class="text-sm font-medium text-gray-900">${user.username}</div>
+                                <div class="text-sm text-gray-500">ID: ${user.id}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            user.is_admin ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                        }">
+                            ${user.is_admin ? '管理员' : '普通用户'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                        <div class="text-sm text-gray-900" id="user-categories-${user.id}">
+                            <span class="text-gray-400">加载中...</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
+                        ${formatDateTime(user.created_at)}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button class="text-blue-600 hover:text-blue-900 mr-3" onclick="manageUserCategories(${user.id}, '${user.username}')">
+                            <i class="fas fa-tags mr-1"></i>管理类别
+                        </button>
+                        <button class="text-green-600 hover:text-green-900 mr-3" onclick="editUser(${user.id})">
+                            <i class="fas fa-edit mr-1"></i>编辑
+                        </button>
+                        ${getUserDeleteButton(user)}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // 获取用户删除按钮
+        function getUserDeleteButton(user) {
+            const currentUser = JSON.parse(localStorage.getItem('user_info') || '{}');
+            
+            // 检查是否为当前登录用户
+            if (currentUser.id === user.id) {
+                return `<button class="text-gray-400 cursor-not-allowed" title="无法删除当前登录用户" disabled>
+                    <i class="fas fa-trash mr-1"></i>删除
+                </button>`;
+            }
+            
+            // 检查用户是否为系统管理员（不能删除最后一个管理员）
+            if (user.is_admin) {
+                const adminUsers = currentUsers.filter(u => u.is_admin).length;
+                if (adminUsers <= 1) {
+                    return `<button class="text-gray-400 cursor-not-allowed" title="系统至少需要保留一个管理员用户" disabled>
+                        <i class="fas fa-trash mr-1"></i>删除
+                    </button>`;
+                }
+            }
+            
+            // 检查用户是否有设备类别权限
+            const userCategoryElement = document.getElementById(`user-categories-${user.id}`);
+            if (userCategoryElement) {
+                const categoryText = userCategoryElement.textContent.trim();
+                if (categoryText && categoryText !== '无权限' && categoryText !== '加载中...' && categoryText !== '加载失败') {
+                    return `<button class="text-gray-400 cursor-not-allowed" title="该用户管理着设备类别，无法删除" disabled>
+                        <i class="fas fa-trash mr-1"></i>删除
+                    </button>`;
+                }
+            }
+            
+            // 如果没有限制，返回正常的删除按钮
+            return `<button class="text-red-600 hover:text-red-900" onclick="deleteUser(${user.id}, '${user.username}')">
+                <i class="fas fa-trash mr-1"></i>删除
+            </button>`;
+        }
+
+        // 更新用户统计
+        function updateUsersStats(users) {
+            const totalUsers = users.length;
+            const adminUsers = users.filter(user => user.is_admin).length;
+            const normalUsers = totalUsers - adminUsers;
+            
+            document.getElementById('total-users-count').textContent = totalUsers;
+            document.getElementById('admin-users-count').textContent = adminUsers;
+            document.getElementById('normal-users-count').textContent = normalUsers;
+            document.getElementById('users-total-count').textContent = totalUsers;
+        }
+
+        // 筛选用户
+        function filterUsers() {
+            const searchQuery = document.getElementById('search-input').value.toLowerCase().trim();
+            
+            if (!searchQuery) {
+                renderUsersTable(currentUsers);
+                return;
+            }
+            
+            const filteredUsers = currentUsers.filter(user =>
+                user.username.toLowerCase().includes(searchQuery)
+            );
+            
+            renderUsersTable(filteredUsers);
+        }
+
+        // 打开创建用户模态框
+        function openCreateUserModal() {
+            editingUserId = null;
+            document.getElementById('modal-title').textContent = '创建用户';
+            document.getElementById('user-form').reset();
+            document.getElementById('password-field').style.display = 'block';
+            document.getElementById('user-password').required = true;
+            document.getElementById('save-user-btn').innerHTML = '<i class="fas fa-save mr-2"></i>创建';
+            document.getElementById('userModal').classList.add('show');
+        }
+
+        // 编辑用户
+        function editUser(userId) {
+            const user = currentUsers.find(u => u.id === userId);
+            if (!user) return;
+            
+            editingUserId = userId;
+            document.getElementById('modal-title').textContent = '编辑用户';
+            document.getElementById('user-username').value = user.username;
+            document.getElementById('user-is-admin').checked = user.is_admin;
+            document.getElementById('password-field').style.display = 'none';
+            document.getElementById('user-password').required = false;
+            document.getElementById('save-user-btn').innerHTML = '<i class="fas fa-save mr-2"></i>保存';
+            document.getElementById('userModal').classList.add('show');
+        }
+
+        // 关闭用户模态框
+        function closeUserModal() {
+            document.getElementById('userModal').classList.remove('show');
+            editingUserId = null;
+        }
+
+        // 处理用户表单提交
+        async function handleUserFormSubmit(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('user-username').value.trim();
+            const password = document.getElementById('user-password').value;
+            const isAdmin = document.getElementById('user-is-admin').checked;
+            
+            if (!username) {
+                showNotification('请输入用户名', 'warning');
+                return;
+            }
+            
+            if (!editingUserId && !password) {
+                showNotification('请输入密码', 'warning');
+                return;
+            }
+            
+            try {
+                document.getElementById('save-user-btn').disabled = true;
+                
+                const userData = {
+                    username,
+                    is_admin: isAdmin
+                };
+                
+                if (!editingUserId) {
+                    userData.password = password;
+                }
+                
+                let response;
+                if (editingUserId) {
+                    // 更新用户
+                    if (password) {
+                        userData.password = password;
+                    }
+                    
+                    response = await fetch(`/api/users/${editingUserId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(userData)
+                    });
+                } else {
+                    // 创建用户
+                    response = await fetch('/api/users/', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(userData)
+                    });
+                }
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                showNotification(editingUserId ? '用户更新成功' : '用户创建成功', 'success');
+                closeUserModal();
+                await loadUsersData();
+                
+            } catch (error) {
+                console.error('保存用户失败:', error);
+                showNotification('保存用户失败: ' + error.message, 'error');
+            } finally {
+                document.getElementById('save-user-btn').disabled = false;
+            }
+        }
+
+        // 删除用户
+        function deleteUser(userId, username) {
+            // 前端验证
+            const user = currentUsers.find(u => u.id === userId);
+            if (!user) {
+                showNotification('用户不存在', 'error');
+                return;
+            }
+            
+            const currentUser = JSON.parse(localStorage.getItem('user_info') || '{}');
+            
+            // 检查是否为当前登录用户
+            if (currentUser.id === user.id) {
+                showNotification('无法删除当前登录用户', 'warning');
+                return;
+            }
+            
+            // 检查用户是否为系统管理员（不能删除最后一个管理员）
+            if (user.is_admin) {
+                const adminUsers = currentUsers.filter(u => u.is_admin).length;
+                if (adminUsers <= 1) {
+                    showNotification('系统至少需要保留一个管理员用户', 'warning');
+                    return;
+                }
+            }
+            
+            // 检查用户是否有设备类别权限
+            const userCategoryElement = document.getElementById(`user-categories-${userId}`);
+            if (userCategoryElement) {
+                const categoryText = userCategoryElement.textContent.trim();
+                if (categoryText && categoryText !== '无权限' && categoryText !== '加载中...' && categoryText !== '加载失败') {
+                    showNotification('该用户管理着设备类别，无法删除', 'warning');
+                    return;
+                }
+            }
+            
+            // 通过验证，显示删除确认对话框
+            deletingUserId = userId;
+            document.getElementById('delete-user-name').textContent = username;
+            document.getElementById('deleteUserModal').classList.add('show');
+        }
+
+        // 关闭删除用户模态框
+        function closeDeleteUserModal() {
+            document.getElementById('deleteUserModal').classList.remove('show');
+            deletingUserId = null;
+        }
+
+        // 确认删除用户
+        async function confirmDeleteUser() {
+            if (!deletingUserId) return;
+            
+            try {
+                const response = await fetch(`/api/users/${deletingUserId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                showNotification('用户删除成功', 'success');
+                closeDeleteUserModal();
+                await loadUsersData();
+                
+            } catch (error) {
+                console.error('删除用户失败:', error);
+                showNotification('删除用户失败: ' + error.message, 'error');
+            }
+        }
+
+        // 格式化日期时间为北京时间
+        function formatDateTime(dateTimeString) {
+            if (!dateTimeString) return '-';
+            
+            const date = new Date(dateTimeString);
+            if (isNaN(date.getTime())) return dateTimeString;
+            
+            // 数据库返回的是UTC时间，直接转换为北京时间 (UTC+8)
+            const beijingOffset = 8 * 60 * 60 * 1000; // 北京时间偏移量（毫秒）
+            const beijingDate = new Date(date.getTime() + beijingOffset);
+            
+            return beijingDate.toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+        }
+
+        // 管理用户设备类别
+        async function manageUserCategories(userId, username) {
+            managingCategoriesUserId = userId;
+            document.getElementById('category-user-name').textContent = username;
+            
+            try {
+                // 加载用户当前的设备类别
+                const response = await fetch(`/api/users/${userId}/categories`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const userCategories = await response.json();
+                renderCategoriesCheckboxes(userCategories);
+                document.getElementById('userCategoriesModal').classList.add('show');
+                
+            } catch (error) {
+                console.error('加载用户设备类别失败:', error);
+                showNotification('加载用户设备类别失败: ' + error.message, 'error');
+            }
+        }
+
+        // 渲染设备类别复选框
+        function renderCategoriesCheckboxes(userCategories) {
+            const container = document.getElementById('categories-checkboxes');
+            
+            if (!allCategories || allCategories.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-sm">暂无设备类别</p>';
+                return;
+            }
+
+            const userCategoryIds = userCategories.map(uc => uc.category_id);
+            
+            container.innerHTML = allCategories.map(category => `
+                <label class="flex items-center space-x-2 p-2 hover:bg-gray-100 rounded cursor-pointer">
+                    <input type="checkbox" 
+                           class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
+                           value="${category.id}"
+                           ${userCategoryIds.includes(category.id) ? 'checked' : ''}
+                           id="category-${category.id}">
+                    <span class="text-sm text-gray-700">${category.name}</span>
+                    ${category.description ? `<span class="text-xs text-gray-500">(${category.description})</span>` : ''}
+                </label>
+            `).join('');
+        }
+
+        // 全选/取消全选设备类别
+        function selectAllCategories() {
+            const checkboxes = document.querySelectorAll('#categories-checkboxes input[type="checkbox"]');
+            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+            
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = !allChecked;
+            });
+        }
+
+        // 关闭用户设备类别模态框
+        function closeUserCategoriesModal() {
+            document.getElementById('userCategoriesModal').classList.remove('show');
+            managingCategoriesUserId = null;
+        }
+
+        // 保存用户设备类别
+        async function saveUserCategories() {
+            if (!managingCategoriesUserId) return;
+
+            const checkboxes = document.querySelectorAll('#categories-checkboxes input[type="checkbox"]:checked');
+            const categoryIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+
+            try {
+                const response = await fetch(`/api/users/${managingCategoriesUserId}/categories`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        category_ids: categoryIds
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                showNotification('用户设备类别权限更新成功', 'success');
+                
+                // 重新加载该用户的设备类别显示
+                await loadUserCategories(managingCategoriesUserId);
+                
+                // 等待一小段时间确保显示更新后再关闭模态框
+                setTimeout(() => {
+                    closeUserCategoriesModal();
+                }, 300);
+                
+            } catch (error) {
+                console.error('保存用户设备类别失败:', error);
+                showNotification('保存用户设备类别失败: ' + error.message, 'error');
+            }
+        }
+    </script>
+</body>
+</html>

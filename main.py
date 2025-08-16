@@ -32,7 +32,7 @@ app.include_router(dashboard.router, prefix="/api/dashboard", tags=["仪表盘"]
 app.include_router(audit_logs.router, prefix="/api/audit", tags=["操作日志"])
 app.include_router(import_export.router, prefix="/api/import", tags=["数据导入导出"])
 app.include_router(attachments.router, prefix="/api/attachments", tags=["附件管理"])
-app.include_router(settings.router, prefix="/api", tags=["系统设置"])
+app.include_router(settings.router, prefix="/api/settings", tags=["系统设置"])
 
 @app.get("/favicon.ico")
 async def favicon():
@@ -90,6 +90,14 @@ async def simple_login_test(request: Request):
 @app.get("/test_settings", response_class=HTMLResponse)
 async def test_settings(request: Request):
     return templates.TemplateResponse("test_settings.html", {"request": request})
+
+@app.get("/test_api_fix", response_class=HTMLResponse)
+async def test_api_fix(request: Request):
+    return templates.TemplateResponse("test_api_fix.html", {"request": request})
+
+@app.get("/test_page_size_feature", response_class=HTMLResponse)
+async def test_page_size_feature(request: Request):
+    return templates.TemplateResponse("test_page_size_feature.html", {"request": request})
 
 @app.get("/api", response_class=RedirectResponse)
 async def api_docs():

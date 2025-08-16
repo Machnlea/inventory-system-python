@@ -71,7 +71,7 @@ def save_settings(settings_data: Dict[str, Any]) -> bool:
         print(f"保存系统设置失败: {e}")
         return False
 
-@router.get("/settings")
+@router.get("/")
 async def get_settings(current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
     """获取系统设置"""
     try:
@@ -80,7 +80,7 @@ async def get_settings(current_user: User = Depends(get_current_user)) -> Dict[s
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取系统设置失败: {str(e)}")
 
-@router.put("/settings")
+@router.put("/")
 async def update_settings(
     settings_data: Dict[str, Any], 
     current_user: User = Depends(get_current_user)
@@ -159,7 +159,7 @@ async def update_settings(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"更新系统设置失败: {str(e)}")
 
-@router.post("/settings/reset")
+@router.post("/reset")
 async def reset_settings(current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
     """重置系统设置为默认值"""
     try:

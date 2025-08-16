@@ -6,7 +6,7 @@
     <title>设备管理 - 设备台账管理系统</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <script src="/static/js/api-client.js"></script>
+    <script src="/static/js/api-client.js?v=20240816-2"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body {
@@ -771,6 +771,18 @@
         // 初始化页面
         async function initializePage() {
             try {
+                // 加载系统设置
+                try {
+                    const settingsResponse = await SystemAPI.getSettings();
+                    const settings = settingsResponse.data || settingsResponse;
+                    // 使用系统设置中的每页显示条数
+                    itemsPerPage = settings.pageSize || 10;
+                    console.log('已加载系统设置，每页显示条数:', itemsPerPage);
+                } catch (settingsError) {
+                    console.warn('加载系统设置失败，使用默认值:', settingsError);
+                    itemsPerPage = 10; // 默认值
+                }
+                
                 // 加载部门和类别数据
                 const [departmentsData, categoriesData] = await Promise.all([
                     DepartmentAPI.getDepartments(),

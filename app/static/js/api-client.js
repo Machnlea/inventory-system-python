@@ -638,12 +638,12 @@ document.addEventListener('visibilitychange', function() {
 const SystemAPI = {
     // 获取系统设置
     async getSettings() {
-        return api.get('/api/settings');
+        return api.get('/api/settings/');
     },
 
     // 更新系统设置
     async updateSettings(settings) {
-        return api.put('/api/settings', settings);
+        return api.put('/api/settings/', settings);
     },
 
     // 重置系统设置

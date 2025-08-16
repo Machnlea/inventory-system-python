@@ -581,9 +581,9 @@
             new Chart(categoryCtx, {
                 type: 'doughnut',
                 data: {
-                    labels: categoryLabels.length > 0 ? categoryLabels : ['压力表', '温度计', '电子秤', '卡尺', '万用表', '其他'],
+                    labels: categoryLabels.length > 0 ? categoryLabels : ['暂无数据'],
                     datasets: [{
-                        data: categoryCounts.length > 0 ? categoryCounts : [35, 28, 22, 18, 15, 24],
+                        data: categoryCounts.length > 0 ? categoryCounts : [0],
                         backgroundColor: [
                             '#3B82F6',
                             '#10B981',
@@ -619,9 +619,9 @@
             new Chart(departmentCtx, {
                 type: 'doughnut',
                 data: {
-                    labels: departmentLabels.length > 0 ? departmentLabels : ['生产部', '质检部', '仓储部', '维修部', '行政部'],
+                    labels: departmentLabels.length > 0 ? departmentLabels : ['暂无数据'],
                     datasets: [{
-                        data: departmentCounts.length > 0 ? departmentCounts : [45, 32, 28, 20, 17],
+                        data: departmentCounts.length > 0 ? departmentCounts : [0],
                         backgroundColor: [
                             '#06B6D4',
                             '#84CC16',

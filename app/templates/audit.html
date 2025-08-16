@@ -383,8 +383,7 @@
                 initializePage();
                 setupEventListeners();
                 loadAuditUsers();
-                loadAuditLogs();
-                updateAuditStats();
+                loadAuditLogs(); // updateAuditStats 会在 loadAuditLogs 完成后调用
                 console.log('✅ Page initialization completed');
             } catch (error) {
                 console.error('❌ 页面初始化失败:', error);
@@ -455,8 +454,7 @@
 
             // 刷新按钮
             document.getElementById('refresh-btn').addEventListener('click', function() {
-                loadAuditLogs();
-                updateAuditStats();
+                loadAuditLogs(); // updateAuditStats 会在 loadAuditLogs 完成后调用
             });
 
             // 导出按钮
@@ -524,6 +522,7 @@
 
                 renderAuditLogsTable(auditLogs);
                 updatePagination();
+                updateAuditStats(); // 在数据加载完成后更新统计信息
                 
                 showNotification('操作日志加载成功', 'success');
                 

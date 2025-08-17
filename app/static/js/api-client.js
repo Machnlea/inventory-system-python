@@ -652,6 +652,128 @@ const SystemAPI = {
     }
 };
 
+// 统计报表API
+const ReportsAPI = {
+    // 获取报表概览
+    async getOverview() {
+        return api.get('/api/reports/overview');
+    },
+
+    // 获取检定统计
+    async getCalibrationStats(start_date, end_date) {
+        const params = new URLSearchParams();
+        if (start_date) params.append('start_date', start_date);
+        if (end_date) params.append('end_date', end_date);
+        
+        const endpoint = `/api/reports/calibration-stats${params.toString() ? '?' + params.toString() : ''}`;
+        return api.get(endpoint);
+    },
+
+    // 获取设备趋势
+    async getEquipmentTrends(start_date, end_date) {
+        const params = new URLSearchParams();
+        if (start_date) params.append('start_date', start_date);
+        if (end_date) params.append('end_date', end_date);
+        
+        const endpoint = `/api/reports/equipment-trends${params.toString() ? '?' + params.toString() : ''}`;
+        return api.get(endpoint);
+    },
+
+    // 获取部门对比
+    async getDepartmentComparison(start_date, end_date) {
+        const params = new URLSearchParams();
+        if (start_date) params.append('start_date', start_date);
+        if (end_date) params.append('end_date', end_date);
+        
+        const endpoint = `/api/reports/department-comparison${params.toString() ? '?' + params.toString() : ''}`;
+        return api.get(endpoint);
+    },
+
+    // 获取检定记录明细
+    async getCalibrationRecords(start_date, end_date, page = 1, page_size = 20) {
+        const params = new URLSearchParams();
+        if (start_date) params.append('start_date', start_date);
+        if (end_date) params.append('end_date', end_date);
+        params.append('page', page);
+        params.append('page_size', page_size);
+        
+        const endpoint = `/api/reports/calibration-records${params.toString() ? '?' + params.toString() : ''}`;
+        return api.get(endpoint);
+    },
+
+    // 导出报表
+    async exportReport(start_date, end_date, format = 'excel') {
+        const params = new URLSearchParams();
+        if (start_date) params.append('start_date', start_date);
+        if (end_date) params.append('end_date', end_date);
+        params.append('format', format);
+        
+        const endpoint = `/api/reports/export${params.toString() ? '?' + params.toString() : ''}`;
+        
+        try {
+            const response = await fetch(endpoint, {
+                method: 'GET',
+                headers: api.getHeaders()
+            });
+            
+            if (!response.ok) {
+                throw new Error(`导出失败: ${response.status}`);
+            }
+            
+            // 获取文件名
+            const contentDisposition = response.headers.get('Content-Disposition');
+            let filename = '统计报表.xlsx';
+            if (contentDisposition) {
+                const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                if (match) {
+                    filename = match[1].replace(/['"]/g, '');
+                }
+            }
+            
+            // 下载文件
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            return { success: true, message: '导出成功' };
+        } catch (error) {
+            console.error('导出报表失败:', error);
+            throw error;
+        }
+    },
+
+    // 导出报表数据
+    async exportData(report_type, start_date, end_date, format = 'excel') {
+        const params = new URLSearchParams();
+        params.append('report_type', report_type);
+        params.append('format', format);
+        if (start_date) params.append('start_date', start_date);
+        if (end_date) params.append('end_date', end_date);
+        
+        const endpoint = `/api/reports/export-data?${params.toString()}`;
+        const filename = `${report_type}_report_${new Date().toISOString().split('T')[0]}.${format === 'excel' ? 'xlsx' : 'csv'}`;
+        return api.downloadFile(endpoint, filename);
+    },
+
+    // 获取设备统计数据
+    async getEquipmentStats(sort_by = 'original_value', sort_order = 'desc', page = 1, page_size = 20) {
+        const params = new URLSearchParams();
+        params.append('sort_by', sort_by);
+        params.append('sort_order', sort_order);
+        params.append('page', page);
+        params.append('page_size', page_size);
+        
+        const endpoint = `/api/reports/equipment-stats?${params.toString()}`;
+        return api.get(endpoint);
+    }
+};
+
 // 导出全局对象
 window.ApiClient = ApiClient;
 window.api = api;
@@ -662,4 +784,5 @@ window.DashboardAPI = DashboardAPI;
 window.AttachmentAPI = AttachmentAPI;
 window.ImportExportAPI = ImportExportAPI;
 window.SystemAPI = SystemAPI;
+window.ReportsAPI = ReportsAPI;
 window.showNotification = showNotification;

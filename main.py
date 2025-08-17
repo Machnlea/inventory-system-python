@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, RedirectResponse
-from app.api import users, auth, equipment, departments, dashboard, audit_logs, categories, import_export, attachments, settings
+from app.api import users, auth, equipment, departments, dashboard, audit_logs, categories, import_export, attachments, settings, reports
 from app.db.database import engine
 from app.models import models
 
@@ -33,6 +33,7 @@ app.include_router(audit_logs.router, prefix="/api/audit", tags=["操作日志"]
 app.include_router(import_export.router, prefix="/api/import", tags=["数据导入导出"])
 app.include_router(attachments.router, prefix="/api/attachments", tags=["附件管理"])
 app.include_router(settings.router, prefix="/api/settings", tags=["系统设置"])
+app.include_router(reports.router, prefix="/api/reports", tags=["统计报表"])
 
 @app.get("/favicon.ico")
 async def favicon():
@@ -82,6 +83,10 @@ async def audit(request: Request):
 @app.get("/settings", response_class=HTMLResponse)
 async def settings(request: Request):
     return templates.TemplateResponse("settings.html", {"request": request})
+
+@app.get("/reports", response_class=HTMLResponse)
+async def reports(request: Request):
+    return templates.TemplateResponse("reports.html", {"request": request})
 
 @app.get("/simple_login_test", response_class=HTMLResponse)
 async def simple_login_test(request: Request):

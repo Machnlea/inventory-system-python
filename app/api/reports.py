@@ -413,6 +413,57 @@ async def get_equipment_stats(
         func.sum(Equipment.original_value).label('total_value')
     ).group_by(Equipment.status).all()
     
+    # 时效监控统计
+    today = date.today()
+    thirty_days_later = today + timedelta(days=30)
+    
+    # 已超期设备数量（红色预警）
+    overdue_count = query.filter(
+        and_(
+            Equipment.status == "在用",
+            Equipment.valid_until < today
+        )
+    ).count()
+    
+    # 30天内即将到期设备数量（黄色预警）
+    expiring_soon_count = query.filter(
+        and_(
+            Equipment.status == "在用",
+            Equipment.valid_until.between(today, thirty_days_later)
+        )
+    ).count()
+    
+    # 正常有效期设备数量
+    valid_count = query.filter(
+        and_(
+            Equipment.status == "在用",
+            Equipment.valid_until > thirty_days_later
+        )
+    ).count()
+    
+    # 合规性指标统计
+    # 外检设备数量（假设检定方式包含"外检"的为外检设备）
+    external_inspection_count = query.filter(
+        Equipment.calibration_method.contains("外检")
+    ).count()
+    
+    # 强检设备数量（管理级别为A级的设备）
+    mandatory_inspection_count = query.filter(
+        Equipment.management_level == "A级"
+    ).count()
+    
+    # A级设备数量（管理级别为A级且状态为在用的设备）
+    a_grade_count = query.filter(
+        and_(
+            Equipment.management_level == "A级",
+            Equipment.status == "在用"
+        )
+    ).count()
+    
+    # 计算合规性指标
+    external_inspection_rate = (external_inspection_count / total * 100) if total > 0 else 0
+    a_grade_rate = (a_grade_count / mandatory_inspection_count * 100) if mandatory_inspection_count > 0 else 0
+    
     # 按部门统计
     department_stats = query.with_entities(
         Department.name,
@@ -481,7 +532,21 @@ async def get_equipment_stats(
                     "avg_value": float(avg_value) if avg_value else 0
                 }
                 for cat_name, count, total_value, avg_value in category_stats
-            ]
+            ],
+            # 新增时效监控统计
+            "time_monitoring": {
+                "overdue_count": overdue_count,
+                "expiring_soon_count": expiring_soon_count,
+                "valid_count": valid_count
+            },
+            # 新增合规性指标
+            "compliance_metrics": {
+                "external_inspection_rate": round(external_inspection_rate, 2),
+                "a_grade_rate": round(a_grade_rate, 2),
+                "external_inspection_count": external_inspection_count,
+                "mandatory_inspection_count": mandatory_inspection_count,
+                "a_grade_count": a_grade_count
+            }
         },
         "pagination": {
             "page": page,

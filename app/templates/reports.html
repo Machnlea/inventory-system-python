@@ -173,13 +173,13 @@
                         </div>
                     </div>
 
-                    <!-- 设备统计概览卡片 -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <!-- 基础统计卡片 -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                         <div class="bg-white rounded-xl shadow-md p-6 card-hover">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <p class="text-sm font-medium text-gray-600">设备总数</p>
-                                    <p class="text-2xl font-bold text-blue-600" id="total-equipment">-</p>
+                                    <p class="text-sm font-medium text-gray-600">计量器具总数</p>
+                                    <p class="text-3xl font-bold text-blue-600" id="total-equipment">-</p>
                                 </div>
                                 <div class="bg-blue-100 rounded-full p-3">
                                     <i class="fas fa-cogs text-blue-600 text-xl"></i>
@@ -189,54 +189,118 @@
                         <div class="bg-white rounded-xl shadow-md p-6 card-hover">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <p class="text-sm font-medium text-gray-600">设备原值总计</p>
-                                    <p class="text-2xl font-bold text-green-600" id="total-original-value">-</p>
+                                    <p class="text-sm font-medium text-gray-600">在用设备数量</p>
+                                    <p class="text-3xl font-bold text-green-600" id="active-equipment">-</p>
                                 </div>
                                 <div class="bg-green-100 rounded-full p-3">
-                                    <i class="fas fa-yen-sign text-green-600 text-xl"></i>
+                                    <i class="fas fa-check-circle text-green-600 text-xl"></i>
                                 </div>
                             </div>
                         </div>
                         <div class="bg-white rounded-xl shadow-md p-6 card-hover">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <p class="text-sm font-medium text-gray-600">在用设备</p>
-                                    <p class="text-2xl font-bold text-purple-600" id="active-equipment">-</p>
+                                    <p class="text-sm font-medium text-gray-600">停用/报废设备数量</p>
+                                    <p class="text-3xl font-bold text-red-600" id="inactive-equipment">-</p>
                                 </div>
-                                <div class="bg-purple-100 rounded-full p-3">
-                                    <i class="fas fa-check-circle text-purple-600 text-xl"></i>
+                                <div class="bg-red-100 rounded-full p-3">
+                                    <i class="fas fa-times-circle text-red-600 text-xl"></i>
                                 </div>
                             </div>
                         </div>
-                        <div class="bg-white rounded-xl shadow-md p-6 card-hover">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm font-medium text-gray-600">平均设备原值</p>
-                                    <p class="text-2xl font-bold text-orange-600" id="avg-original-value">-</p>
+                    </div>
+
+                    <!-- 时效监控统计 -->
+                    <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                            <i class="fas fa-clock text-orange-500 mr-2"></i>时效监控
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="bg-red-50 rounded-lg p-4 border-l-4 border-red-500">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm font-medium text-red-800">已超期设备数量</p>
+                                        <p class="text-2xl font-bold text-red-600" id="overdue-count">-</p>
+                                    </div>
+                                    <div class="bg-red-100 rounded-full p-2">
+                                        <i class="fas fa-exclamation-triangle text-red-600"></i>
+                                    </div>
                                 </div>
-                                <div class="bg-orange-100 rounded-full p-3">
-                                    <i class="fas fa-chart-line text-orange-600 text-xl"></i>
+                                <p class="text-xs text-red-600 mt-1">红色预警</p>
+                            </div>
+                            <div class="bg-yellow-50 rounded-lg p-4 border-l-4 border-yellow-500">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm font-medium text-yellow-800">30天内即将到期设备数量</p>
+                                        <p class="text-2xl font-bold text-yellow-600" id="expiring-soon-count">-</p>
+                                    </div>
+                                    <div class="bg-yellow-100 rounded-full p-2">
+                                        <i class="fas fa-clock text-yellow-600"></i>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-yellow-600 mt-1">黄色预警</p>
+                            </div>
+                            <div class="bg-green-50 rounded-lg p-4 border-l-4 border-green-500">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm font-medium text-green-800">正常有效期设备数量</p>
+                                        <p class="text-2xl font-bold text-green-600" id="valid-count">-</p>
+                                    </div>
+                                    <div class="bg-green-100 rounded-full p-2">
+                                        <i class="fas fa-check-circle text-green-600"></i>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-green-600 mt-1">状态正常</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 合规性指标 -->
+                    <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                            <i class="fas fa-chart-pie text-purple-500 mr-2"></i>合规性指标
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="bg-purple-50 rounded-lg p-4">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm font-medium text-purple-800">外检设备占比</p>
+                                        <p class="text-2xl font-bold text-purple-600" id="external-inspection-rate">-</p>
+                                    </div>
+                                    <div class="bg-purple-100 rounded-full p-2">
+                                        <i class="fas fa-percentage text-purple-600"></i>
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <div class="w-full bg-gray-200 rounded-full h-2">
+                                        <div class="bg-purple-600 h-2 rounded-full" id="external-inspection-bar" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-indigo-50 rounded-lg p-4">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm font-medium text-indigo-800">强检设备合格率</p>
+                                        <p class="text-2xl font-bold text-indigo-600" id="a-grade-rate">-</p>
+                                    </div>
+                                    <div class="bg-indigo-100 rounded-full p-2">
+                                        <i class="fas fa-percentage text-indigo-600"></i>
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <div class="w-full bg-gray-200 rounded-full h-2">
+                                        <div class="bg-indigo-600 h-2 rounded-full" id="a-grade-bar" style="width: 0%"></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- 图表区域 -->
-                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
-                        <!-- 设备原值分布图 -->
-                        <div class="bg-white rounded-xl shadow-md p-6">
-                            <h3 class="text-lg font-semibold text-gray-900 mb-4">设备原值分布</h3>
-                            <div class="chart-container">
-                                <canvas id="equipmentValueChart"></canvas>
-                            </div>
-                        </div>
-                        
-                        <!-- 设备状态分布图 -->
-                        <div class="bg-white rounded-xl shadow-md p-6">
-                            <h3 class="text-lg font-semibold text-gray-900 mb-4">设备状态分布</h3>
-                            <div class="chart-container">
-                                <canvas id="equipmentStatusChart"></canvas>
-                            </div>
+                    <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">设备状态分布</h3>
+                        <div class="chart-container" style="height: 300px;">
+                            <canvas id="equipmentStatusChart"></canvas>
                         </div>
                     </div>
 
@@ -451,7 +515,6 @@
                 updateEquipmentStats(equipmentStats.statistics);
                 
                 // 创建图表
-                createEquipmentValueChart(equipmentStats.statistics.status_distribution);
                 createEquipmentStatusChart(equipmentStats.statistics.status_distribution);
                 createDepartmentStatsChart(equipmentStats.statistics.department_stats);
                 createCategoryStatsChart(equipmentStats.statistics.category_stats);
@@ -470,16 +533,35 @@
 
         // 更新设备统计概览
         function updateEquipmentStats(data) {
+            // 基础统计
             document.getElementById('total-equipment').textContent = data.total_count || 0;
-            document.getElementById('total-original-value').textContent = formatCurrency(data.total_original_value || 0);
             
-            // 计算在用设备数量
+            // 计算在用和停用/报废设备数量
             const activeEquipment = data.status_distribution?.find(s => s.status === '在用')?.count || 0;
-            document.getElementById('active-equipment').textContent = activeEquipment;
+            const inactiveEquipment = data.status_distribution?.filter(s => s.status !== '在用').reduce((sum, s) => sum + s.count, 0) || 0;
             
-            // 使用后端返回的平均值
-            const avgValue = data.avg_original_value || 0;
-            document.getElementById('avg-original-value').textContent = formatCurrency(avgValue);
+            document.getElementById('active-equipment').textContent = activeEquipment;
+            document.getElementById('inactive-equipment').textContent = inactiveEquipment;
+            
+            // 更新时效监控统计
+            if (data.time_monitoring) {
+                document.getElementById('overdue-count').textContent = data.time_monitoring.overdue_count || 0;
+                document.getElementById('expiring-soon-count').textContent = data.time_monitoring.expiring_soon_count || 0;
+                document.getElementById('valid-count').textContent = data.time_monitoring.valid_count || 0;
+            }
+            
+            // 更新合规性指标
+            if (data.compliance_metrics) {
+                const externalRate = data.compliance_metrics.external_inspection_rate || 0;
+                const aGradeRate = data.compliance_metrics.a_grade_rate || 0;
+                
+                document.getElementById('external-inspection-rate').textContent = externalRate + '%';
+                document.getElementById('a-grade-rate').textContent = aGradeRate + '%';
+                
+                // 更新进度条
+                document.getElementById('external-inspection-bar').style.width = externalRate + '%';
+                document.getElementById('a-grade-bar').style.width = aGradeRate + '%';
+            }
         }
 
         // 格式化货币
@@ -492,79 +574,7 @@
             }).format(value);
         }
 
-        // 创建设备原值分布图
-        function createEquipmentValueChart(data) {
-            const ctx = document.getElementById('equipmentValueChart').getContext('2d');
-            
-            if (chartInstances.equipmentValue) {
-                chartInstances.equipmentValue.destroy();
-            }
-
-            // 如果数据为空或undefined，创建空图表
-            if (!data || !Array.isArray(data) || data.length === 0) {
-                chartInstances.equipmentValue = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: ['暂无数据'],
-                        datasets: [{
-                            label: '设备数量',
-                            data: [0],
-                            backgroundColor: '#3B82F6'
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            title: {
-                                display: true,
-                                text: '设备状态分布 (暂无数据)'
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                ticks: {
-                                    stepSize: 1
-                                }
-                            }
-                        }
-                    }
-                });
-                return;
-            }
-
-            chartInstances.equipmentValue = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: data.map(item => item.status),
-                    datasets: [{
-                        label: '设备数量',
-                        data: data.map(item => item.count),
-                        backgroundColor: '#3B82F6'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    },
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: '设备状态分布'
-                        },
-                        legend: {
-                            position: 'top'
-                        }
-                    }
-                }
-            });
-        }
-
+    
         // 创建设备状态分布图
         function createEquipmentStatusChart(data) {
             const ctx = document.getElementById('equipmentStatusChart').getContext('2d');

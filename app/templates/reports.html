@@ -364,11 +364,11 @@
                             </table>
                         </div>
                         
-                        <!-- 分页控件 -->
-                        <div class="flex items-center justify-between mt-6">
+                        <!-- 统一分页控件 -->
+                        <div id="pagination-container" class="flex items-center justify-between mt-6">
                             <div class="flex items-center space-x-2">
                                 <span class="text-sm text-gray-700">每页显示</span>
-                                <select id="page-size" class="px-3 py-1 border border-gray-300 rounded-lg text-sm">
+                                <select id="page-size" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                     <option value="10">10</option>
                                     <option value="20" selected>20</option>
                                     <option value="50">50</option>
@@ -376,10 +376,21 @@
                                 </select>
                                 <span class="text-sm text-gray-700">条</span>
                             </div>
-                            <div class="flex items-center space-x-2">
-                                <button id="prev-page" class="px-3 py-1 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">上一页</button>
-                                <span id="page-info" class="text-sm text-gray-700">第 1 页，共 1 页</span>
-                                <button id="next-page" class="px-3 py-1 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">下一页</button>
+                            <div class="flex items-center space-x-1">
+                                <button id="prev-page" class="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-colors">
+                                    <i class="fas fa-chevron-left mr-1"></i>上一页
+                                </button>
+                                <div id="page-numbers" class="flex items-center space-x-1">
+                                    <!-- 页码按钮将动态生成 -->
+                                </div>
+                                <button id="next-page" class="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-colors">
+                                    下一页<i class="fas fa-chevron-right ml-1"></i>
+                                </button>
+                            </div>
+                            <div class="text-sm text-gray-700">
+                                <span id="page-info">第 1 页，共 1 页</span>
+                                <span class="text-gray-500 mx-2">|</span>
+                                <span>共 <span id="total-count">0</span> 条</span>
                             </div>
                         </div>
                     </div>
@@ -892,9 +903,79 @@
             
             document.getElementById('equipment-total').textContent = total;
             document.getElementById('page-info').textContent = `第 ${page} 页，共 ${totalPages} 页`;
+            document.getElementById('total-count').textContent = total;
             
             document.getElementById('prev-page').disabled = page <= 1;
             document.getElementById('next-page').disabled = page >= totalPages;
+            
+            // 生成页码按钮
+            generatePageNumbers(page, totalPages);
+        }
+
+        // 生成页码按钮
+        function generatePageNumbers(currentPage, totalPages) {
+            const pageNumbersContainer = document.getElementById('page-numbers');
+            pageNumbersContainer.innerHTML = '';
+            
+            if (totalPages <= 1) return;
+            
+            const maxVisiblePages = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+            let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+            
+            if (endPage - startPage + 1 < maxVisiblePages) {
+                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+            }
+            
+            // 第一页
+            if (startPage > 1) {
+                pageNumbersContainer.appendChild(createPageButton(1, currentPage));
+                if (startPage > 2) {
+                    pageNumbersContainer.appendChild(createEllipsis());
+                }
+            }
+            
+            // 页码按钮
+            for (let i = startPage; i <= endPage; i++) {
+                pageNumbersContainer.appendChild(createPageButton(i, currentPage));
+            }
+            
+            // 最后一页
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    pageNumbersContainer.appendChild(createEllipsis());
+                }
+                pageNumbersContainer.appendChild(createPageButton(totalPages, currentPage));
+            }
+        }
+        
+        // 创建页码按钮
+        function createPageButton(pageNum, currentPage) {
+            const button = document.createElement('button');
+            button.className = `px-3 py-2 border text-sm font-medium rounded-lg transition-colors ${
+                pageNum === currentPage 
+                    ? 'bg-blue-500 text-white border-blue-500' 
+                    : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+            }`;
+            button.textContent = pageNum;
+            button.onclick = () => changePage(pageNum);
+            return button;
+        }
+        
+        // 创建省略号
+        function createEllipsis() {
+            const span = document.createElement('span');
+            span.className = 'px-3 py-2 text-gray-500';
+            span.textContent = '...';
+            return span;
+        }
+        
+        // 切换页面
+        function changePage(page) {
+            if (page < 1 || page > totalPages) return;
+            
+            currentPage = page;
+            loadEquipmentData();
         }
 
         // 显示通知

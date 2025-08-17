@@ -361,28 +361,33 @@
                     </table>
                 </div>
                 
-                <!-- 分页 -->
-                <div class="bg-white px-6 py-3 border-t border-gray-200 flex items-center justify-between">
-                    <div class="flex-1 flex justify-between sm:hidden">
-                        <button id="mobile-prev-btn" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                            上一页
+                <!-- 统一分页控件 -->
+                <div id="pagination-container" class="flex items-center justify-between mt-6">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-sm text-gray-700">每页显示</span>
+                        <select id="page-size" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="10">10</option>
+                            <option value="20" selected>20</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                        <span class="text-sm text-gray-700">条</span>
+                    </div>
+                    <div class="flex items-center space-x-1">
+                        <button id="prev-page" class="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-colors">
+                            <i class="fas fa-chevron-left mr-1"></i>上一页
                         </button>
-                        <button id="mobile-next-btn" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                            下一页
+                        <div id="page-numbers" class="flex items-center space-x-1">
+                            <!-- 页码按钮将动态生成 -->
+                        </div>
+                        <button id="next-page" class="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-colors">
+                            下一页<i class="fas fa-chevron-right ml-1"></i>
                         </button>
                     </div>
-                    <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                        <div>
-                            <p class="text-sm text-gray-700">
-                                显示第 <span id="page-start-item" class="font-medium">1</span> 到 <span id="page-end-item" class="font-medium">10</span> 项，
-                                共 <span id="page-total-items" class="font-medium">0</span> 项结果
-                            </p>
-                        </div>
-                        <div>
-                            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" id="pagination-nav">
-                                <!-- 动态生成分页按钮 -->
-                            </nav>
-                        </div>
+                    <div class="text-sm text-gray-700">
+                        <span id="page-info">第 1 页，共 1 页</span>
+                        <span class="text-gray-500 mx-2">|</span>
+                        <span>共 <span id="total-count">0</span> 条</span>
                     </div>
                 </div>
             </div>
@@ -1267,27 +1272,26 @@
         // 更新分页
         function updatePagination() {
             const totalPages = Math.ceil(totalItems / itemsPerPage);
-            const startItem = (currentPage - 1) * itemsPerPage + 1;
-            const endItem = Math.min(currentPage * itemsPerPage, totalItems);
             
             // 更新分页信息
-            document.getElementById('page-start-item').textContent = totalItems > 0 ? startItem : 0;
-            document.getElementById('page-end-item').textContent = endItem;
-            document.getElementById('page-total-items').textContent = totalItems;
+            document.getElementById('page-info').textContent = `第 ${currentPage} 页，共 ${totalPages} 页`;
+            document.getElementById('total-count').textContent = totalItems;
             
-            // 生成分页按钮
-            const paginationNav = document.getElementById('pagination-nav');
-            paginationNav.innerHTML = '';
+            // 更新按钮状态
+            document.getElementById('prev-page').disabled = currentPage <= 1;
+            document.getElementById('next-page').disabled = currentPage >= totalPages;
             
-            // 上一页按钮
-            const prevBtn = document.createElement('button');
-            prevBtn.className = `relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 ${currentPage === 1 ? 'cursor-not-allowed opacity-50' : ''}`;
-            prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
-            prevBtn.disabled = currentPage === 1;
-            prevBtn.onclick = () => changePage(currentPage - 1);
-            paginationNav.appendChild(prevBtn);
+            // 生成页码按钮
+            generatePageNumbers(currentPage, totalPages);
+        }
+
+        // 生成页码按钮
+        function generatePageNumbers(currentPage, totalPages) {
+            const pageNumbersContainer = document.getElementById('page-numbers');
+            pageNumbersContainer.innerHTML = '';
             
-            // 页码按钮
+            if (totalPages <= 1) return;
+            
             const maxVisiblePages = 5;
             let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
             let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
@@ -1296,55 +1300,47 @@
                 startPage = Math.max(1, endPage - maxVisiblePages + 1);
             }
             
+            // 第一页
             if (startPage > 1) {
-                const firstBtn = createPageButton(1);
-                paginationNav.appendChild(firstBtn);
-                
+                pageNumbersContainer.appendChild(createPageButton(1, currentPage));
                 if (startPage > 2) {
-                    const ellipsis = document.createElement('span');
-                    ellipsis.className = 'relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700';
-                    ellipsis.textContent = '...';
-                    paginationNav.appendChild(ellipsis);
+                    pageNumbersContainer.appendChild(createEllipsis());
                 }
             }
             
+            // 页码按钮
             for (let i = startPage; i <= endPage; i++) {
-                const pageBtn = createPageButton(i);
-                paginationNav.appendChild(pageBtn);
+                pageNumbersContainer.appendChild(createPageButton(i, currentPage));
             }
             
+            // 最后一页
             if (endPage < totalPages) {
                 if (endPage < totalPages - 1) {
-                    const ellipsis = document.createElement('span');
-                    ellipsis.className = 'relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700';
-                    ellipsis.textContent = '...';
-                    paginationNav.appendChild(ellipsis);
+                    pageNumbersContainer.appendChild(createEllipsis());
                 }
-                
-                const lastBtn = createPageButton(totalPages);
-                paginationNav.appendChild(lastBtn);
+                pageNumbersContainer.appendChild(createPageButton(totalPages, currentPage));
             }
-            
-            // 下一页按钮
-            const nextBtn = document.createElement('button');
-            nextBtn.className = `relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 ${currentPage === totalPages ? 'cursor-not-allowed opacity-50' : ''}`;
-            nextBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
-            nextBtn.disabled = currentPage === totalPages;
-            nextBtn.onclick = () => changePage(currentPage + 1);
-            paginationNav.appendChild(nextBtn);
         }
-
+        
         // 创建页码按钮
-        function createPageButton(pageNum) {
+        function createPageButton(pageNum, currentPage) {
             const button = document.createElement('button');
-            button.className = `relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+            button.className = `px-3 py-2 border text-sm font-medium rounded-lg transition-colors ${
                 pageNum === currentPage 
-                    ? 'z-10 bg-blue-50 border-blue-500 text-blue-600' 
-                    : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                    ? 'bg-blue-500 text-white border-blue-500' 
+                    : 'border-gray-300 text-gray-700 hover:bg-gray-50'
             }`;
             button.textContent = pageNum;
             button.onclick = () => changePage(pageNum);
             return button;
+        }
+        
+        // 创建省略号
+        function createEllipsis() {
+            const span = document.createElement('span');
+            span.className = 'px-3 py-2 text-gray-500';
+            span.textContent = '...';
+            return span;
         }
 
         // 切换页面

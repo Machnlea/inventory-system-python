@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试修复</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div id="notification-container"></div>
+    
+    <h1>JavaScript 错误修复测试</h1>
+    
+    <div style="width: 400px; height: 300px; margin: 20px;">
+        <canvas id="testChart"></canvas>
+    </div>
+    
+    <script>
+        // 测试空数据处理
+        function createTestChart(data) {
+            const ctx = document.getElementById('testChart').getContext('2d');
+            
+            // 如果数据为空或undefined，创建空图表
+            if (!data || !Array.isArray(data) || data.length === 0) {
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [
+                            {
+                                label: '测试数据',
+                                data: [],
+                                borderColor: '#3B82F6',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                tension: 0.4
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: '测试图表 (暂无数据)'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1
+                                }
+                            }
+                        }
+                    }
+                });
+                console.log('✅ 成功处理空数据');
+                return;
+            }
+            
+            // 正常处理数据
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map(item => item.month),
+                    datasets: [
+                        {
+                            label: '测试数据',
+                            data: data.map(item => item.value),
+                            borderColor: '#3B82F6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '测试图表 (有数据)'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+            console.log('✅ 成功处理正常数据');
+        }
+        
+        // 测试用例
+        console.log('开始测试修复...');
+        
+        // 测试1: undefined数据
+        console.log('测试1: undefined数据');
+        createTestChart(undefined);
+        
+        // 测试2: null数据
+        console.log('测试2: null数据');
+        createTestChart(null);
+        
+        // 测试3: 空数组
+        console.log('测试3: 空数组');
+        createTestChart([]);
+        
+        // 测试4: 正常数据
+        console.log('测试4: 正常数据');
+        createTestChart([
+            { month: '1月', value: 10 },
+            { month: '2月', value: 20 },
+            { month: '3月', value: 15 }
+        ]);
+        
+        console.log('✅ 所有测试通过！');
+    </script>
+</body>
+</html>

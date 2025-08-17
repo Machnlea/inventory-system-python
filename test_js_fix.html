@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JavaScript 错误修复验证</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>JavaScript 错误修复验证测试</h1>
+    <div id="test-results"></div>
+    
+    <div style="width: 400px; height: 300px; margin: 20px;">
+        <canvas id="testChart"></canvas>
+    </div>
+    
+    <script>
+        // 模拟 createCalibrationTrendChart 函数
+        function createCalibrationTrendChart(data) {
+            const ctx = document.getElementById('testChart').getContext('2d');
+            
+            // 如果数据为空或undefined，创建空图表
+            if (!data || !Array.isArray(data) || data.length === 0) {
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [
+                            {
+                                label: '检定总数',
+                                data: [],
+                                borderColor: '#3B82F6',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                tension: 0.4
+                            },
+                            {
+                                label: '合格数',
+                                data: [],
+                                borderColor: '#10B981',
+                                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                tension: 0.4
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: '检定趋势分析 (暂无数据)'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1
+                                }
+                            }
+                        }
+                    }
+                });
+                return '✅ 成功处理空数据';
+            }
+            
+            // 正常处理数据
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map(item => item.month),
+                    datasets: [
+                        {
+                            label: '检定总数',
+                            data: data.map(item => item.total),
+                            borderColor: '#3B82F6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            tension: 0.4
+                        },
+                        {
+                            label: '合格数',
+                            data: data.map(item => item.qualified),
+                            borderColor: '#10B981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    }
+                }
+            });
+            return '✅ 成功处理正常数据';
+        }
+        
+        // 测试用例
+        const results = [];
+        
+        try {
+            // 测试1: undefined数据
+            results.push('测试1: undefined数据 - ' + createCalibrationTrendChart(undefined));
+        } catch (error) {
+            results.push('测试1: undefined数据 - ❌ 失败: ' + error.message);
+        }
+        
+        try {
+            // 测试2: null数据
+            results.push('测试2: null数据 - ' + createCalibrationTrendChart(null));
+        } catch (error) {
+            results.push('测试2: null数据 - ❌ 失败: ' + error.message);
+        }
+        
+        try {
+            // 测试3: 空数组
+            results.push('测试3: 空数组 - ' + createCalibrationTrendChart([]));
+        } catch (error) {
+            results.push('测试3: 空数组 - ❌ 失败: ' + error.message);
+        }
+        
+        try {
+            // 测试4: 正常数据
+            results.push('测试4: 正常数据 - ' + createCalibrationTrendChart([
+                { month: '1月', total: 10, qualified: 8 },
+                { month: '2月', total: 15, qualified: 12 },
+                { month: '3月', total: 20, qualified: 18 }
+            ]));
+        } catch (error) {
+            results.push('测试4: 正常数据 - ❌ 失败: ' + error.message);
+        }
+        
+        // 显示测试结果
+        document.getElementById('test-results').innerHTML = `
+            <h2>测试结果:</h2>
+            <ul>
+                ${results.map(result => `<li>${result}</li>`).join('')}
+            </ul>
+        `;
+        
+        console.log('所有测试完成');
+    </script>
+</body>
+</html>

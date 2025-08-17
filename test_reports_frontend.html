@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设备统计报表测试</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto p-8">
+        <h1 class="text-3xl font-bold text-gray-900 mb-8">设备统计报表测试</h1>
+        
+        <!-- 测试结果区域 -->
+        <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">API测试结果</h2>
+            <div id="test-results" class="space-y-4">
+                <div class="text-gray-500">正在测试设备统计API...</div>
+            </div>
+        </div>
+
+        <!-- 排序控件测试 -->
+        <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">排序功能测试</h2>
+            <div class="flex items-center space-x-4">
+                <select id="sort-by" class="px-3 py-2 border border-gray-300 rounded-lg">
+                    <option value="name">设备名称</option>
+                    <option value="original_value">设备原值</option>
+                    <option value="created_at">创建时间</option>
+                </select>
+                <select id="sort-order" class="px-3 py-2 border border-gray-300 rounded-lg">
+                    <option value="asc">升序</option>
+                    <option value="desc">降序</option>
+                </select>
+                <button id="test-sort" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                    测试排序
+                </button>
+            </div>
+        </div>
+
+        <!-- 图表测试区域 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">设备原值分布图</h3>
+                <div class="chart-container">
+                    <canvas id="equipmentValueChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">设备状态分布图</h3>
+                <div class="chart-container">
+                    <canvas id="equipmentStatusChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- 设备列表测试 -->
+        <div class="bg-white rounded-xl shadow-md p-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">设备列表测试</h2>
+            <div id="equipment-list" class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">设备名称</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">设备原值</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">状态</th>
+                        </tr>
+                    </thead>
+                    <tbody id="equipment-tbody" class="bg-white divide-y divide-gray-200">
+                        <tr>
+                            <td colspan="3" class="px-6 py-4 text-center text-gray-500">暂无数据</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 模拟API客户端
+        class MockApiClient {
+            constructor() {
+                this.baseURL = 'http://127.0.0.1:8000';
+            }
+
+            async get(endpoint) {
+                try {
+                    const response = await fetch(`${this.baseURL}${endpoint}`);
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return await response.json();
+                } catch (error) {
+                    console.error('API请求失败:', error);
+                    throw error;
+                }
+            }
+        }
+
+        const api = new MockApiClient();
+
+        // 模拟ReportsAPI
+        const ReportsAPI = {
+            async getEquipmentStats(sort_by = 'original_value', sort_order = 'desc', page = 1, page_size = 20) {
+                const params = new URLSearchParams();
+                params.append('sort_by', sort_by);
+                params.append('sort_order', sort_order);
+                params.append('page', page);
+                params.append('page_size', page_size);
+                
+                const endpoint = `/api/reports/equipment-stats?${params.toString()}`;
+                return api.get(endpoint);
+            }
+        };
+
+        // 格式化货币
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('zh-CN', {
+                style: 'currency',
+                currency: 'CNY',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(value);
+        }
+
+        // 显示测试结果
+        function showTestResults(message, type = 'info') {
+            const resultsDiv = document.getElementById('test-results');
+            const colorClass = type === 'success' ? 'text-green-600' : 
+                               type === 'error' ? 'text-red-600' : 'text-blue-600';
+            
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `${colorClass}`;
+            resultDiv.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'times' : 'info'}-circle mr-2"></i>${message}`;
+            resultsDiv.appendChild(resultDiv);
+        }
+
+        // 创建设备原值分布图
+        function createEquipmentValueChart(data) {
+            const ctx = document.getElementById('equipmentValueChart').getContext('2d');
+            
+            if (!data || data.length === 0) {
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['暂无数据'],
+                        datasets: [{
+                            label: '设备数量',
+                            data: [0],
+                            backgroundColor: '#3B82F6'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: '设备原值分布 (暂无数据)'
+                            }
+                        }
+                    }
+                });
+                return;
+            }
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.map(item => item.range),
+                    datasets: [{
+                        label: '设备数量',
+                        data: data.map(item => item.count),
+                        backgroundColor: '#3B82F6'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // 创建设备状态分布图
+        function createEquipmentStatusChart(data) {
+            const ctx = document.getElementById('equipmentStatusChart').getContext('2d');
+            
+            if (!data || data.length === 0) {
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['暂无数据'],
+                        datasets: [{
+                            data: [1],
+                            backgroundColor: ['#E5E7EB']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: '设备状态分布 (暂无数据)'
+                            }
+                        }
+                    }
+                });
+                return;
+            }
+
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: data.map(item => item.status),
+                    datasets: [{
+                        data: data.map(item => item.count),
+                        backgroundColor: ['#10B981', '#6B7280', '#EF4444', '#F59E0B']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        }
+
+        // 更新设备列表
+        function updateEquipmentList(equipment) {
+            const tbody = document.getElementById('equipment-tbody');
+            
+            if (!equipment || equipment.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="3" class="px-6 py-4 text-center text-gray-500">暂无设备数据</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = equipment.map(item => `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${item.name || '未知设备'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(item.original_value || 0)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                            ${item.status || '未知'}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // 测试设备统计功能
+        async function testEquipmentStats() {
+            try {
+                showTestResults('开始测试设备统计API...', 'info');
+                
+                const stats = await ReportsAPI.getEquipmentStats();
+                showTestResults('✅ 设备统计API调用成功', 'success');
+                
+                // 显示概览统计
+                const overview = stats.overview || {};
+                showTestResults(`设备总数: ${overview.total_equipment || 0}`, 'info');
+                showTestResults(`设备原值总计: ${formatCurrency(overview.total_original_value || 0)}`, 'info');
+                showTestResults(`在用设备数: ${overview.active_equipment || 0}`, 'info');
+                
+                // 创建图表
+                createEquipmentValueChart(stats.value_distribution);
+                createEquipmentStatusChart(stats.status_distribution);
+                
+                // 更新设备列表
+                updateEquipmentList(stats.equipment);
+                
+                showTestResults('✅ 前端功能测试完成', 'success');
+                
+            } catch (error) {
+                showTestResults(`❌ 测试失败: ${error.message}`, 'error');
+                console.error('测试失败:', error);
+            }
+        }
+
+        // 测试排序功能
+        async function testSort() {
+            try {
+                const sortBy = document.getElementById('sort-by').value;
+                const sortOrder = document.getElementById('sort-order').value;
+                
+                showTestResults(`测试排序: ${sortBy} ${sortOrder}`, 'info');
+                
+                const stats = await ReportsAPI.getEquipmentStats(sortBy, sortOrder);
+                updateEquipmentList(stats.equipment);
+                
+                showTestResults(`✅ 排序测试成功`, 'success');
+                
+            } catch (error) {
+                showTestResults(`❌ 排序测试失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 页面加载完成后执行测试
+        document.addEventListener('DOMContentLoaded', function() {
+            // 绑定排序测试按钮
+            document.getElementById('test-sort').addEventListener('click', testSort);
+            
+            // 执行主要测试
+            testEquipmentStats();
+        });
+    </script>
+</body>
+</html>

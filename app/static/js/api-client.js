@@ -168,12 +168,14 @@ class ApiClient {
     }
 
     // 文件下载
-    async downloadFile(endpoint, filename) {
+    async downloadFile(endpoint, filename, options = {}) {
         const url = `${this.baseURL}${endpoint}`;
         
         try {
             const response = await fetch(url, {
-                headers: this.getHeaders()
+                method: options.method || 'GET',
+                headers: this.getHeaders(),
+                body: options.body
             });
 
             if (response.status === 401) {
@@ -286,7 +288,10 @@ const EquipmentAPI = {
     },
 
     async batchExport(data) {
-        return api.post('/api/equipment/batch/export-selected', data);
+        return api.downloadFile('/api/equipment/batch/export-selected', '选中设备.xlsx', {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
     },
 
     // 导出功能

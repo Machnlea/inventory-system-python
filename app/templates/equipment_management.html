@@ -991,7 +991,21 @@
                 return;
             }
             
-            tableBody.innerHTML = equipments.map(equipment => {
+            // 对设备进行排序：随坏随换设备排在最后
+            const sortedEquipments = [...equipments].sort((a, b) => {
+                const aIsReplaceable = a.calibration_cycle === '随坏随换';
+                const bIsReplaceable = b.calibration_cycle === '随坏随换';
+                
+                // 如果都是随坏随换或都不是，保持原有顺序
+                if (aIsReplaceable === bIsReplaceable) {
+                    return 0;
+                }
+                
+                // 随坏随换设备排在后面
+                return aIsReplaceable ? 1 : -1;
+            });
+            
+            tableBody.innerHTML = sortedEquipments.map(equipment => {
                 const departmentName = equipment.department ? equipment.department.name : '未知部门';
                 const categoryName = equipment.category ? equipment.category.name : '其他';
                 const accuracyLevel = equipment.accuracy_level || '未设置';
@@ -999,7 +1013,7 @@
                 const calibrationMethod = equipment.calibration_method || '内检';
                 
                 return `
-                    <tr class="hover:bg-gray-50 equipment-row" data-expiry-date="${equipment.valid_until || ''}">
+                    <tr class="hover:bg-gray-50 equipment-row" data-expiry-date="${equipment.valid_until || ''}" data-calibration-cycle="${equipment.calibration_cycle || ''}">
                         <td class="px-6 py-4 whitespace-nowrap text-center">
                             <input type="checkbox" class="equipment-checkbox rounded border-gray-300" 
                                    value="${equipment.id}" onchange="updateSelectedCount()">
@@ -1019,7 +1033,7 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-left">${equipment.serial_number || '-'}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-left">${departmentName}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-left">${formatDate(equipment.valid_until)}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-left">${formatDate(equipment.valid_until, equipment.calibration_cycle)}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-center">
                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusStyle(equipment.status)}">${equipment.status || '未知'}</span>
                         </td>
@@ -1048,7 +1062,7 @@
             }).join('');
             
             // 加载附件数量
-            setTimeout(() => loadEquipmentAttachmentCounts(equipments.map(eq => eq.id)), 200);
+            setTimeout(() => loadEquipmentAttachmentCounts(sortedEquipments.map(eq => eq.id)), 200);
         }
 
         // 加载设备附件数量
@@ -1226,8 +1240,13 @@
             return colorMap[categoryName] || 'bg-gray-100';
         }
 
-        // 格式化日期
-        function formatDate(dateString) {
+        // 格式化日期或显示检定周期
+        function formatDate(dateString, calibrationCycle) {
+            // 如果是随坏随换设备，显示"随坏随换"
+            if (calibrationCycle === '随坏随换') {
+                return '随坏随换';
+            }
+            
             if (!dateString) return '-';
             
             // 如果是ISO 8601格式（包含T），转换为本地时间格式
@@ -1815,7 +1834,7 @@
                         </div>
                     </div>
                     <div class="col-span-2 text-sm text-gray-500">${formatFileSize(attachment.file_size)}</div>
-                    <div class="col-span-2 text-sm text-gray-500">${formatDate(attachment.created_at)}</div>
+                    <div class="col-span-2 text-sm text-gray-500">${formatDate(attachment.created_at, null)}</div>
                     <div class="col-span-2">
                         <span class="px-2 py-1 text-xs font-medium rounded-full ${getFileTypeStyle(attachment.file_type)}">
                             ${attachment.file_type ? attachment.file_type.toUpperCase() : 'UNKNOWN'}
@@ -1862,7 +1881,7 @@
                         </div>
                     </div>
                     <div class="col-span-2 text-sm text-gray-500">${formatFileSize(attachment.file_size)}</div>
-                    <div class="col-span-2 text-sm text-gray-500">${formatDate(attachment.created_at)}</div>
+                    <div class="col-span-2 text-sm text-gray-500">${formatDate(attachment.created_at, null)}</div>
                     <div class="col-span-2">
                         <span class="px-2 py-1 text-xs font-medium rounded-full ${getFileTypeStyle(attachment.file_type)}">
                             ${attachment.file_type ? attachment.file_type.toUpperCase() : 'UNKNOWN'}
@@ -2136,9 +2155,8 @@
                             return;
                         }
                         
-                        // 构建包含选中设备ID的筛选条件
-                        const selectedFilters = { ...filters, equipment_ids: selectedIds };
-                        await ImportExportAPI.exportFiltered(selectedFilters);
+                        // 使用批量导出API来导出选中的设备
+                        await EquipmentAPI.batchExport({ equipment_ids: selectedIds });
                         break;
                 }
                 

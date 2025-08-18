@@ -509,11 +509,10 @@
                 document.getElementById('equipmentForm').reset();
                 
                 // 设置一些合理的默认值
-                const today = new Date().toISOString().split('T')[0];
-                document.getElementById('calibrationDate').value = today;
                 document.getElementById('equipmentStatus').value = '在用';
                 document.getElementById('calibrationMethod').value = '内检';
                 document.getElementById('calibrationPeriod').value = '12个月';
+                // 不设置检定日期的默认值，让用户根据检定周期来决定是否填写
                 
                 // 清空验证消息
                 document.getElementById('codeValidation').textContent = '';
@@ -747,12 +746,14 @@
                 calibrationDateInput.required = false;
                 calibrationDateLabel.classList.remove('required-field');
                 validUntilInput.placeholder = '随坏随换设备无有效期';
+                validUntilInput.disabled = true;
                 // 不清空检定日期，让用户可以编辑
             } else {
                 // 其他周期需要检定日期
                 calibrationDateInput.required = true;
                 calibrationDateLabel.classList.add('required-field');
                 validUntilInput.placeholder = '';
+                validUntilInput.disabled = false;
                 
                 if (calibrationDate && calibrationPeriod) {
                     const date = new Date(calibrationDate);

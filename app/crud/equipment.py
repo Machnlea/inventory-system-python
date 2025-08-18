@@ -68,12 +68,20 @@ def get_equipments(db: Session, skip: int = 0, limit: int = 100,
             EquipmentCategory.name.asc() if sort_order == "asc" else EquipmentCategory.name.desc()
         )
     elif sort_field == "valid_until":
-        query = query.order_by(
-            Equipment.valid_until.asc() if sort_order == "asc" else Equipment.valid_until.desc()
-        )
+        # 特殊处理：确保随坏随换设备（valid_until为null）总是排在最后
+        if sort_order == "asc":
+            # 升序：非null值按升序，null值排在最后
+            query = query.order_by(
+                Equipment.valid_until.asc().nulls_last()
+            )
+        else:
+            # 降序：非null值按降序，null值排在最后
+            query = query.order_by(
+                Equipment.valid_until.desc().nulls_last()
+            )
     else:
-        # 默认按有效期至排序
-        query = query.order_by(Equipment.valid_until.asc())
+        # 默认按有效期至升序排序，随坏随换设备排在最后
+        query = query.order_by(Equipment.valid_until.asc().nulls_last())
     
     return query.offset(skip).limit(limit).all()
 
@@ -265,12 +273,20 @@ def filter_equipments(db: Session, filters: EquipmentFilter, user_id: Optional[i
             EquipmentCategory.name.asc() if sort_order == "asc" else EquipmentCategory.name.desc()
         )
     elif sort_field == "valid_until":
-        query = query.order_by(
-            Equipment.valid_until.asc() if sort_order == "asc" else Equipment.valid_until.desc()
-        )
+        # 特殊处理：确保随坏随换设备（valid_until为null）总是排在最后
+        if sort_order == "asc":
+            # 升序：非null值按升序，null值排在最后
+            query = query.order_by(
+                Equipment.valid_until.asc().nulls_last()
+            )
+        else:
+            # 降序：非null值按降序，null值排在最后
+            query = query.order_by(
+                Equipment.valid_until.desc().nulls_last()
+            )
     else:
-        # 默认按有效期至排序
-        query = query.order_by(Equipment.valid_until.asc())
+        # 默认按有效期至升序排序，随坏随换设备排在最后
+        query = query.order_by(Equipment.valid_until.asc().nulls_last())
     
     return query.offset(skip).limit(limit).all()
 
@@ -311,7 +327,7 @@ def get_equipments_due_for_calibration(db: Session, start_date: date, end_date: 
         query = query.filter(Equipment.category_id.in_(authorized_categories))
     
     # 按有效期至升序排序
-    query = query.order_by(Equipment.valid_until.asc())
+    query = query.order_by(Equipment.valid_until.asc().nulls_last())
     
     return query.all()
 
@@ -332,7 +348,7 @@ def get_overdue_equipments(db: Session, user_id: Optional[int] = None, is_admin:
         query = query.filter(Equipment.category_id.in_(authorized_categories))
     
     # 按有效期至升序排序（最早超期的排在前面）
-    query = query.order_by(Equipment.valid_until.asc())
+    query = query.order_by(Equipment.valid_until.asc().nulls_last())
     
     return query.all()
 

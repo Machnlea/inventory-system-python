@@ -991,25 +991,8 @@
                 return;
             }
             
-            // 对设备进行排序：随坏随换设备排在最后，其他设备按有效期至升序排列
-            const sortedEquipments = [...equipments].sort((a, b) => {
-                const aIsReplaceable = a.calibration_cycle === '随坏随换';
-                const bIsReplaceable = b.calibration_cycle === '随坏随换';
-                
-                // 如果都是随坏随换或都不是，保持原有顺序
-                if (aIsReplaceable === bIsReplaceable) {
-                    // 对于非随坏随换设备，按有效期至升序排列
-                    if (!aIsReplaceable) {
-                        const aDate = a.valid_until ? new Date(a.valid_until) : new Date('9999-12-31');
-                        const bDate = b.valid_until ? new Date(b.valid_until) : new Date('9999-12-31');
-                        return aDate - bDate;
-                    }
-                    return 0;
-                }
-                
-                // 随坏随换设备排在后面
-                return aIsReplaceable ? 1 : -1;
-            });
+            // 后端已经正确处理了排序，直接使用返回的数据
+            const sortedEquipments = equipments;
             
             tableBody.innerHTML = sortedEquipments.map(equipment => {
                 const departmentName = equipment.department ? equipment.department.name : '未知部门';

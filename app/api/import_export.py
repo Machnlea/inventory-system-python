@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Response
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Response, Form
 from sqlalchemy.orm import Session
 from typing import List
 import pandas as pd
@@ -177,8 +177,8 @@ def download_import_template():
                 '设备的准确度等级',
                 '设备的测量范围',
                 '设备的唯一编号',
-                '只能填写"6个月"、"12个月"、"24个月"、"36个月"或"随坏随换"，随坏随换设备无需填写检定日期',
-                '格式：YYYY-MM-DD，如2024-01-15（注：随坏随换设备无需填写）',
+                '只能填写"6个月"、"12个月"、"24个月"、"36个月"或"随坏随换"',
+                '格式：YYYY-MM-DD，如2024-01-15（注：随坏随换设备可选填，如填写需确保格式正确）',
                 '设备的安装位置',
                 '设备的分度值，如0.01mm',
                 '设备制造商名称',
@@ -213,11 +213,17 @@ def download_import_template():
 @router.post("/upload")
 async def import_equipment_data(
     file: UploadFile = File(...),
-    overwrite: bool = False,  # 新增参数：是否覆盖重复数据
+    overwrite: str = Form("false"),  # 使用Form字段
     db: Session = Depends(get_db),
     current_user = Depends(get_current_admin_user)
 ):
     """导入设备数据"""
+    
+    # 手动转换overwrite参数为布尔值
+    overwrite_bool = overwrite.lower() in ['true', '1', 'yes', 'on']
+    
+    # 调试信息：记录覆盖参数
+    print(f"导入参数 - overwrite: {overwrite}, type: {type(overwrite)}, 转换后: {overwrite_bool}")
     
     if not file.filename.endswith(('.xlsx', '.xls')):
         raise HTTPException(status_code=400, detail="只支持Excel文件格式")
@@ -321,15 +327,36 @@ async def import_equipment_data(
                         error_count += 1
                         continue
                 
-                # 验证日期格式
-                try:
-                    calibration_date = pd.to_datetime(row['检定(校准)日期']).date()
-                except:
-                    result["status"] = "失败"
-                    result["message"] = "检定日期格式错误，请使用YYYY-MM-DD格式"
-                    detailed_results.append(result)
-                    error_count += 1
-                    continue
+                # 验证日期格式（随坏随换设备可选）
+                calibration_date = None
+                calibration_date_str = str(row['检定(校准)日期']).strip()
+                
+                if calibration_cycle == "随坏随换":
+                    # 随坏随换设备：如果有检定日期且格式正确才导入
+                    if calibration_date_str and calibration_date_str != '':
+                        try:
+                            calibration_date = pd.to_datetime(calibration_date_str).date()
+                        except:
+                            # 随坏随换设备的检定日期格式错误时跳过，不设为必填项
+                            calibration_date = None
+                    # 如果没有检定日期或格式错误，calibration_date保持为None
+                else:
+                    # 非随坏随换设备：必须填写检定日期
+                    if not calibration_date_str or calibration_date_str == '':
+                        result["status"] = "失败"
+                        result["message"] = "检定(校准)日期为必填项"
+                        detailed_results.append(result)
+                        error_count += 1
+                        continue
+                    
+                    try:
+                        calibration_date = pd.to_datetime(calibration_date_str).date()
+                    except:
+                        result["status"] = "失败"
+                        result["message"] = "检定日期格式错误，请使用YYYY-MM-DD格式"
+                        detailed_results.append(result)
+                        error_count += 1
+                        continue
                 
                 manufacture_date = None
                 if pd.notna(row.get('出厂日期')):
@@ -413,7 +440,7 @@ async def import_equipment_data(
                 ).first()
                 
                 if existing_equipment:
-                    if overwrite:
+                    if overwrite_bool:
                         # 覆盖现有设备
                         update_data = EquipmentUpdate(
                             department_id=equipment_data.department_id,
@@ -461,7 +488,7 @@ async def import_equipment_data(
                         result["status"] = "跳过"
                         result["message"] = f"计量编号'{equipment_data.serial_number}'已存在，如需覆盖请勾选覆盖选项"
                         detailed_results.append(result)
-                        error_count += 1
+                        # 跳过不算错误，不增加error_count
                     continue
                 
                 # 创建新设备

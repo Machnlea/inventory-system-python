@@ -573,6 +573,17 @@
 
         // 创建图表
         function createCharts(categoryData, departmentData) {
+            // 销毁现有图表实例
+            const categoryChart = Chart.getChart('categoryChart');
+            if (categoryChart) {
+                categoryChart.destroy();
+            }
+            
+            const departmentChart = Chart.getChart('departmentChart');
+            if (departmentChart) {
+                departmentChart.destroy();
+            }
+            
             // 设备类别分布图
             const categoryCtx = document.getElementById('categoryChart').getContext('2d');
             const categoryLabels = categoryData.map(item => item.name);

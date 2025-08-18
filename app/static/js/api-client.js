@@ -504,7 +504,14 @@ const ImportExportAPI = {
     async uploadImportFile(file, overwrite = false) {
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('overwrite', overwrite);
+        // 将布尔值转换为字符串传递给FastAPI
+        formData.append('overwrite', overwrite.toString());
+
+        console.log('上传文件参数:', {
+            filename: file.name,
+            overwrite: overwrite,
+            overwriteType: typeof overwrite
+        });
 
         const response = await fetch('/api/import/upload', {
             method: 'POST',

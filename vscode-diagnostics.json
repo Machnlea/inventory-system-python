@@ -1,1 +1,21 @@
-[]
+[
+  {
+    "file": "/home/ming/my_project/inventory-system-python/init_db.py",
+    "diagnostics": [
+      {
+        "message": "未存取“Session”",
+        "severity": 3,
+        "level": "Hint",
+        "source": "Pylance",
+        "start": {
+          "line": 0,
+          "character": 27
+        },
+        "end": {
+          "line": 0,
+          "character": 34
+        }
+      }
+    ]
+  }
+]

@@ -178,8 +178,8 @@ def export_monthly_plan(db: Session = Depends(get_db),
             '测量范围': eq.measurement_range,
             '计量编号': eq.serial_number,
             '检定周期': eq.calibration_cycle,
-            '检定（校准）日期': eq.calibration_date.strftime('%Y-%m-%d'),
-            '有效期至': eq.valid_until.strftime('%Y-%m-%d'),
+            '检定（校准）日期': eq.calibration_date.strftime('%Y-%m-%d') if eq.calibration_date else '',
+            '有效期至': eq.valid_until.strftime('%Y-%m-%d') if eq.valid_until else '',
             '安装地点': eq.installation_location,
             '分度值': eq.scale_value or '',
             '制造厂家': eq.manufacturer,
@@ -209,11 +209,20 @@ def export_monthly_plan(db: Session = Depends(get_db),
     # 创建Excel文件
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, sheet_name=f'{today.year}年{today.month}月待检设备计划', index=False)
+        df.to_excel(writer, sheet_name='选中设备', index=False)
     output.seek(0)
     
-    filename = f"{today.year}年{today.month}月待检设备计划.xlsx"
+    filename = f"选中设备_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
     encoded_filename = quote(filename)
+    
+    # 记录操作日志
+    create_audit_log(
+        db=db,
+        user_id=current_user.id,
+        action="批量导出选中",
+        description=f"批量导出选中设备，共{len(selected_equipments)}台"
+    )
+    
     return Response(
         content=output.getvalue(),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -244,8 +253,8 @@ def export_filtered_equipments(filters: EquipmentFilter,
             '测量范围': eq.measurement_range,
             '计量编号': eq.serial_number,
             '检定周期': eq.calibration_cycle,
-            '检定（校准）日期': eq.calibration_date.strftime('%Y-%m-%d'),
-            '有效期至': eq.valid_until.strftime('%Y-%m-%d'),
+            '检定（校准）日期': eq.calibration_date.strftime('%Y-%m-%d') if eq.calibration_date else '',
+            '有效期至': eq.valid_until.strftime('%Y-%m-%d') if eq.valid_until else '',
             '安装地点': eq.installation_location,
             '分度值': eq.scale_value or '',
             '制造厂家': eq.manufacturer,
@@ -535,8 +544,8 @@ def batch_export_selected_equipments(
             '测量范围': eq.measurement_range,
             '计量编号': eq.serial_number,
             '检定周期': eq.calibration_cycle,
-            '检定（校准）日期': eq.calibration_date.strftime('%Y-%m-%d'),
-            '有效期至': eq.valid_until.strftime('%Y-%m-%d'),
+            '检定（校准）日期': eq.calibration_date.strftime('%Y-%m-%d') if eq.calibration_date else '',
+            '有效期至': eq.valid_until.strftime('%Y-%m-%d') if eq.valid_until else '',
             '安装地点': eq.installation_location,
             '分度值': eq.scale_value or '',
             '制造厂家': eq.manufacturer,
@@ -618,8 +627,8 @@ def export_search_equipments(search_params: EquipmentSearch,
             '测量范围': eq.measurement_range,
             '计量编号': eq.serial_number,
             '检定周期': eq.calibration_cycle,
-            '检定（校准）日期': eq.calibration_date.strftime('%Y-%m-%d'),
-            '有效期至': eq.valid_until.strftime('%Y-%m-%d'),
+            '检定（校准）日期': eq.calibration_date.strftime('%Y-%m-%d') if eq.calibration_date else '',
+            '有效期至': eq.valid_until.strftime('%Y-%m-%d') if eq.valid_until else '',
             '安装地点': eq.installation_location,
             '分度值': eq.scale_value or '',
             '制造厂家': eq.manufacturer,

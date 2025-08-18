@@ -724,7 +724,7 @@
     <script>
         // 全局变量
         let currentPage = 1;
-        let itemsPerPage = 100;
+        let itemsPerPage = 20;
         let totalItems = 0;
         let currentFilters = {};
         let currentSort = { field: 'valid_until', order: 'asc' };
@@ -776,16 +776,10 @@
         // 初始化页面
         async function initializePage() {
             try {
-                // 加载系统设置
-                try {
-                    const settingsResponse = await SystemAPI.getSettings();
-                    const settings = settingsResponse.data || settingsResponse;
-                    // 使用系统设置中的每页显示条数
-                    itemsPerPage = settings.pageSize || 10;
-                    console.log('已加载系统设置，每页显示条数:', itemsPerPage);
-                } catch (settingsError) {
-                    console.warn('加载系统设置失败，使用默认值:', settingsError);
-                    itemsPerPage = 10; // 默认值
+                // 设置页面大小选择控件的默认值
+                const pageSizeSelect = document.getElementById('page-size');
+                if (pageSizeSelect) {
+                    pageSizeSelect.value = itemsPerPage;
                 }
                 
                 // 加载部门和类别数据
@@ -1371,6 +1365,16 @@
                     loadEquipmentData();
                 });
             });
+            
+            // 页面大小选择控件
+            const pageSizeSelect = document.getElementById('page-size');
+            if (pageSizeSelect) {
+                pageSizeSelect.addEventListener('change', function() {
+                    itemsPerPage = parseInt(this.value);
+                    currentPage = 1;
+                    loadEquipmentData();
+                });
+            }
             
             // 批量操作下拉菜单
             const batchOperationBtn = document.getElementById('batchOperationBtn');

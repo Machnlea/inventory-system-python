@@ -1,6 +1,5 @@
 {
   "themeMode": "light",
-  "pageSize": 20,
   "sessionTimeout": 2,
   "minPasswordLength": 6,
   "enableTwoFactor": false,

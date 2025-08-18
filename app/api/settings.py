@@ -16,7 +16,6 @@ SETTINGS_FILE = Path(__file__).parent.parent.parent / "data" / "system_settings.
 DEFAULT_SETTINGS = {
     # 界面设置
     "themeMode": "light",
-    "pageSize": 10,
     
     # 安全设置
     "sessionTimeout": 2,
@@ -92,16 +91,10 @@ async def update_settings(
             raise HTTPException(status_code=400, detail="设置数据格式错误")
         
         # 验证必要字段
-        required_fields = ["pageSize"]
+        required_fields = []
         for field in required_fields:
             if field not in settings_data:
                 raise HTTPException(status_code=400, detail=f"缺少必要字段: {field}")
-        
-        # 验证数值范围
-        if "pageSize" in settings_data:
-            page_size = settings_data["pageSize"]
-            if not isinstance(page_size, int) or page_size < 5 or page_size > 100:
-                raise HTTPException(status_code=400, detail="每页显示条数必须在5-100之间")
         
         if "sessionTimeout" in settings_data:
             timeout = settings_data["sessionTimeout"]

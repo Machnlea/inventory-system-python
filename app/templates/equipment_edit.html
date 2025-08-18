@@ -602,7 +602,7 @@
                 accuracy_level: document.getElementById('accuracy').value,
                 measurement_range: document.getElementById('measureRange').value || null,
                 calibration_cycle: calibrationPeriod,
-                calibration_date: calibrationPeriod !== '随坏随换' ? calibrationDate : null,
+                calibration_date: calibrationDate || null, // 随坏随换设备也可以有检定日期
                 calibration_method: calibrationMethod,
                 serial_number: document.getElementById('equipmentCode').value,
                 installation_location: document.getElementById('installLocation').value || null,
@@ -742,12 +742,12 @@
             const calibrationDateInput = document.getElementById('calibrationDate');
             
             if (calibrationPeriod === '随坏随换') {
-                // 随坏随换设备不需要检定日期和有效期
+                // 随坏随换设备不需要有效期，但检定日期可选填
                 validUntilInput.value = '';
-                calibrationDateInput.value = '';
                 calibrationDateInput.required = false;
                 calibrationDateLabel.classList.remove('required-field');
                 validUntilInput.placeholder = '随坏随换设备无有效期';
+                // 不清空检定日期，让用户可以编辑
             } else {
                 // 其他周期需要检定日期
                 calibrationDateInput.required = true;

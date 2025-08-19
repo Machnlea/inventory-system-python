@@ -73,18 +73,18 @@
             border-radius: 12px;
             object-fit: cover;
             border: 3px solid #e5e7eb;
+            transition: all 0.3s ease;
+            cursor: pointer;
         }
-        .qr-code {
-            width: 120px;
-            height: 120px;
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #f9fafb;
+        .equipment-photo:hover {
+            border-color: #6366f1;
+            transform: scale(1.05);
+            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.2);
         }
-        .attachment-item {
+        .equipment-photo:active {
+            transform: scale(0.98);
+        }
+          .attachment-item {
             display: flex;
             align-items: center;
             justify-content: between;
@@ -377,34 +377,40 @@
                         </h2>
                         
                         <div class="text-center">
-                            <img src="https://via.placeholder.com/200x200/e5e7eb/6b7280?text=压力表" 
+                            <img id="equipmentPhoto" 
+                                 src="https://via.placeholder.com/200x200/e5e7eb/6b7280?text=压力表" 
                                  alt="设备照片" 
-                                 class="equipment-photo mx-auto mb-4">
-                            <button class="text-sm text-blue-600 hover:text-blue-800">
+                                 class="equipment-photo mx-auto mb-4 cursor-pointer hover:opacity-80 transition-opacity"
+                                 onclick="previewPhoto()">
+                            <input type="file" id="photoUploadInput" class="hidden" accept="image/*" onchange="handlePhotoUpload(event)">
+                            <button onclick="triggerPhotoUpload()" class="text-sm text-blue-600 hover:text-blue-800">
                                 <i class="fas fa-camera mr-1"></i>更新照片
                             </button>
                         </div>
                     </div>
 
-                    <!-- 二维码 -->
+                    <!-- 设备备注 -->
                     <div class="info-card">
                         <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                            <i class="fas fa-qrcode text-green-600 mr-2"></i>
-                            设备二维码
+                            <i class="fas fa-sticky-note text-yellow-600 mr-2"></i>
+                            设备备注
                         </h2>
                         
-                        <div class="text-center">
-                            <div class="qr-code mx-auto mb-4">
-                                <i class="fas fa-qrcode text-4xl text-gray-400"></i>
+                        <div class="space-y-3">
+                            <div id="equipmentNotes" class="text-gray-700 text-sm leading-relaxed bg-gray-50 p-4 rounded-lg min-h-[100px]">
+                                <!-- 备注内容将在这里显示 -->
                             </div>
-                            <div class="text-xs text-gray-500 mb-3">扫码查看设备信息</div>
-                            <button onclick="downloadQRCode()" class="text-sm text-blue-600 hover:text-blue-800">
-                                <i class="fas fa-download mr-1"></i>下载二维码
-                            </button>
+                            <div class="flex justify-between items-center">
+                                <button onclick="editNotes()" class="text-sm text-blue-600 hover:text-blue-800">
+                                    <i class="fas fa-edit mr-1"></i>编辑备注
+                                </button>
+                                <span id="notesStatus" class="text-xs text-gray-500">
+                                    <!-- 备注状态信息 -->
+                                </span>
+                            </div>
                         </div>
                     </div>
 
-  
                     <!-- 快速操作 -->
                     <div class="info-card">
                         <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -441,6 +447,41 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 照片预览模态框 -->
+    <div id="photoPreviewModal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center p-4 z-50">
+        <div class="modal-content bg-white rounded-xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-semibold text-gray-900">
+                        <i class="fas fa-image text-indigo-600 mr-2"></i>设备照片预览
+                    </h3>
+                    <button type="button" class="text-gray-400 hover:text-gray-600 transition-colors" onclick="closePhotoPreview()">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="px-6 py-4 overflow-y-auto" style="max-height: 70vh;">
+                <div class="text-center mb-4">
+                    <img id="photoPreviewImage" src="" alt="设备照片" class="max-w-full max-h-[60vh] mx-auto rounded-lg shadow-lg">
+                </div>
+                <div class="text-center text-sm text-gray-600">
+                    <div id="photoFileName" class="font-medium mb-1"></div>
+                    <div id="photoFileSize" class="text-gray-500"></div>
+                </div>
+            </div>
+            
+            <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                <button type="button" class="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors btn-click-effect" onclick="closePhotoPreview()">
+                    关闭
+                </button>
+                <button type="button" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors btn-click-effect" onclick="downloadCurrentPhoto()">
+                    <i class="fas fa-download mr-2"></i>下载照片
+                </button>
             </div>
         </div>
     </div>
@@ -529,12 +570,57 @@
         </div>
     </div>
 
+    <!-- 备注编辑模态框 -->
+    <div id="notesEditModal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center p-4">
+        <div class="modal-content bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-semibold text-gray-900">
+                        <i class="fas fa-sticky-note text-yellow-600 mr-2"></i>编辑设备备注
+                    </h3>
+                    <button type="button" class="text-gray-400 hover:text-gray-600 transition-colors" onclick="closeNotesEditModal()">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="px-6 py-4">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">备注内容</label>
+                    <textarea id="notesTextarea" 
+                              class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none" 
+                              rows="6" 
+                              placeholder="请输入设备备注信息..."></textarea>
+                    <div class="mt-2 text-sm text-gray-500">
+                        <span id="notesCharCount">0</span> / 500 字符
+                    </div>
+                </div>
+                
+                <div class="flex justify-between items-center">
+                    <div class="text-sm text-gray-500">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        备注可用于记录设备的特殊说明、维护记录、使用注意事项等
+                    </div>
+                    <div class="flex space-x-3">
+                        <button type="button" class="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors" onclick="closeNotesEditModal()">
+                            取消
+                        </button>
+                        <button type="button" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors" onclick="saveNotes()">
+                            <i class="fas fa-save mr-2"></i>保存备注
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // 全局变量
         let currentEquipmentId = null;
         let equipmentData = null;
         let currentEquipmentForAttachments = null;
         let currentPreviewAttachment = null;
+        let currentNotes = null;
 
         // 初始化页面
         document.addEventListener('DOMContentLoaded', async function() {
@@ -559,6 +645,9 @@
                 // 渲染设备信息
                 renderEquipmentInfo();
                 
+                // 加载设备照片
+                await loadEquipmentPhoto();
+                
                 // 更新附件计数
                 await updateAttachmentCount(currentEquipmentId);
 
@@ -578,6 +667,53 @@
                 console.error('加载设备数据失败:', error);
                 showNotification('加载设备数据失败: ' + error.message, 'error');
                 throw error;
+            }
+        }
+
+        // 加载设备照片
+        async function loadEquipmentPhoto() {
+            try {
+                // 获取设备附件列表
+                const attachments = await AttachmentAPI.getEquipmentAttachments(currentEquipmentId);
+                
+                // 查找图片类型的附件（优先查找最新的图片）
+                const imageAttachments = attachments.filter(att => 
+                    ['jpg', 'jpeg', 'png', 'gif'].includes(att.file_type?.toLowerCase())
+                ).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                
+                if (imageAttachments.length > 0) {
+                    // 使用最新的图片作为设备照片
+                    const photoAttachment = imageAttachments[0];
+                    const photoElement = document.getElementById('equipmentPhoto');
+                    
+                    // 获取预览URL
+                    const previewUrl = await AttachmentAPI.previewAttachment(photoAttachment.id);
+                    photoElement.src = previewUrl;
+                    
+                    // 保存当前照片信息
+                    currentEquipmentPhoto = {
+                        id: photoAttachment.id,
+                        filename: photoAttachment.filename,
+                        original_filename: photoAttachment.original_filename,
+                        file_path: photoAttachment.file_path,
+                        file_type: photoAttachment.file_type,
+                        file_size: photoAttachment.file_size
+                    };
+                    
+                    console.log('设备照片加载成功:', currentEquipmentPhoto);
+                } else {
+                    // 没有找到图片附件，使用默认占位图
+                    const photoElement = document.getElementById('equipmentPhoto');
+                    photoElement.src = 'https://via.placeholder.com/200x200/e5e7eb/6b7280?text=暂无照片';
+                    currentEquipmentPhoto = null;
+                    console.log('设备没有照片附件');
+                }
+            } catch (error) {
+                console.error('加载设备照片失败:', error);
+                // 加载失败时使用默认占位图
+                const photoElement = document.getElementById('equipmentPhoto');
+                photoElement.src = 'https://via.placeholder.com/200x200/e5e7eb/6b7280?text=加载失败';
+                currentEquipmentPhoto = null;
             }
         }
 
@@ -645,6 +781,19 @@
                 const statusElement = document.getElementById('equipmentStatus');
                 statusElement.textContent = equipmentData.status || '-';
                 statusElement.className = `status-badge ${getStatusClass(equipmentData.status)}`;
+
+                // 备注信息
+                currentNotes = equipmentData.notes || '';
+                const notesElement = document.getElementById('equipmentNotes');
+                const notesStatusElement = document.getElementById('notesStatus');
+                
+                if (currentNotes && currentNotes.trim()) {
+                    notesElement.innerHTML = currentNotes.replace(/\n/g, '<br>');
+                    notesStatusElement.textContent = `最后更新: ${equipmentData.notes_updated_at ? new Date(equipmentData.notes_updated_at).toLocaleDateString('zh-CN') : '未知'}`;
+                } else {
+                    notesElement.innerHTML = '<span class="text-gray-400 italic">暂无备注</span>';
+                    notesStatusElement.textContent = '点击编辑备注';
+                }
 
                 // 更新编辑按钮的设备ID
                 const editButton = document.querySelector('button[onclick^="editEquipment"]');
@@ -801,11 +950,6 @@
             window.print();
         }
 
-        // 下载二维码
-        function downloadQRCode() {
-            alert('二维码下载功能开发中...');
-        }
-
         // 页面加载完成后的初始化
         document.addEventListener('DOMContentLoaded', function() {
             console.log('设备详情页面加载完成');
@@ -857,7 +1001,7 @@
                     <div class="flex items-center justify-between">
                         <div class="flex items-center flex-1">
                             <div class="flex-shrink-0 mr-4">
-                                ${getFileIcon(fileType)}
+                                ${getFileIcon(fileType.toLowerCase())}
                             </div>
                             <div class="flex-1 min-w-0">
                                 <div class="text-sm font-medium text-gray-900 truncate">${attachment.original_filename || attachment.filename}</div>
@@ -986,7 +1130,7 @@
                             </button>
                         </div>
                     `;
-                } else if (['jpg', 'jpeg', 'png'].includes(fileType)) {
+                } else if (['jpg', 'jpeg', 'png'].includes(fileType.toLowerCase())) {
                     // 使用API客户端获取预览URL
                     try {
                         const previewUrl = await AttachmentAPI.previewAttachment(attachmentId);
@@ -1074,10 +1218,35 @@
                 showNotification('正在下载附件...', 'info');
                 
                 // 首先获取附件信息来得到文件名
-                const attachment = await AttachmentAPI.getAttachment(attachmentId);
+                const response = await fetch(`/api/attachments/${attachmentId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                    }
+                });
+                const attachment = await response.json();
                 const filename = attachment.original_filename || attachment.filename;
                 
-                await AttachmentAPI.downloadAttachment(attachmentId, filename);
+                const downloadResponse = await fetch(`/api/attachments/${attachmentId}/download`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                    }
+                });
+                
+                if (!downloadResponse.ok) {
+                    throw new Error('附件下载失败');
+                }
+
+                // 创建下载链接
+                const blob = await downloadResponse.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
                 showNotification('附件下载成功', 'success');
             } catch (error) {
                 console.error('下载附件失败:', error);
@@ -1120,10 +1289,162 @@
             updateAttachmentCount(currentEquipmentId);
         }
 
+        // 照片相关功能
+        let currentEquipmentPhoto = null;
+
+        // 触发照片上传
+        function triggerPhotoUpload() {
+            document.getElementById('photoUploadInput').click();
+        }
+
+        // 处理照片上传
+        async function handlePhotoUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // 验证文件类型
+            if (!file.type.startsWith('image/')) {
+                showNotification('请选择图片文件', 'error');
+                return;
+            }
+
+            // 验证文件大小（限制为5MB）
+            if (file.size > 5 * 1024 * 1024) {
+                showNotification('图片文件大小不能超过5MB', 'error');
+                return;
+            }
+
+            try {
+                showNotification('正在上传照片...', 'info');
+                
+                // 创建FormData对象
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('equipment_id', currentEquipmentId);
+
+                // 这里需要调用API上传照片
+                // 使用附件上传API，注意正确的URL路径
+                const response = await fetch(`/api/attachments/equipment/${currentEquipmentId}/attachments`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('照片上传失败');
+                }
+
+                const result = await response.json();
+                
+                // 更新照片显示
+                const photoElement = document.getElementById('equipmentPhoto');
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    photoElement.src = e.target.result;
+                    currentEquipmentPhoto = {
+                        id: result.id,
+                        filename: result.filename,
+                        original_filename: result.original_filename || file.name,
+                        file_path: result.file_path,
+                        file_type: file.type
+                    };
+                };
+                reader.readAsDataURL(file);
+
+                showNotification('照片上传成功', 'success');
+                
+                // 清空文件输入
+                event.target.value = '';
+                
+            } catch (error) {
+                console.error('照片上传失败:', error);
+                showNotification('照片上传失败: ' + error.message, 'error');
+            }
+        }
+
+        // 预览照片
+        function previewPhoto() {
+            if (!currentEquipmentPhoto) {
+                showNotification('没有可预览的照片', 'error');
+                return;
+            }
+
+            const previewImage = document.getElementById('photoPreviewImage');
+            const photoFileName = document.getElementById('photoFileName');
+            const photoFileSize = document.getElementById('photoFileSize');
+            
+            // 使用重新获取的预览URL确保图片能正确显示
+            AttachmentAPI.previewAttachment(currentEquipmentPhoto.id)
+                .then(previewUrl => {
+                    previewImage.src = previewUrl;
+                    photoFileName.textContent = currentEquipmentPhoto.original_filename || '设备照片';
+                    photoFileSize.textContent = `文件大小: ${formatFileSize(currentEquipmentPhoto.file_size || 0)}`;
+                    
+                    // 显示预览模态框
+                    showModal('photoPreviewModal');
+                })
+                .catch(error => {
+                    console.error('获取照片预览失败:', error);
+                    showNotification('照片预览失败', 'error');
+                });
+        }
+
+        // 关闭照片预览
+        function closePhotoPreview() {
+            hideModal('photoPreviewModal');
+        }
+
+        // 下载当前照片
+        async function downloadCurrentPhoto() {
+            if (!currentEquipmentPhoto) {
+                showNotification('没有可下载的照片', 'error');
+                return;
+            }
+
+            try {
+                showNotification('正在下载照片...', 'info');
+                
+                // 使用附件下载API下载照片
+                const response = await fetch(`/api/attachments/${currentEquipmentPhoto.id}/download`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('照片下载失败');
+                }
+
+                // 创建下载链接
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = currentEquipmentPhoto.original_filename || '设备照片.jpg';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+
+                showNotification('照片下载成功', 'success');
+            } catch (error) {
+                console.error('照片下载失败:', error);
+                showNotification('照片下载失败: ' + error.message, 'error');
+            }
+        }
+
         // 更新附件计数显示
         async function updateAttachmentCount(equipmentId) {
             try {
-                const attachments = await AttachmentAPI.getEquipmentAttachments(equipmentId);
+                const response = await fetch(`/api/attachments/equipment/${equipmentId}/attachments`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                    }
+                });
+                const attachments = await response.json();
                 const count = attachments.length;
                 // 更新详情页面上的附件计数
                 const attachmentBadge = document.getElementById('attachmentCountBadge');
@@ -1159,6 +1480,131 @@
         document.getElementById('attachmentPreviewModal').addEventListener('click', function(e) {
             if (e.target === this) {
                 closePreviewModal();
+            }
+        });
+
+        // ========== 备注管理功能 ==========
+
+        // 编辑备注
+        function editNotes() {
+            const notesTextarea = document.getElementById('notesTextarea');
+            const notesCharCount = document.getElementById('notesCharCount');
+            
+            // 设置当前备注内容
+            notesTextarea.value = currentNotes || '';
+            updateNotesCharCount();
+            
+            // 显示编辑模态框
+            showModal('notesEditModal');
+            
+            // 聚焦到文本框
+            setTimeout(() => {
+                notesTextarea.focus();
+            }, 100);
+        }
+
+        // 关闭备注编辑模态框
+        function closeNotesEditModal() {
+            hideModal('notesEditModal');
+        }
+
+        // 保存备注
+        async function saveNotes() {
+            const notesTextarea = document.getElementById('notesTextarea');
+            const newNotes = notesTextarea.value.trim();
+            
+            try {
+                showNotification('正在保存备注...', 'info');
+                
+                // 调用API保存备注
+                const response = await fetch(`/api/equipment/${currentEquipmentId}/notes`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                    },
+                    body: JSON.stringify({
+                        notes: newNotes
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('备注保存失败');
+                }
+
+                const result = await response.json();
+                
+                // 更新本地数据
+                currentNotes = newNotes;
+                equipmentData.notes = newNotes;
+                equipmentData.notes_updated_at = result.notes_updated_at;
+                
+                // 更新显示
+                const notesElement = document.getElementById('equipmentNotes');
+                const notesStatusElement = document.getElementById('notesStatus');
+                
+                if (newNotes) {
+                    notesElement.innerHTML = newNotes.replace(/\n/g, '<br>');
+                    notesStatusElement.textContent = `最后更新: ${new Date(result.notes_updated_at).toLocaleDateString('zh-CN')}`;
+                } else {
+                    notesElement.innerHTML = '<span class="text-gray-400 italic">暂无备注</span>';
+                    notesStatusElement.textContent = '点击编辑备注';
+                }
+                
+                // 关闭模态框
+                closeNotesEditModal();
+                
+                showNotification('备注保存成功', 'success');
+                
+            } catch (error) {
+                console.error('保存备注失败:', error);
+                showNotification('保存备注失败: ' + error.message, 'error');
+            }
+        }
+
+        // 更新字符计数
+        function updateNotesCharCount() {
+            const notesTextarea = document.getElementById('notesTextarea');
+            const notesCharCount = document.getElementById('notesCharCount');
+            const charCount = notesTextarea.value.length;
+            
+            notesCharCount.textContent = charCount;
+            
+            // 字符数限制提醒
+            if (charCount > 500) {
+                notesCharCount.className = 'text-red-500 font-medium';
+            } else if (charCount > 400) {
+                notesCharCount.className = 'text-yellow-500 font-medium';
+            } else {
+                notesCharCount.className = '';
+            }
+        }
+
+        // 监听文本框输入事件
+        document.addEventListener('DOMContentLoaded', function() {
+            const notesTextarea = document.getElementById('notesTextarea');
+            if (notesTextarea) {
+                notesTextarea.addEventListener('input', updateNotesCharCount);
+                notesTextarea.addEventListener('paste', function() {
+                    setTimeout(updateNotesCharCount, 10);
+                });
+            }
+        });
+
+        // ESC键关闭备注编辑模态框
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const notesEditModal = document.getElementById('notesEditModal');
+                if (!notesEditModal.classList.contains('hidden')) {
+                    closeNotesEditModal();
+                }
+            }
+        });
+
+        // 点击模态框外部关闭
+        document.getElementById('notesEditModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeNotesEditModal();
             }
         });
     </script>

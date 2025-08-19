@@ -195,7 +195,8 @@
             <!-- 搜索和筛选 -->
             <div class="bg-white rounded-xl shadow-md p-6 mb-8">
                 <div class="flex flex-col lg:flex-row gap-4 mb-4">
-                    <div class="flex-1">
+                    <!-- 搜索框 -->
+                    <div class="lg:w-1/2">
                         <div class="relative">
                             <input type="text" id="search-input" placeholder="搜索设备名称、型号、编号..." 
                                    class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
@@ -204,26 +205,49 @@
                     </div>
                     
                     <!-- 筛选器 -->
-                    <div class="flex gap-3">
-                        <select id="department-filter" class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                            <option value="">全部部门</option>
-                        </select>
+                    <div class="lg:w-3/4 flex flex-wrap gap-1 items-end justify-end">
+                        <div class="relative">
+                            <select id="department-filter" class="pl-8 pr-6 py-3 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-blue-50 text-blue-900">
+                                <option value="">全部部门</option>
+                            </select>
+                            <i class="fas fa-building absolute left-2 top-1/2 transform -translate-y-1/2 text-blue-600"></i>
+                        </div>
                         
-                        <select id="category-filter" class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                            <option value="">全部类别</option>
-                        </select>
+                        <div class="relative">
+                            <select id="category-filter" class="pl-8 pr-6 py-3 border border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-green-50 text-green-900">
+                                <option value="">全部类别</option>
+                            </select>
+                            <i class="fas fa-tags absolute left-2 top-1/2 transform -translate-y-1/2 text-green-600"></i>
+                        </div>
                         
-                        <select id="status-filter" class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                            <option value="">全部状态</option>
-                            <option value="在用" selected>在用</option>
-                            <option value="停用">停用</option>
-                            <option value="报废">报废</option>
-                        </select>
+                        <div class="relative">
+                            <select id="status-filter" class="pl-8 pr-6 py-3 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-purple-50 text-purple-900">
+                                <option value="">全部状态</option>
+                                <option value="在用" selected>在用</option>
+                                <option value="停用">停用</option>
+                                <option value="报废">报废</option>
+                            </select>
+                            <i class="fas fa-info-circle absolute left-2 top-1/2 transform -translate-y-1/2 text-purple-600"></i>
+                        </div>
+                        
+                        <!-- 开始日期筛选器 -->
+                        <div class="relative">
+                            <input type="date" id="start-date-filter" placeholder="开始日期" 
+                                   class="pl-8 pr-2 py-3 border border-orange-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-orange-50 text-orange-900">
+                            <i class="fas fa-calendar-alt absolute left-2 top-1/2 transform -translate-y-1/2 text-orange-600"></i>
+                        </div>
+                        
+                        <!-- 结束日期筛选器 -->
+                        <div class="relative">
+                            <input type="date" id="end-date-filter" placeholder="结束日期" 
+                                   class="pl-8 pr-2 py-3 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-red-50 text-red-900">
+                            <i class="fas fa-calendar-alt absolute left-2 top-1/2 transform -translate-y-1/2 text-red-600"></i>
+                        </div>
                     </div>
                 </div>
                 
                 <!-- 操作按钮 -->
-                <div class="flex flex-col sm:flex-row gap-3">
+                <div class="flex flex-wrap gap-3">
                     <button class="btn-primary text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all duration-200" onclick="addNewEquipment()">
                         <i class="fas fa-plus mr-2"></i>添加设备
                     </button>
@@ -954,17 +978,23 @@
             const categoryId = document.getElementById('category-filter').value;
             const status = document.getElementById('status-filter').value;
             const searchQuery = document.getElementById('search-input').value.trim();
+            const startDate = document.getElementById('start-date-filter').value;
+            const endDate = document.getElementById('end-date-filter').value;
             
             console.log('筛选器原始值:');
             console.log('- 部门ID:', departmentId);
             console.log('- 类别ID:', categoryId);
             console.log('- 状态:', status);
             console.log('- 搜索查询:', searchQuery);
+            console.log('- 开始日期:', startDate);
+            console.log('- 结束日期:', endDate);
             
             if (departmentId) filters.department_id = parseInt(departmentId);
             if (categoryId) filters.category_id = parseInt(categoryId);
             if (status) filters.status = status;
             if (searchQuery) filters.query = searchQuery;
+            if (startDate) filters.next_calibration_start = startDate;
+            if (endDate) filters.next_calibration_end = endDate;
             
             console.log('构建的筛选条件:', filters);
             
@@ -1363,7 +1393,7 @@
             });
             
             // 筛选器
-            ['department-filter', 'category-filter', 'status-filter'].forEach(id => {
+            ['department-filter', 'category-filter', 'status-filter', 'start-date-filter', 'end-date-filter'].forEach(id => {
                 document.getElementById(id).addEventListener('change', function() {
                     currentPage = 1;
                     loadEquipmentData();

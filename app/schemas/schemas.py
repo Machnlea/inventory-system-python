@@ -245,6 +245,8 @@ class EquipmentSearch(BaseModel):
     department_id: Optional[int] = None
     category_id: Optional[int] = None
     status: Optional[str] = None
+    next_calibration_start: Optional[date] = None
+    next_calibration_end: Optional[date] = None
 
 class DashboardStats(BaseModel):
     total_equipment_count: int

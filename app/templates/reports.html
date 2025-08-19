@@ -329,17 +329,36 @@
                             <h3 class="text-lg font-semibold text-gray-900">设备明细</h3>
                             <div class="flex items-center space-x-4">
                                 <!-- 排序控件 -->
-                                <div class="flex items-center space-x-2">
-                                    <label class="text-sm text-gray-600">排序方式:</label>
-                                    <select id="sort-by" class="px-3 py-1 border border-gray-300 rounded-lg text-sm">
-                                        <option value="name">设备名称</option>
-                                        <option value="original_value">设备原值</option>
-                                        <option value="created_at">创建时间</option>
-                                    </select>
-                                    <select id="sort-order" class="px-3 py-1 border border-gray-300 rounded-lg text-sm">
-                                        <option value="asc">升序</option>
-                                        <option value="desc">降序</option>
-                                    </select>
+                                <div class="flex items-center space-x-4">
+                                    <div class="flex items-center space-x-2">
+                                        <label class="text-sm text-gray-600">主排序:</label>
+                                        <select id="sort-by" class="px-3 py-1 border border-gray-300 rounded-lg text-sm">
+                                            <option value="name">设备名称</option>
+                                            <option value="original_value">设备原值</option>
+                                            <option value="status">设备状态</option>
+                                            <option value="department">使用部门</option>
+                                            <option value="category">设备类别</option>
+                                        </select>
+                                        <select id="sort-order" class="px-3 py-1 border border-gray-300 rounded-lg text-sm">
+                                            <option value="asc">升序</option>
+                                            <option value="desc">降序</option>
+                                        </select>
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <label class="text-sm text-gray-600">次排序:</label>
+                                        <select id="sort-by2" class="px-3 py-1 border border-gray-300 rounded-lg text-sm">
+                                            <option value="">无</option>
+                                            <option value="name">设备名称</option>
+                                            <option value="original_value">设备原值</option>
+                                            <option value="status">设备状态</option>
+                                            <option value="department">使用部门</option>
+                                            <option value="category">设备类别</option>
+                                        </select>
+                                        <select id="sort-order2" class="px-3 py-1 border border-gray-300 rounded-lg text-sm">
+                                            <option value="asc">升序</option>
+                                            <option value="desc">降序</option>
+                                        </select>
+                                    </div>
                                 </div>
                                 <span class="text-sm text-gray-600">
                                     共 <span id="equipment-total" class="font-medium text-blue-600">0</span> 台设备
@@ -353,9 +372,11 @@
                                         <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">设备名称</th>
                                         <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">设备编号</th>
                                         <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">使用部门</th>
-                                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">设备原值(元)</th>
+                                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">准确度等级</th>
+                                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">测量范围</th>
+                                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">分度值</th>
+                                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">原值/元</th>
                                         <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">设备状态</th>
-                                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">创建时间</th>
                                     </tr>
                                 </thead>
                                 <tbody id="equipment-table" class="bg-white divide-y divide-gray-200">
@@ -489,6 +510,17 @@
                 loadEquipmentData();
             });
 
+            // 次排序控件
+            document.getElementById('sort-by2').addEventListener('change', function() {
+                currentPage = 1;
+                loadEquipmentData();
+            });
+
+            document.getElementById('sort-order2').addEventListener('change', function() {
+                currentPage = 1;
+                loadEquipmentData();
+            });
+
             // 分页控件
             document.getElementById('page-size').addEventListener('change', function() {
                 pageSize = parseInt(this.value);
@@ -520,9 +552,11 @@
                 
                 const sortBy = document.getElementById('sort-by').value;
                 const sortOrder = document.getElementById('sort-order').value;
+                const sortBy2 = document.getElementById('sort-by2').value;
+                const sortOrder2 = document.getElementById('sort-order2').value;
 
                 // 加载设备统计数据
-                const equipmentStats = await ReportsAPI.getEquipmentStats(sortBy, sortOrder, currentPage, pageSize);
+                const equipmentStats = await ReportsAPI.getEquipmentStats(sortBy, sortOrder, currentPage, pageSize, sortBy2, sortOrder2);
 
                 // 更新概览统计
                 updateEquipmentStats(equipmentStats.statistics);
@@ -798,7 +832,7 @@
             if (!equipment || equipment.length === 0) {
                 tableBody.innerHTML = `
                     <tr>
-                        <td colspan="6" class="px-6 py-4 text-center text-gray-500">
+                        <td colspan="8" class="px-6 py-4 text-center text-gray-500">
                             <i class="fas fa-info-circle mr-2"></i>
                             暂无设备数据
                         </td>
@@ -829,13 +863,15 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${item.serial_number || '-'}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${item.department_name || '未知部门'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${item.accuracy_level || '-'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${item.measurement_range || '-'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${item.scale_value || '-'}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(item.original_value || 0)}</td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusStyle(item.status)}">
                                 ${item.status || '未知'}
                             </span>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${item.created_at ? new Date(item.created_at).toLocaleDateString('zh-CN') : '-'}</td>
                     </tr>
                 `;
             }).join('');

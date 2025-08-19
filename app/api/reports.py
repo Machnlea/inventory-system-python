@@ -365,8 +365,10 @@ async def export_reports_data(
 
 @router.get("/equipment-stats")
 async def get_equipment_stats(
-    sort_by: str = Query("original_value", description="排序字段：original_value, name, created_at"),
-    sort_order: str = Query("desc", description="排序方向：asc, desc"),
+    sort_by: str = Query("original_value", description="主排序字段：original_value, name, status, department, category"),
+    sort_order: str = Query("desc", description="主排序方向：asc, desc"),
+    sort_by2: str = Query(None, description="次排序字段：original_value, name, status, department, category"),
+    sort_order2: str = Query("desc", description="次排序方向：asc, desc"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
@@ -388,19 +390,47 @@ async def get_equipment_stats(
     # 获取总数
     total = query.count()
     
-    # 排序
+    # 构建排序条件
+    order_by_clauses = []
+    
+    # 主排序字段
     if sort_by == "original_value":
-        order_by = Equipment.original_value.desc() if sort_order == "desc" else Equipment.original_value.asc()
+        primary_order = Equipment.original_value.desc() if sort_order == "desc" else Equipment.original_value.asc()
     elif sort_by == "name":
-        order_by = Equipment.name.desc() if sort_order == "desc" else Equipment.name.asc()
-    elif sort_by == "created_at":
-        order_by = Equipment.created_at.desc() if sort_order == "desc" else Equipment.created_at.asc()
+        primary_order = Equipment.name.desc() if sort_order == "desc" else Equipment.name.asc()
+    elif sort_by == "status":
+        primary_order = Equipment.status.desc() if sort_order == "desc" else Equipment.status.asc()
+    elif sort_by == "department":
+        primary_order = Department.name.desc() if sort_order == "desc" else Department.name.asc()
+    elif sort_by == "category":
+        primary_order = EquipmentCategory.name.desc() if sort_order == "desc" else EquipmentCategory.name.asc()
     else:
-        order_by = Equipment.original_value.desc()
+        primary_order = Equipment.original_value.desc()
+    
+    order_by_clauses.append(primary_order)
+    
+    # 次排序字段
+    if sort_by2:
+        if sort_by2 == "original_value":
+            secondary_order = Equipment.original_value.desc() if sort_order2 == "desc" else Equipment.original_value.asc()
+        elif sort_by2 == "name":
+            secondary_order = Equipment.name.desc() if sort_order2 == "desc" else Equipment.name.asc()
+        elif sort_by2 == "status":
+            secondary_order = Equipment.status.desc() if sort_order2 == "desc" else Equipment.status.asc()
+        elif sort_by2 == "department":
+            secondary_order = Department.name.desc() if sort_order2 == "desc" else Department.name.asc()
+        elif sort_by2 == "category":
+            secondary_order = EquipmentCategory.name.desc() if sort_order2 == "desc" else EquipmentCategory.name.asc()
+        else:
+            secondary_order = Equipment.name.asc()  # 默认次排序为名称升序
+        
+        # 避免重复排序字段
+        if str(secondary_order) != str(primary_order):
+            order_by_clauses.append(secondary_order)
     
     # 分页查询
     offset = (page - 1) * page_size
-    equipments = query.order_by(order_by).offset(offset).limit(page_size).all()
+    equipments = query.order_by(*order_by_clauses).offset(offset).limit(page_size).all()
     
     # 统计数据
     total_original_value = query.with_entities(func.sum(Equipment.original_value)).scalar() or 0

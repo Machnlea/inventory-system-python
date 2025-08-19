@@ -774,12 +774,18 @@ const ReportsAPI = {
     },
 
     // 获取设备统计数据
-    async getEquipmentStats(sort_by = 'original_value', sort_order = 'desc', page = 1, page_size = 20) {
+    async getEquipmentStats(sort_by = 'original_value', sort_order = 'desc', page = 1, page_size = 20, sort_by2 = '', sort_order2 = 'desc') {
         const params = new URLSearchParams();
         params.append('sort_by', sort_by);
         params.append('sort_order', sort_order);
         params.append('page', page);
         params.append('page_size', page_size);
+        
+        // 只在提供了次排序字段时才添加次排序参数
+        if (sort_by2) {
+            params.append('sort_by2', sort_by2);
+            params.append('sort_order2', sort_order2);
+        }
         
         const endpoint = `/api/reports/equipment-stats?${params.toString()}`;
         return api.get(endpoint);

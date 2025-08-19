@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import and_, or_, func, select
+from sqlalchemy import and_, or_, func, select, cast, String
 from app.models.models import Equipment, UserCategory, Department, EquipmentCategory
 from app.schemas.schemas import EquipmentCreate, EquipmentUpdate, EquipmentFilter, EquipmentSearch
 from datetime import date, timedelta, datetime
@@ -382,6 +382,26 @@ def search_equipments_count(db: Session, search: EquipmentSearch, user_id: Optio
             Equipment.measurement_range.ilike(search_term),
             Equipment.calibration_method.ilike(search_term)
         ])
+        
+        # 添加原值/元字段搜索支持
+        # 尝试将搜索词转换为数字，如果成功则搜索原值字段
+        try:
+            # 移除可能的货币符号和空格
+            clean_search_term = search.query.replace(',', '').replace('，', '').replace(' ', '').strip()
+            if clean_search_term:
+                # 尝试转换为浮点数
+                search_value = float(clean_search_term)
+                search_conditions.append(Equipment.original_value == search_value)
+                
+                # 同时支持模糊匹配（比如搜索"100"可以匹配"100.5"）
+                search_conditions.append(
+                    cast(Equipment.original_value, String).ilike(f"%{clean_search_term}%")
+                )
+        except ValueError:
+            # 如果转换失败，只进行字符串匹配
+            search_conditions.append(
+                cast(Equipment.original_value, String).ilike(search_term)
+            )
     
     # 添加部门名称搜索
     if search.query:
@@ -442,6 +462,26 @@ def search_equipments(db: Session, search: EquipmentSearch, user_id: Optional[in
             Equipment.measurement_range.ilike(search_term),
             Equipment.calibration_method.ilike(search_term)
         ])
+        
+        # 添加原值/元字段搜索支持
+        # 尝试将搜索词转换为数字，如果成功则搜索原值字段
+        try:
+            # 移除可能的货币符号和空格
+            clean_search_term = search.query.replace(',', '').replace('，', '').replace(' ', '').strip()
+            if clean_search_term:
+                # 尝试转换为浮点数
+                search_value = float(clean_search_term)
+                search_conditions.append(Equipment.original_value == search_value)
+                
+                # 同时支持模糊匹配（比如搜索"100"可以匹配"100.5"）
+                search_conditions.append(
+                    cast(Equipment.original_value, String).ilike(f"%{clean_search_term}%")
+                )
+        except ValueError:
+            # 如果转换失败，只进行字符串匹配
+            search_conditions.append(
+                cast(Equipment.original_value, String).ilike(search_term)
+            )
     
     # 添加部门名称搜索
     if search.query:

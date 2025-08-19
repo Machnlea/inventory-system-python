@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>分页记忆功能测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-container {
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-radius: 3px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        select, button {
+            padding: 8px 12px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>分页记忆功能测试</h1>
+    
+    <div class="test-container">
+        <h2>设备管理页面测试</h2>
+        <label>每页显示条数：</label>
+        <select id="equipment-page-size">
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+        </select>
+        <button onclick="testEquipmentPage()">测试保存</button>
+        <button onclick="clearEquipmentStorage()">清除设置</button>
+        <div id="equipment-result"></div>
+    </div>
+
+    <div class="test-container">
+        <h2>部门管理页面测试</h2>
+        <label>每页显示条数：</label>
+        <select id="departments-page-size">
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+        </select>
+        <button onclick="testDepartmentsPage()">测试保存</button>
+        <button onclick="clearDepartmentsStorage()">清除设置</button>
+        <div id="departments-result"></div>
+    </div>
+
+    <div class="test-container">
+        <h2>设备类别页面测试</h2>
+        <label>每页显示条数：</label>
+        <select id="categories-page-size">
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+        </select>
+        <button onclick="testCategoriesPage()">测试保存</button>
+        <button onclick="clearCategoriesStorage()">清除设置</button>
+        <div id="categories-result"></div>
+    </div>
+
+    <div class="test-container">
+        <h2>用户管理页面测试</h2>
+        <label>每页显示条数：</label>
+        <select id="users-page-size">
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+        </select>
+        <button onclick="testUsersPage()">测试保存</button>
+        <button onclick="clearUsersStorage()">清除设置</button>
+        <div id="users-result"></div>
+    </div>
+
+    <div class="test-container">
+        <h2>统计报表页面测试</h2>
+        <label>每页显示条数：</label>
+        <select id="reports-page-size">
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+        </select>
+        <button onclick="testReportsPage()">测试保存</button>
+        <button onclick="clearReportsStorage()">清除设置</button>
+        <div id="reports-result"></div>
+    </div>
+
+    <script>
+        function showResult(elementId, message, isSuccess) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="result ${isSuccess ? 'success' : 'error'}">${message}</div>`;
+        }
+
+        function testEquipmentPage() {
+            const value = document.getElementById('equipment-page-size').value;
+            localStorage.setItem('equipment_management_page_size', value);
+            const savedValue = localStorage.getItem('equipment_management_page_size');
+            const success = savedValue === value;
+            showResult('equipment-result', 
+                `保存值: ${value}, 读取值: ${savedValue} - ${success ? '成功' : '失败'}`, 
+                success);
+        }
+
+        function testDepartmentsPage() {
+            const value = document.getElementById('departments-page-size').value;
+            localStorage.setItem('departments_page_size', value);
+            const savedValue = localStorage.getItem('departments_page_size');
+            const success = savedValue === value;
+            showResult('departments-result', 
+                `保存值: ${value}, 读取值: ${savedValue} - ${success ? '成功' : '失败'}`, 
+                success);
+        }
+
+        function testCategoriesPage() {
+            const value = document.getElementById('categories-page-size').value;
+            localStorage.setItem('categories_page_size', value);
+            const savedValue = localStorage.getItem('categories_page_size');
+            const success = savedValue === value;
+            showResult('categories-result', 
+                `保存值: ${value}, 读取值: ${savedValue} - ${success ? '成功' : '失败'}`, 
+                success);
+        }
+
+        function testUsersPage() {
+            const value = document.getElementById('users-page-size').value;
+            localStorage.setItem('users_page_size', value);
+            const savedValue = localStorage.getItem('users_page_size');
+            const success = savedValue === value;
+            showResult('users-result', 
+                `保存值: ${value}, 读取值: ${savedValue} - ${success ? '成功' : '失败'}`, 
+                success);
+        }
+
+        function testReportsPage() {
+            const value = document.getElementById('reports-page-size').value;
+            localStorage.setItem('reports_page_size', value);
+            const savedValue = localStorage.getItem('reports_page_size');
+            const success = savedValue === value;
+            showResult('reports-result', 
+                `保存值: ${value}, 读取值: ${savedValue} - ${success ? '成功' : '失败'}`, 
+                success);
+        }
+
+        function clearEquipmentStorage() {
+            localStorage.removeItem('equipment_management_page_size');
+            showResult('equipment-result', '设备管理页面设置已清除', true);
+        }
+
+        function clearDepartmentsStorage() {
+            localStorage.removeItem('departments_page_size');
+            showResult('departments-result', '部门管理页面设置已清除', true);
+        }
+
+        function clearCategoriesStorage() {
+            localStorage.removeItem('categories_page_size');
+            showResult('categories-result', '设备类别页面设置已清除', true);
+        }
+
+        function clearUsersStorage() {
+            localStorage.removeItem('users_page_size');
+            showResult('users-result', '用户管理页面设置已清除', true);
+        }
+
+        function clearReportsStorage() {
+            localStorage.removeItem('reports_page_size');
+            showResult('reports-result', '统计报表页面设置已清除', true);
+        }
+
+        // 页面加载时恢复保存的设置
+        window.addEventListener('load', function() {
+            // 恢复设备管理页面设置
+            const equipmentSize = localStorage.getItem('equipment_management_page_size');
+            if (equipmentSize) {
+                document.getElementById('equipment-page-size').value = equipmentSize;
+            }
+
+            // 恢复部门管理页面设置
+            const departmentsSize = localStorage.getItem('departments_page_size');
+            if (departmentsSize) {
+                document.getElementById('departments-page-size').value = departmentsSize;
+            }
+
+            // 恢复设备类别页面设置
+            const categoriesSize = localStorage.getItem('categories_page_size');
+            if (categoriesSize) {
+                document.getElementById('categories-page-size').value = categoriesSize;
+            }
+
+            // 恢复用户管理页面设置
+            const usersSize = localStorage.getItem('users_page_size');
+            if (usersSize) {
+                document.getElementById('users-page-size').value = usersSize;
+            }
+
+            // 恢复统计报表页面设置
+            const reportsSize = localStorage.getItem('reports_page_size');
+            if (reportsSize) {
+                document.getElementById('reports-page-size').value = reportsSize;
+            }
+        });
+    </script>
+</body>
+</html>

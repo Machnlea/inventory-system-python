@@ -724,7 +724,7 @@
     <script>
         // 全局变量
         let currentPage = 1;
-        let itemsPerPage = 20;
+        let itemsPerPage = parseInt(localStorage.getItem('equipment_management_page_size') || '20');
         let totalItems = 0;
         let currentFilters = {};
         let currentSort = { field: 'valid_until', order: 'asc' };
@@ -1380,6 +1380,8 @@
                 pageSizeSelect.addEventListener('change', function() {
                     itemsPerPage = parseInt(this.value);
                     currentPage = 1;
+                    // 保存每页显示条数到本地存储
+                    localStorage.setItem('equipment_management_page_size', this.value);
                     loadEquipmentData();
                 });
             }

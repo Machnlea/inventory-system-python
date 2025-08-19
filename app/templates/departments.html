@@ -324,7 +324,7 @@
         let departmentChart = null;
         let currentChartType = 'bar';
         let currentPage = 1;
-        let itemsPerPage = 20;
+        let itemsPerPage = parseInt(localStorage.getItem('departments_page_size') || '20');
         let totalItems = 0;
 
         // 侧边栏功能
@@ -654,6 +654,8 @@
             document.getElementById('page-size').addEventListener('change', function() {
                 itemsPerPage = parseInt(this.value);
                 currentPage = 1;
+                // 保存每页显示条数到本地存储
+                localStorage.setItem('departments_page_size', this.value);
                 loadDepartments();
             });
 

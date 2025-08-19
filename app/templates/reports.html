@@ -403,7 +403,7 @@
         // 全局变量
         let currentPage = 1;
         let totalPages = 1;
-        let pageSize = 20;
+        let pageSize = parseInt(localStorage.getItem('reports_page_size') || '20');
         let chartInstances = {};
 
         // 页面初始化
@@ -493,6 +493,8 @@
             document.getElementById('page-size').addEventListener('change', function() {
                 pageSize = parseInt(this.value);
                 currentPage = 1;
+                // 保存每页显示条数到本地存储
+                localStorage.setItem('reports_page_size', this.value);
                 loadEquipmentData();
             });
 

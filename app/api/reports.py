@@ -528,7 +528,10 @@ async def get_equipment_stats(
             "manufacturer": equipment.manufacturer or "",
             "calibration_method": equipment.calibration_method or "",
             "verification_result": equipment.verification_result or "",
-            "installation_location": equipment.installation_location or ""
+            "installation_location": equipment.installation_location or "",
+            "accuracy_level": equipment.accuracy_level or "",
+            "measurement_range": equipment.measurement_range or "",
+            "scale_value": equipment.scale_value or ""
         })
     
     return {

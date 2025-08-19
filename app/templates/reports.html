@@ -443,6 +443,12 @@
             
             document.getElementById('start-date').value = startDate.toISOString().split('T')[0];
             document.getElementById('end-date').value = endDate.toISOString().split('T')[0];
+            
+            // 设置每页显示条数的默认值
+            const pageSizeSelect = document.getElementById('page-size');
+            if (pageSizeSelect) {
+                pageSizeSelect.value = pageSize;
+            }
 
             // 侧边栏功能
             const systemMenuBtn = document.getElementById('system-menu-btn');

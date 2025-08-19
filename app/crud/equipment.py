@@ -391,16 +391,25 @@ def search_equipments_count(db: Session, search: EquipmentSearch, user_id: Optio
             if clean_search_term:
                 # 尝试转换为浮点数
                 search_value = float(clean_search_term)
+                
+                # 精确匹配
                 search_conditions.append(Equipment.original_value == search_value)
                 
-                # 同时支持模糊匹配（比如搜索"100"可以匹配"100.5"）
+                # 更精确的模糊匹配：只匹配包含完整搜索词的数值
+                # 例如搜索"1500"会匹配"1500.0"但不会匹配"1000.0"
                 search_conditions.append(
-                    cast(Equipment.original_value, String).ilike(f"%{clean_search_term}%")
+                    cast(Equipment.original_value, String).ilike(f"%{clean_search_term}.%")
+                )
+                search_conditions.append(
+                    cast(Equipment.original_value, String).ilike(f"{clean_search_term}.%")
                 )
         except ValueError:
-            # 如果转换失败，只进行字符串匹配
+            # 如果转换失败，只进行字符串匹配，但排除NULL值
             search_conditions.append(
-                cast(Equipment.original_value, String).ilike(search_term)
+                and_(
+                    Equipment.original_value.isnot(None),
+                    cast(Equipment.original_value, String).ilike(search_term)
+                )
             )
     
     # 添加部门名称搜索
@@ -471,16 +480,25 @@ def search_equipments(db: Session, search: EquipmentSearch, user_id: Optional[in
             if clean_search_term:
                 # 尝试转换为浮点数
                 search_value = float(clean_search_term)
+                
+                # 精确匹配
                 search_conditions.append(Equipment.original_value == search_value)
                 
-                # 同时支持模糊匹配（比如搜索"100"可以匹配"100.5"）
+                # 更精确的模糊匹配：只匹配包含完整搜索词的数值
+                # 例如搜索"1500"会匹配"1500.0"但不会匹配"1000.0"
                 search_conditions.append(
-                    cast(Equipment.original_value, String).ilike(f"%{clean_search_term}%")
+                    cast(Equipment.original_value, String).ilike(f"%{clean_search_term}.%")
+                )
+                search_conditions.append(
+                    cast(Equipment.original_value, String).ilike(f"{clean_search_term}.%")
                 )
         except ValueError:
-            # 如果转换失败，只进行字符串匹配
+            # 如果转换失败，只进行字符串匹配，但排除NULL值
             search_conditions.append(
-                cast(Equipment.original_value, String).ilike(search_term)
+                and_(
+                    Equipment.original_value.isnot(None),
+                    cast(Equipment.original_value, String).ilike(search_term)
+                )
             )
     
     # 添加部门名称搜索

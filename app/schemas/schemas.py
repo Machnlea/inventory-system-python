@@ -104,9 +104,8 @@ class EquipmentBase(BaseModel):
             if not self.verification_agency:
                 raise ValueError("外检设备必须填写检定机构")
         
-        # 验证状态变更时间：当状态为"停用"或"报废"时必填
-        if self.status in ["停用", "报废"] and not self.status_change_date:
-            raise ValueError("当设备状态为'停用'或'报废'时，状态变更时间为必填项")
+        # 状态变更时间：当状态为"停用"或"报废"时可选填，如果提供需要验证格式
+        # 注：根据新需求，状态变更时间不再是必填项
         
         return self
 
@@ -163,9 +162,8 @@ class EquipmentUpdate(BaseModel):
             if not self.verification_agency:
                 raise ValueError("外检设备必须填写检定机构")
         
-        # 验证状态变更时间：当状态为"停用"或"报废"时必填
-        if self.status in ["停用", "报废"] and not self.status_change_date:
-            raise ValueError("当设备状态为'停用'或'报废'时，状态变更时间为必填项")
+        # 状态变更时间：当状态为"停用"或"报废"时可选填，如果提供需要验证格式
+        # 注：根据新需求，状态变更时间不再是必填项
         
         return self
 

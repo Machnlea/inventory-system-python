@@ -138,6 +138,7 @@ def download_import_template():
         '管理级别': ['A级', '-', 'C级', '-', 'C级'],
         '原值/元': [1500.00, 800.00, 1200.00, 2000.00, 500.00],
         '设备状态': ['在用', '在用', '在用', '在用', '在用'],
+        '状态变更时间': ['', '', '', '', ''],
         '证书编号': ['', 'CERT001', '', 'CERT002', ''],
         '检定结果': ['', '合格', '', '合格', ''],
         '检定机构': ['', '国家计量院', '', '省计量院', ''],
@@ -160,14 +161,14 @@ def download_import_template():
             '字段名': [
                 '使用部门', '设备类别', '计量器具名称', '型号/规格', '准确度等级', '测量范围',
                 '计量编号', '检定周期', '检定(校准)日期', '安装地点', '分度值', '制造厂家', 
-                '出厂日期', '检定方式', '管理级别', '原值/元', '设备状态', '证书编号', 
+                '出厂日期', '检定方式', '管理级别', '原值/元', '设备状态', '状态变更时间', '证书编号', 
                 '检定结果', '检定机构', '证书形式', '备注'
             ],
             '是否必填': [
                 '是', '是', '是', '是', '是', '否',
                 '是', '是', '否', '否', '否', '否', 
                 '否', '是', '否', '否', '否', '否', 
-                '否', '否', '否', '否'
+                '否', '否', '否', '否', '否'
             ],
             '说明': [
                 '必须是系统中已存在的部门名称',
@@ -187,6 +188,7 @@ def download_import_template():
                 '管理级别：A级/B级/C级（注：外检时此项自动设为"-"，无需填写）',
                 '设备原值，单位：元（支持小数）',
                 '设备状态：在用/停用/报废',
+                '状态变更时间：设备状态为停用或报废时填写，格式：YYYY-MM-DD（选填）',
                 '证书编号（外检时必填）',
                 '检定结果（外检时必填）',
                 '检定机构（外检时必填）',
@@ -390,20 +392,17 @@ async def import_equipment_data(
                 equipment_status = str(row.get('设备状态', '在用'))
                 if equipment_status in ['停用', '报废']:
                     status_change_date_input = row.get('状态变更时间')
-                    if pd.isna(status_change_date_input) or str(status_change_date_input).strip() == '':
-                        result["status"] = "失败"
-                        result["message"] = f"设备状态为'{equipment_status}'时，状态变更时间为必填项"
-                        detailed_results.append(result)
-                        error_count += 1
-                        continue
-                    try:
-                        status_change_date = pd.to_datetime(status_change_date_input).date()
-                    except:
-                        result["status"] = "失败"
-                        result["message"] = "状态变更时间格式错误，请使用YYYY-MM-DD格式"
-                        detailed_results.append(result)
-                        error_count += 1
-                        continue
+                    # 状态变更时间为非必填项，如果提供了就验证格式
+                    if pd.notna(status_change_date_input) and str(status_change_date_input).strip() != '':
+                        try:
+                            status_change_date = pd.to_datetime(status_change_date_input).date()
+                        except:
+                            result["status"] = "失败"
+                            result["message"] = "状态变更时间格式错误，请使用YYYY-MM-DD格式"
+                            detailed_results.append(result)
+                            error_count += 1
+                            continue
+                    # 如果没有提供状态变更时间，保持为None（可选填）
                 
                 # 创建设备数据
                 from app.schemas.schemas import EquipmentCreate, EquipmentUpdate

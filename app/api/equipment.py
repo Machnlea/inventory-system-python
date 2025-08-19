@@ -379,8 +379,19 @@ def batch_change_status(
     if not new_status:
         raise HTTPException(status_code=400, detail="未提供新状态")
     
-    if new_status in ['停用', '报废'] and not status_change_date:
-        raise HTTPException(status_code=400, detail="停用或报废状态时，状态变更时间为必填项")
+    # 状态变更时间：当状态为"停用"或"报废"时可选填
+    if new_status in ['停用', '报废']:
+        # 如果提供了状态变更时间，验证格式
+        if status_change_date:
+            try:
+                from datetime import datetime
+                datetime.strptime(status_change_date, '%Y-%m-%d')
+            except ValueError:
+                raise HTTPException(status_code=400, detail="状态变更时间格式错误，请使用YYYY-MM-DD格式")
+        # 如果没有提供状态变更时间，使用当前日期
+        else:
+            from datetime import datetime
+            status_change_date = datetime.now().strftime('%Y-%m-%d')
     
     success_count = 0
     error_count = 0

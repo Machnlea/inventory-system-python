@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker
 import os
 
 # 数据库URL（默认使用SQLite，生产环境可改为PostgreSQL）
-SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./inventory.db")
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./data/inventory.db")
 
 # 如果使用SQLite
 if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):

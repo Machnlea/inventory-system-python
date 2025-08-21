@@ -25,20 +25,20 @@ def init_db():
         
         # 创建默认部门 (包含代码)
         default_departments = [
-            {"name": "防腐漆车间", "category_code": "FF", "description": "防腐产品生产车间"},
-            {"name": "工业漆车间", "category_code": "GY", "description": "工业漆生产车间"},
-            {"name": "技术中心", "category_code": "JS", "description": "技术研发部门"},
-            {"name": "水性漆车间", "category_code": "SX", "description": "水性漆生产车间"},
-            {"name": "汽摩漆车间", "category_code": "QM", "description": "汽摩产品生产车间"},
-            {"name": "树脂车间", "category_code": "SZ", "description": "树脂生产车间"},
-            {"name": "通用漆车间", "category_code": "TY", "description": "通用漆生产车间"},
-            {"name": "质管部", "category_code": "ZG", "description": "质量管理部门"},
-            {"name": "服务中心", "category_code": "FW", "description": "服务支持部门"},
-            {"name": "制听车间", "category_code": "ZT", "description": "制听产品生产车间"},
-            {"name": "安环部", "category_code": "AH", "description": "安全环保部门"},
-            {"name": "物管部", "category_code": "WG", "description": "物资管理部门"},
-            {"name": "机修车间", "category_code": "JX", "description": "机修车间"},
-            {"name": "电控部", "category_code": "DK", "description": "电控部门"}
+            {"name": "防腐漆车间", "code": "FF", "description": "防腐产品生产车间"},
+            {"name": "工业漆车间", "code": "GY", "description": "工业漆生产车间"},
+            {"name": "技术中心", "code": "JS", "description": "技术研发部门"},
+            {"name": "水性漆车间", "code": "SX", "description": "水性漆生产车间"},
+            {"name": "汽摩漆车间", "code": "QM", "description": "汽摩产品生产车间"},
+            {"name": "树脂车间", "code": "SZ", "description": "树脂生产车间"},
+            {"name": "通用漆车间", "code": "TY", "description": "通用漆生产车间"},
+            {"name": "质管部", "code": "ZG", "description": "质量管理部门"},
+            {"name": "服务中心", "code": "FW", "description": "服务支持部门"},
+            {"name": "制听车间", "code": "ZT", "description": "制听产品生产车间"},
+            {"name": "安环部", "code": "AH", "description": "安全环保部门"},
+            {"name": "物管部", "code": "WG", "description": "物资管理部门"},
+            {"name": "机修车间", "code": "JX", "description": "机修车间"},
+            {"name": "电控部", "code": "DK", "description": "电控部门"}
         ]
         
         for dept_data in default_departments:

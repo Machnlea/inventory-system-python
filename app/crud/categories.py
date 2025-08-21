@@ -26,12 +26,31 @@ def create_category(db: Session, category: EquipmentCategoryCreate):
     return db_category
 
 def update_category(db: Session, category_id: int, category: EquipmentCategoryCreate):
+    from app.models.models import Equipment
+    
     db_category = db.query(EquipmentCategory).filter(EquipmentCategory.id == category_id).first()
     if db_category:
         # 将category_code映射到code字段
         category_data = category.dict()
         if 'category_code' in category_data:
             category_data['code'] = category_data.pop('category_code')
+            
+            # 检查是否要修改类别编号
+            new_code = category_data.get('code')
+            old_code = db_category.code
+            
+            if new_code and new_code != old_code:
+                # 检查该类别下是否有设备
+                equipment_count = db.query(Equipment).filter(
+                    Equipment.category_id == category_id
+                ).count()
+                
+                if equipment_count > 0:
+                    raise ValueError(f'无法修改类别编号，该类别下还有{equipment_count}台设备。请先删除或移动所有设备后再修改编号。')
+        
+        # 保护predefined_names字段不被意外清除
+        if 'predefined_names' not in category_data or category_data['predefined_names'] is None:
+            category_data.pop('predefined_names', None)
         
         for field, value in category_data.items():
             setattr(db_category, field, value)

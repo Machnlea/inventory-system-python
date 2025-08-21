@@ -429,6 +429,7 @@
         let currentCategoryName = null;
         let currentPredefinedNamesCategoryId = null;
         let currentPredefinedNamesCategoryName = null;
+        let currentPredefinedNames = [];
         let categoryChart = null;
         let currentChartType = 'bar';
         let currentPage = 1;
@@ -495,8 +496,8 @@
         // 设置事件监听器
         function setupEventListeners() {
             // 新增类别按钮
-            document.getElementById('addCategoryBtn').addEventListener('click', function() {
-                openCategoryModal();
+            document.getElementById('addCategoryBtn').addEventListener('click', async function() {
+                await openCategoryModal();
             });
 
             // 刷新按钮
@@ -558,7 +559,8 @@
                     const name = btn.dataset.name;
                     const description = btn.dataset.description;
                     const code = btn.dataset.code;
-                    editCategory(id, name, description, code);
+                    const names = JSON.parse(btn.dataset.names || '[]');
+                    editCategory(id, name, description, code, names);
                 }
                 
                 // 处理删除按钮点击
@@ -658,13 +660,20 @@
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${category.category_code ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
                                     ${category.category_code || '未设置'}
                                 </span>
-                                <button class="ml-2 text-blue-600 hover:text-blue-800 transition-colors edit-category-code-btn" 
-                                        data-id="${category.id}" 
-                                        data-name="${category.name.replace(/"/g, '&quot;')}" 
-                                        data-code="${category.category_code || ''}"
-                                        title="${category.category_code ? '编辑类别编号' : '设置类别编号'}">
-                                    <i class="fas ${category.category_code ? 'fa-edit' : 'fa-plus'} text-sm"></i>
-                                </button>
+                                ${category.equipment_count > 0 ? 
+                                    `<button class="ml-2 text-gray-400 cursor-not-allowed transition-colors" 
+                                            disabled
+                                            title="该类别下有${category.equipment_count}台设备，无法修改编号">
+                                        <i class="fas ${category.category_code ? 'fa-edit' : 'fa-plus'} text-sm"></i>
+                                    </button>` :
+                                    `<button class="ml-2 text-blue-600 hover:text-blue-800 transition-colors edit-category-code-btn" 
+                                            data-id="${category.id}" 
+                                            data-name="${category.name.replace(/"/g, '&quot;')}" 
+                                            data-code="${category.category_code || ''}"
+                                            title="${category.category_code ? '编辑类别编号' : '设置类别编号'}">
+                                        <i class="fas ${category.category_code ? 'fa-edit' : 'fa-plus'} text-sm"></i>
+                                    </button>`
+                                }
                             </div>
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-900">
@@ -686,13 +695,20 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatDate(category.created_at)}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button class="text-blue-600 hover:text-blue-900 mr-3 edit-category-btn" 
-                                    data-id="${category.id}" 
-                                    data-name="${category.name.replace(/"/g, '&quot;')}" 
-                                    data-description="${category.description || ''}" 
-                                    data-code="${category.category_code || ''}">
-                                <i class="fas fa-edit mr-1"></i>编辑
-                            </button>
+                            ${category.equipment_count > 0 ? 
+                                `<button class="text-gray-400 cursor-not-allowed mr-3" 
+                                        title="该类别下有${category.equipment_count}台设备，无法编辑">
+                                    <i class="fas fa-edit mr-1"></i>编辑
+                                </button>` :
+                                `<button class="text-blue-600 hover:text-blue-900 mr-3 edit-category-btn" 
+                                        data-id="${category.id}" 
+                                        data-name="${category.name.replace(/"/g, '&quot;')}" 
+                                        data-description="${category.description || ''}" 
+                                        data-code="${category.category_code || ''}"
+                                        data-names='${JSON.stringify(category.predefined_names || [])}'>
+                                    <i class="fas fa-edit mr-1"></i>编辑
+                                </button>`
+                            }
                             ${category.equipment_count > 0 ? 
                                 `<button class="text-gray-400 cursor-not-allowed" title="该类别下有${category.equipment_count}台设备，无法删除" disabled>
                                     <i class="fas fa-trash mr-1"></i>删除
@@ -710,21 +726,40 @@
         }
 
         // 打开类别模态框
-        function openCategoryModal(category = null) {
+        async function openCategoryModal(category = null) {
             const modal = document.getElementById('categoryModal');
             const modalTitle = document.getElementById('modalTitle');
             const form = document.getElementById('categoryForm');
             
             if (category) {
+                // 检查该类别下是否有设备
+                try {
+                    const categories = await CategoryAPI.getCategoriesWithCounts();
+                    const categoryInfo = categories.find(cat => cat.id === category.id);
+                    const equipmentCount = categoryInfo ? categoryInfo.equipment_count || 0 : 0;
+                    
+                    if (equipmentCount > 0) {
+                        showNotification(`无法编辑类别"${category.name}"，该类别下还有${equipmentCount}台设备。请先删除或移动所有设备后再编辑。`, 'warning');
+                        return;
+                    }
+                } catch (error) {
+                    console.error('检查设备数量失败:', error);
+                    showNotification('检查设备数量失败，无法编辑类别', 'error');
+                    return;
+                }
+                
                 modalTitle.textContent = '编辑类别';
                 document.getElementById('categoryName').value = category.name;
                 document.getElementById('categoryCode').value = category.category_code || '';
                 document.getElementById('categoryDescription').value = category.description || '';
                 currentEditId = category.id;
+                // 存储预定义名称以便在保存时使用
+                currentPredefinedNames = category.predefined_names || [];
             } else {
                 modalTitle.textContent = '新增类别';
                 form.reset();
                 currentEditId = null;
+                currentPredefinedNames = [];
             }
             
             modal.classList.add('show');
@@ -735,6 +770,7 @@
             document.getElementById('categoryModal').classList.remove('show');
             document.getElementById('categoryForm').reset();
             currentEditId = null;
+            currentPredefinedNames = [];
         }
 
         // 保存类别
@@ -765,7 +801,12 @@
             }
 
             try {
-                const categoryData = { name, category_code: categoryCode, description };
+                const categoryData = { 
+                    name, 
+                    category_code: categoryCode, 
+                    description,
+                    predefined_names: currentPredefinedNames 
+                };
                 
                 if (currentEditId) {
                     // 编辑模式
@@ -787,8 +828,8 @@
         }
 
         // 编辑类别
-        function editCategory(id, name, description, categoryCode) {
-            openCategoryModal({ id, name, description, category_code: categoryCode });
+        async function editCategory(id, name, description, categoryCode, predefinedNames) {
+            await openCategoryModal({ id, name, description, category_code: categoryCode, predefined_names: predefinedNames });
         }
 
         // 删除类别
@@ -1191,12 +1232,28 @@
         }
 
         // 编辑类别编号
-        function editCategoryCode(id, name, currentCode) {
-            currentCategoryCodeId = id;
-            currentCategoryName = name;
-            document.getElementById('categoryCodeName').textContent = name;
-            document.getElementById('categoryCodeInput').value = currentCode || '';
-            document.getElementById('categoryCodeModal').classList.add('show');
+        async function editCategoryCode(id, name, currentCode) {
+            // 先检查该类别下是否有设备
+            try {
+                const categories = await CategoryAPI.getCategoriesWithCounts();
+                const category = categories.find(cat => cat.id === id);
+                const equipmentCount = category ? category.equipment_count || 0 : 0;
+                
+                if (equipmentCount > 0) {
+                    showNotification(`无法修改类别"${name}"的编号，该类别下还有${equipmentCount}台设备。请先删除或移动所有设备后再修改编号。`, 'warning');
+                    return;
+                }
+                
+                currentCategoryCodeId = id;
+                currentCategoryName = name;
+                document.getElementById('categoryCodeName').textContent = name;
+                document.getElementById('categoryCodeInput').value = currentCode || '';
+                document.getElementById('categoryCodeModal').classList.add('show');
+                
+            } catch (error) {
+                console.error('检查设备数量失败:', error);
+                showNotification('检查设备数量失败，无法修改编号', 'error');
+            }
         }
 
         // 关闭类别编号模态框

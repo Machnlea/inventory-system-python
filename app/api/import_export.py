@@ -31,7 +31,7 @@ def generate_export_data(equipments, db: Session) -> tuple:
     # 基础列
     base_columns = [
         '序号', '使用部门', '设备类别', '计量器具名称', '型号/规格', '准确度等级', 
-        '测量范围', '计量编号', '检定周期', '检定(校准)日期', '有效期至', '安装地点', 
+        '测量范围', '出厂编号', '检定周期', '检定(校准)日期', '有效期至', '安装地点', 
         '分度值', '制造厂家', '出厂日期', '检定方式', '管理级别', '原值/元', '设备状态', '备注'
     ]
     
@@ -47,7 +47,8 @@ def generate_export_data(equipments, db: Session) -> tuple:
             '型号/规格': eq.model,
             '准确度等级': eq.accuracy_level,
             '测量范围': eq.measurement_range,
-            '计量编号': eq.serial_number,
+            '厂内编号': eq.internal_id,
+            '出厂编号': eq.manufacturer_id or '',
             '检定周期': eq.calibration_cycle,
             '检定(校准)日期': eq.calibration_date.strftime('%Y-%m-%d') if eq.calibration_date else '',
             '有效期至': eq.valid_until.strftime('%Y-%m-%d') if eq.valid_until else '',
@@ -127,7 +128,7 @@ def download_import_template():
         '型号/规格': ['PT100', '500ml A级', 'Y-100', 'K型', 'DN-100'],
         '准确度等级': ['A级', 'A级', '1.6级', 'B级', '2级'],
         '测量范围': ['-200~850℃', '0~500ml', '0~1.6MPa', '0~1300℃', '10-100N·m'],
-        '计量编号': ['PT001', 'GL001', 'YL001', 'TC001', 'BS001'],
+        '出厂编号': ['PT001', 'GL001', 'YL001', 'TC001', 'BS001'],
         '检定周期': ['6个月', '12个月', '24个月', '36个月', '随坏随换'],
         '检定(校准)日期': ['2024-01-15', '2024-03-20', '2024-06-01', '2024-09-01', ''],
         '安装地点': ['1号反应釜', '质检室', '实验室', '2号反应釜', '工具间'],
@@ -160,13 +161,13 @@ def download_import_template():
         explanation_data = {
             '字段名': [
                 '使用部门', '设备类别', '计量器具名称', '型号/规格', '准确度等级', '测量范围',
-                '计量编号', '检定周期', '检定(校准)日期', '安装地点', '分度值', '制造厂家', 
+                '出厂编号', '检定周期', '检定(校准)日期', '安装地点', '分度值', '制造厂家', 
                 '出厂日期', '检定方式', '管理级别', '原值/元', '设备状态', '状态变更时间', '证书编号', 
                 '检定结果', '检定机构', '证书形式', '备注'
             ],
             '是否必填': [
                 '是', '是', '是', '是', '是', '否',
-                '是', '是', '否', '否', '否', '否', 
+                '是', '否', '否', '否', '否', '否', 
                 '否', '是', '否', '否', '否', '否', 
                 '否', '否', '否', '否', '否'
             ],
@@ -177,15 +178,15 @@ def download_import_template():
                 '设备的型号或规格',
                 '设备的准确度等级',
                 '设备的测量范围',
-                '设备的唯一编号',
-                '只能填写"6个月"、"12个月"、"24个月"、"36个月"或"随坏随换"',
-                '格式：YYYY-MM-DD，如2024-01-15（注：随坏随换设备可选填，如填写需确保格式正确）',
-                '设备的安装位置',
-                '设备的分度值，如0.01mm',
-                '设备制造商名称',
-                '格式：YYYY-MM-DD',
+                '出厂唯一编号',
+                '检定周期（如：12个月、24个月）',
+                '最近一次检定日期，格式：YYYY-MM-DD',
+                '设备安装位置',
+                '设备的最小分度值',
+                '设备制造厂家',
+                '设备出厂日期，格式：YYYY-MM-DD',
                 '检定方式：内检/外检',
-                '管理级别：A级/B级/C级（注：外检时此项自动设为"-"，无需填写）',
+                '管理级别：A级/B级/C级',
                 '设备原值，单位：元（支持小数）',
                 '设备状态：在用/停用/报废',
                 '状态变更时间：设备状态为停用或报废时填写，格式：YYYY-MM-DD（选填）',
@@ -241,7 +242,7 @@ async def import_equipment_data(
         # 验证必需的列
         required_columns = [
             '使用部门', '设备类别', '计量器具名称', '型号/规格', '准确度等级',
-            '检定周期', '检定(校准)日期', '计量编号', '检定方式'
+            '检定周期', '检定(校准)日期', '厂内编号', '出厂编号', '检定方式'
         ]
         
         missing_columns = [col for col in required_columns if col not in df.columns]
@@ -260,7 +261,7 @@ async def import_equipment_data(
             row_number = index + 2  # Excel行号从2开始（第1行是标题）
             result = {
                 "row": row_number,
-                "serial_number": str(row['计量编号']),
+                "internal_id": str(row['厂内编号']),
                 "name": str(row['计量器具名称']),
                 "status": "",
                 "message": ""
@@ -416,7 +417,7 @@ async def import_equipment_data(
                     calibration_cycle=calibration_cycle,
                     calibration_date=calibration_date,
                     calibration_method=calibration_method,
-                    serial_number=str(row['计量编号']),
+                    internal_id=str(row['厂内编号']),
                     installation_location=str(row.get('安装地点', '')) if pd.notna(row.get('安装地点')) else '',
                     manufacturer=str(row.get('制造厂家', '')) if pd.notna(row.get('制造厂家')) else '',
                     manufacture_date=manufacture_date,
@@ -432,10 +433,10 @@ async def import_equipment_data(
                     notes=str(row.get('备注', '')) if pd.notna(row.get('备注')) else ''
                 )
                 
-                # 检查计量编号是否已存在
+                # 检查厂内编号是否已存在
                 from app.models.models import Equipment
                 existing_equipment = db.query(Equipment).filter(
-                    Equipment.serial_number == equipment_data.serial_number
+                    Equipment.internal_id == equipment_data.internal_id
                 ).first()
                 
                 if existing_equipment:
@@ -485,7 +486,7 @@ async def import_equipment_data(
                         update_count += 1
                     else:
                         result["status"] = "跳过"
-                        result["message"] = f"计量编号'{equipment_data.serial_number}'已存在，如需覆盖请勾选覆盖选项"
+                        result["message"] = f"厂内编号'{equipment_data.internal_id}'已存在，如需覆盖请勾选覆盖选项"
                         detailed_results.append(result)
                         # 跳过不算错误，不增加error_count
                     continue

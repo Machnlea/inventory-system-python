@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="/static/js/api-client.js"></script>
+    <script src="/static/js/api-client.js?v=20250821_1"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body {
@@ -181,7 +181,8 @@
                             <thead class="bg-gray-50">
                                 <tr>
                                     <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">类别名称</th>
-                                    <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">描述</th>
+                                    <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">类别编号</th>
+                                    <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">预定义器具名称</th>
                                     <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">设备数量</th>
                                     <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">创建时间</th>
                                     <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">操作</th>
@@ -245,6 +246,13 @@
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                placeholder="请输入类别名称">
                     </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">类别编号 <span class="text-red-500">*</span></label>
+                        <input type="text" id="categoryCode" name="category_code" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="请输入类别编号（如：EQ、SB、JL等）" maxlength="3">
+                        <p class="text-sm text-gray-500 mt-1">编号将用于设备厂内编号的生成，必须是3个字符的字母或数字组合</p>
+                    </div>
                     <div class="mb-6">
                         <label class="block text-sm font-medium text-gray-700 mb-2">描述</label>
                         <textarea id="categoryDescription" name="description" rows="3"
@@ -296,6 +304,104 @@
         </div>
     </div>
 
+    <!-- 类别编号编辑模态框 -->
+    <div id="categoryCodeModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-900">编辑类别编号</h3>
+                <button class="text-gray-400 hover:text-gray-600" onclick="closeCategoryCodeModal()">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-6">
+                    <div class="flex items-center mb-4">
+                        <div class="flex-shrink-0">
+                            <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                                <i class="fas fa-barcode text-blue-600 text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm text-gray-600">为类别 "<span id="categoryCodeName" class="font-medium text-gray-900"></span>" 设置编号</p>
+                            <p class="text-sm text-gray-500 mt-1">编号将用于设备厂内编号的生成，建议使用2-4个字符的字母或数字组合</p>
+                        </div>
+                    </div>
+                </div>
+                <form id="categoryCodeForm">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">类别编号 <span class="text-red-500">*</span></label>
+                        <input type="text" id="categoryCodeInput" name="categoryCode" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="请输入类别编号（如：EQ、SB、JL等）" maxlength="3">
+                        <p class="text-sm text-gray-500 mt-1">必须是3个字符的字母或数字组合</p>
+                    </div>
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400" onclick="closeCategoryCodeModal()">
+                            取消
+                        </button>
+                        <button type="submit" class="btn-primary text-white font-medium py-2 px-4 rounded-lg hover:shadow-lg transition-all duration-200">
+                            <i class="fas fa-save mr-2"></i>保存
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 预定义器具名称管理模态框 -->
+    <div id="predefinedNamesModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-900">管理预定义器具名称</h3>
+                <button class="text-gray-400 hover:text-gray-600" onclick="closePredefinedNamesModal()">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-6">
+                    <div class="flex items-center mb-4">
+                        <div class="flex-shrink-0">
+                            <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                                <i class="fas fa-list text-green-600 text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm text-gray-600">为类别 "<span id="predefinedNamesCategoryName" class="font-medium text-gray-900"></span>" 管理预定义器具名称</p>
+                            <p class="text-sm text-gray-500 mt-1">这些名称将用于在添加设备时提供快速选择</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 添加新名称表单 -->
+                <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                    <h4 class="text-sm font-medium text-gray-900 mb-3">添加新名称</h4>
+                    <form id="addPredefinedNameForm" class="flex gap-2">
+                        <input type="text" id="newPredefinedName" 
+                               class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="请输入预定义器具名称" required>
+                        <button type="submit" class="btn-primary text-white font-medium py-2 px-4 rounded-lg hover:shadow-lg transition-all duration-200">
+                            <i class="fas fa-plus mr-2"></i>添加
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- 现有名称列表 -->
+                <div class="mb-4">
+                    <h4 class="text-sm font-medium text-gray-900 mb-3">现有名称列表</h4>
+                    <div id="predefinedNamesList" class="space-y-2 max-h-60 overflow-y-auto">
+                        <!-- 动态加载的名称列表 -->
+                    </div>
+                </div>
+                
+                <div class="flex justify-end space-x-3">
+                    <button type="button" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400" onclick="closePredefinedNamesModal()">
+                        关闭
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 模态框样式 -->
     <style>
         .modal {
@@ -319,6 +425,10 @@
         // 全局变量
         let currentEditId = null;
         let currentDeleteId = null;
+        let currentCategoryCodeId = null;
+        let currentCategoryName = null;
+        let currentPredefinedNamesCategoryId = null;
+        let currentPredefinedNamesCategoryName = null;
         let categoryChart = null;
         let currentChartType = 'bar';
         let currentPage = 1;
@@ -411,6 +521,63 @@
                     closeDeleteModal();
                 }
             });
+            document.getElementById('categoryCodeModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeCategoryCodeModal();
+                }
+            });
+
+            // 类别编号表单提交
+            document.getElementById('categoryCodeForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                saveCategoryCode();
+            });
+
+            // 添加预定义名称表单提交
+            document.getElementById('addPredefinedNameForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const nameInput = document.getElementById('newPredefinedName');
+                const name = nameInput.value.trim();
+                addPredefinedName(name);
+            });
+
+            // 使用事件委托处理类别编号编辑按钮点击
+            document.addEventListener('click', function(e) {
+                if (e.target.closest('.edit-category-code-btn')) {
+                    const btn = e.target.closest('.edit-category-code-btn');
+                    const id = parseInt(btn.dataset.id);
+                    const name = btn.dataset.name;
+                    const code = btn.dataset.code;
+                    editCategoryCode(id, name, code);
+                }
+                
+                // 处理编辑按钮点击
+                if (e.target.closest('.edit-category-btn')) {
+                    const btn = e.target.closest('.edit-category-btn');
+                    const id = parseInt(btn.dataset.id);
+                    const name = btn.dataset.name;
+                    const description = btn.dataset.description;
+                    const code = btn.dataset.code;
+                    editCategory(id, name, description, code);
+                }
+                
+                // 处理删除按钮点击
+                if (e.target.closest('.delete-category-btn')) {
+                    const btn = e.target.closest('.delete-category-btn');
+                    const id = parseInt(btn.dataset.id);
+                    const name = btn.dataset.name;
+                    deleteCategory(id, name);
+                }
+                
+                // 处理管理预定义器具名称按钮点击
+                if (e.target.closest('.manage-predefined-names-btn')) {
+                    const btn = e.target.closest('.manage-predefined-names-btn');
+                    const id = parseInt(btn.dataset.id);
+                    const name = btn.dataset.name;
+                    const names = JSON.parse(btn.dataset.names || '[]');
+                    managePredefinedNames(id, name, names);
+                }
+            });
 
             // 分页事件监听器
             setupPaginationEventListeners();
@@ -449,7 +616,7 @@
             if (!categories || categories.length === 0) {
                 tableBody.innerHTML = `
                     <tr>
-                        <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+                        <td colspan="6" class="px-6 py-12 text-center text-gray-500">
                             <div class="flex flex-col items-center">
                                 <i class="fas fa-tags text-gray-300 text-4xl mb-4"></i>
                                 <p class="text-lg font-medium text-gray-500 mb-2">暂无类别数据</p>
@@ -467,6 +634,11 @@
                     return new Date(dateString).toLocaleDateString('zh-CN');
                 };
 
+                const predefinedNames = category.predefined_names || [];
+                const namesDisplay = predefinedNames.length > 0 ? 
+                    predefinedNames.slice(0, 3).join(', ') + (predefinedNames.length > 3 ? '...' : '') : 
+                    '未设置';
+
                 return `
                     <tr class="hover:bg-gray-50">
                         <td class="px-6 py-4 whitespace-nowrap">
@@ -481,7 +653,32 @@
                                 </div>
                             </div>
                         </td>
-                        <td class="px-6 py-4 text-sm text-gray-900">${category.description || '-'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${category.category_code ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
+                                    ${category.category_code || '未设置'}
+                                </span>
+                                <button class="ml-2 text-blue-600 hover:text-blue-800 transition-colors edit-category-code-btn" 
+                                        data-id="${category.id}" 
+                                        data-name="${category.name.replace(/"/g, '&quot;')}" 
+                                        data-code="${category.category_code || ''}"
+                                        title="${category.category_code ? '编辑类别编号' : '设置类别编号'}">
+                                    <i class="fas ${category.category_code ? 'fa-edit' : 'fa-plus'} text-sm"></i>
+                                </button>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-900">
+                            <div class="flex items-center">
+                                <span class="text-sm">${namesDisplay}</span>
+                                <button class="ml-2 text-green-600 hover:text-green-800 transition-colors manage-predefined-names-btn" 
+                                        data-id="${category.id}" 
+                                        data-name="${category.name.replace(/"/g, '&quot;')}" 
+                                        data-names='${JSON.stringify(predefinedNames)}'
+                                        title="管理预定义器具名称">
+                                    <i class="fas fa-cog text-sm"></i>
+                                </button>
+                            </div>
+                        </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
                                 ${category.equipment_count || 0} 台设备
@@ -489,14 +686,20 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatDate(category.created_at)}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button class="text-blue-600 hover:text-blue-900 mr-3" onclick="editCategory(${category.id}, '${category.name}', '${category.description || ''}')">
+                            <button class="text-blue-600 hover:text-blue-900 mr-3 edit-category-btn" 
+                                    data-id="${category.id}" 
+                                    data-name="${category.name.replace(/"/g, '&quot;')}" 
+                                    data-description="${category.description || ''}" 
+                                    data-code="${category.category_code || ''}">
                                 <i class="fas fa-edit mr-1"></i>编辑
                             </button>
                             ${category.equipment_count > 0 ? 
                                 `<button class="text-gray-400 cursor-not-allowed" title="该类别下有${category.equipment_count}台设备，无法删除" disabled>
                                     <i class="fas fa-trash mr-1"></i>删除
                                 </button>` :
-                                `<button class="text-red-600 hover:text-red-900" onclick="deleteCategory(${category.id}, '${category.name}')">
+                                `<button class="text-red-600 hover:text-red-900 delete-category-btn" 
+                                        data-id="${category.id}" 
+                                        data-name="${category.name.replace(/"/g, '&quot;')}">
                                     <i class="fas fa-trash mr-1"></i>删除
                                 </button>`
                             }
@@ -515,6 +718,7 @@
             if (category) {
                 modalTitle.textContent = '编辑类别';
                 document.getElementById('categoryName').value = category.name;
+                document.getElementById('categoryCode').value = category.category_code || '';
                 document.getElementById('categoryDescription').value = category.description || '';
                 currentEditId = category.id;
             } else {
@@ -536,6 +740,7 @@
         // 保存类别
         async function saveCategory() {
             const name = document.getElementById('categoryName').value.trim();
+            const categoryCode = document.getElementById('categoryCode').value.trim();
             const description = document.getElementById('categoryDescription').value.trim();
             
             if (!name) {
@@ -543,8 +748,24 @@
                 return;
             }
 
+            if (!categoryCode) {
+                showNotification('请输入类别编号', 'warning');
+                return;
+            }
+
+            // 验证编号格式（只允许字母和数字，且必须是3个字符）
+            if (!/^[A-Za-z0-9]+$/.test(categoryCode)) {
+                showNotification('类别编号只能包含字母和数字', 'warning');
+                return;
+            }
+            
+            if (categoryCode.length !== 3) {
+                showNotification('类别编号必须是3个字符', 'warning');
+                return;
+            }
+
             try {
-                const categoryData = { name, description };
+                const categoryData = { name, category_code: categoryCode, description };
                 
                 if (currentEditId) {
                     // 编辑模式
@@ -566,8 +787,8 @@
         }
 
         // 编辑类别
-        function editCategory(id, name, description) {
-            openCategoryModal({ id, name, description });
+        function editCategory(id, name, description, categoryCode) {
+            openCategoryModal({ id, name, description, category_code: categoryCode });
         }
 
         // 删除类别
@@ -967,6 +1188,290 @@
             };
 
             categoryChart = new Chart(ctx, chartConfig);
+        }
+
+        // 编辑类别编号
+        function editCategoryCode(id, name, currentCode) {
+            currentCategoryCodeId = id;
+            currentCategoryName = name;
+            document.getElementById('categoryCodeName').textContent = name;
+            document.getElementById('categoryCodeInput').value = currentCode || '';
+            document.getElementById('categoryCodeModal').classList.add('show');
+        }
+
+        // 关闭类别编号模态框
+        function closeCategoryCodeModal() {
+            document.getElementById('categoryCodeModal').classList.remove('show');
+            document.getElementById('categoryCodeForm').reset();
+            currentCategoryCodeId = null;
+            currentCategoryName = null;
+        }
+
+        // 保存类别编号
+        async function saveCategoryCode() {
+            const categoryCode = document.getElementById('categoryCodeInput').value.trim();
+            
+            if (!categoryCode) {
+                showNotification('请输入类别编号', 'warning');
+                return;
+            }
+
+            // 验证编号格式（只允许字母和数字，且必须是3个字符）
+            if (!/^[A-Za-z0-9]+$/.test(categoryCode)) {
+                showNotification('类别编号只能包含字母和数字', 'warning');
+                return;
+            }
+            
+            if (categoryCode.length !== 3) {
+                showNotification('类别编号必须是3个字符', 'warning');
+                return;
+            }
+
+            try {
+                showNotification('正在保存类别编号...', 'info');
+                
+                // 检查当前类别名称是否存在
+                if (!currentCategoryName) {
+                    showNotification('类别名称丢失，请重新操作', 'error');
+                    return;
+                }
+                
+                // 获取当前类别的完整信息以保持其他字段不变
+                const categoryData = { 
+                    name: currentCategoryName, 
+                    category_code: categoryCode 
+                };
+                await CategoryAPI.updateCategory(currentCategoryCodeId, categoryData);
+                
+                showNotification('类别编号保存成功', 'success');
+                closeCategoryCodeModal();
+                loadCategories();
+                
+            } catch (error) {
+                console.error('保存类别编号失败:', error);
+                showNotification('保存类别编号失败: ' + error.message, 'error');
+            }
+        }
+
+        // 管理预定义器具名称
+        function managePredefinedNames(categoryId, categoryName, names) {
+            console.log('=== 管理预定义器具名称调试信息 ===');
+            console.log('类别ID:', categoryId);
+            console.log('类别名称:', categoryName);
+            console.log('现有名称:', names);
+            
+            currentPredefinedNamesCategoryId = categoryId;
+            currentPredefinedNamesCategoryName = categoryName;
+            
+            document.getElementById('predefinedNamesCategoryName').textContent = categoryName;
+            updatePredefinedNamesList(names);
+            document.getElementById('predefinedNamesModal').classList.add('show');
+            
+            console.log('模态框已显示，当前类别ID设置为:', currentPredefinedNamesCategoryId);
+        }
+
+        // 关闭预定义器具名称模态框
+        function closePredefinedNamesModal() {
+            document.getElementById('predefinedNamesModal').classList.remove('show');
+            document.getElementById('addPredefinedNameForm').reset();
+            currentPredefinedNamesCategoryId = null;
+            currentPredefinedNamesCategoryName = null;
+        }
+
+        // 更新预定义器具名称列表
+        async function updatePredefinedNamesList(names) {
+            const listContainer = document.getElementById('predefinedNamesList');
+            
+            if (!names || names.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-inbox text-gray-300 text-3xl mb-3"></i>
+                        <p class="text-sm">暂无预定义器具名称</p>
+                        <p class="text-xs text-gray-400 mt-1">添加名称后，将在添加设备时提供快速选择</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // 获取设备使用情况和编号映射
+            let usageStats = {};
+            let nameMapping = {};
+            let categoryCode = '';
+            
+            // 等待确保API加载完成
+            if (typeof CategoryAPI === 'undefined') {
+                console.error('CategoryAPI 未定义');
+                showNotification('API客户端未加载，请刷新页面重试', 'error');
+                return;
+            }
+            
+            try {
+                if (currentPredefinedNamesCategoryId) {
+                    // 检查方法是否存在，如果不存在则手动添加
+                    if (typeof CategoryAPI.getEquipmentUsage !== 'function') {
+                        console.log('手动添加 getEquipmentUsage 方法');
+                        CategoryAPI.getEquipmentUsage = async function(categoryId) {
+                            const response = await fetch(`/api/categories/${categoryId}/equipment-usage`, {
+                                method: 'GET',
+                                headers: {
+                                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                                    'Content-Type': 'application/json'
+                                }
+                            });
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+                            return await response.json();
+                        };
+                    }
+                    
+                    const usageData = await CategoryAPI.getEquipmentUsage(currentPredefinedNamesCategoryId);
+                    console.log('获取到的使用数据:', usageData);
+                    usageStats = usageData.usage_stats || {};
+                    nameMapping = usageData.name_mapping || {};
+                    categoryCode = usageData.category_code || '';
+                }
+            } catch (error) {
+                console.error('获取设备使用情况失败:', error);
+                // 如果获取失败，至少显示编号
+                nameMapping = {};
+                names.forEach((name, index) => {
+                    nameMapping[name] = (index + 1).toString();
+                });
+            }
+
+            listContainer.innerHTML = names.map((name, index) => {
+                const equipmentCount = usageStats[name] || 0;
+                const isUsed = equipmentCount > 0;
+                const nameNumber = nameMapping[name] || (index + 1).toString();
+                
+                return `
+                    <div class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                        <div class="flex items-center flex-1">
+                            <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                                <i class="fas fa-tag text-blue-600 text-sm"></i>
+                            </div>
+                            <div class="flex flex-col flex-1">
+                                <span class="text-sm font-medium text-gray-900">${name}</span>
+                                ${isUsed ? `
+                                    <span class="text-xs text-orange-600 flex items-center mt-1">
+                                        <i class="fas fa-exclamation-triangle mr-1"></i>
+                                        有 ${equipmentCount} 台设备在使用
+                                    </span>
+                                ` : ''}
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                ${nameNumber}
+                            </span>
+                            ${isUsed ? `
+                                <button class="text-gray-400 cursor-not-allowed transition-colors p-1" 
+                                        disabled
+                                        title="该名称有 ${equipmentCount} 台设备在使用，不能删除">
+                                    <i class="fas fa-trash text-sm"></i>
+                                </button>
+                            ` : `
+                                <button class="text-red-600 hover:text-red-800 transition-colors remove-predefined-name-btn p-1" 
+                                        data-name="${name}" 
+                                        title="删除此名称">
+                                    <i class="fas fa-trash text-sm"></i>
+                                </button>
+                            `}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // 使用事件委托处理删除按钮点击
+            listContainer.removeEventListener('click', handleRemoveButtonClick);
+            listContainer.addEventListener('click', handleRemoveButtonClick);
+        }
+
+        // 处理删除按钮点击的事件处理函数
+        function handleRemoveButtonClick(event) {
+            if (event.target.closest('.remove-predefined-name-btn')) {
+                const btn = event.target.closest('.remove-predefined-name-btn');
+                const name = btn.dataset.name;
+                
+                // 再次检查按钮是否被禁用（双重保护）
+                if (btn.disabled || btn.classList.contains('cursor-not-allowed')) {
+                    showNotification('该预定义名称有设备在使用，不能删除', 'warning');
+                    return;
+                }
+                
+                removePredefinedName(name);
+            }
+        }
+
+        // 添加预定义器具名称
+        async function addPredefinedName(name) {
+            console.log('=== 添加预定义器具名称调试信息 ===');
+            console.log('输入的名称:', name);
+            console.log('当前类别ID:', currentPredefinedNamesCategoryId);
+            console.log('当前类别名称:', currentPredefinedNamesCategoryName);
+            
+            if (!name || !name.trim()) {
+                showNotification('请输入预定义器具名称', 'warning');
+                return;
+            }
+
+            if (!currentPredefinedNamesCategoryId) {
+                showNotification('请先选择一个设备类别', 'warning');
+                return;
+            }
+
+            try {
+                console.log('准备调用API添加名称...');
+                const result = await CategoryAPI.addPredefinedName(currentPredefinedNamesCategoryId, name.trim());
+                console.log('API调用成功，返回结果:', result);
+                showNotification('预定义器具名称添加成功', 'success');
+                
+                // 直接使用API返回的数据更新列表
+                if (result.predefined_names) {
+                    console.log('使用API返回的预定义名称:', result.predefined_names);
+                    updatePredefinedNamesList(result.predefined_names);
+                } else {
+                    // 如果API没有返回数据，则重新获取
+                    console.log('API没有返回预定义名称，重新获取...');
+                    const updatedNames = await CategoryAPI.getPredefinedNames(currentPredefinedNamesCategoryId);
+                    console.log('获取到的更新后名称:', updatedNames);
+                    updatePredefinedNamesList(updatedNames.predefined_names || []);
+                }
+                
+                // 清空输入框
+                document.getElementById('newPredefinedName').value = '';
+                
+                // 刷新类别列表以更新显示
+                loadCategories();
+                
+            } catch (error) {
+                console.error('添加预定义器具名称失败:', error);
+                showNotification('添加预定义器具名称失败: ' + error.message, 'error');
+            }
+        }
+
+        // 删除预定义器具名称
+        async function removePredefinedName(name) {
+            if (!confirm(`确定要删除预定义器具名称"${name}"吗？`)) {
+                return;
+            }
+
+            try {
+                await CategoryAPI.removePredefinedName(currentPredefinedNamesCategoryId, name);
+                showNotification('预定义器具名称删除成功', 'success');
+                
+                // 重新加载名称列表
+                const updatedNames = await CategoryAPI.getPredefinedNames(currentPredefinedNamesCategoryId);
+                updatePredefinedNamesList(updatedNames.predefined_names || []);
+                
+                // 刷新类别列表以更新显示
+                loadCategories();
+                
+            } catch (error) {
+                console.error('删除预定义器具名称失败:', error);
+                showNotification('删除预定义器具名称失败: ' + error.message, 'error');
+            }
         }
     </script>
 </body>

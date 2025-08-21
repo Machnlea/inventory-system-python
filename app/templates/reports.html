@@ -366,7 +366,7 @@
                                 <thead class="bg-gray-50">
                                     <tr>
                                         <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">设备名称</th>
-                                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">设备编号</th>
+                                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">编号信息</th>
                                         <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">使用部门</th>
                                         <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">准确度等级</th>
                                         <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">测量范围</th>
@@ -863,7 +863,10 @@
                             <div class="text-sm font-medium text-gray-900">${item.name || '未知设备'}</div>
                             <div class="text-sm text-gray-500">型号: ${item.model || '未知'}</div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${item.serial_number || '-'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">${item.internal_id || '-'}</div>
+                            <div class="text-sm text-gray-500">${item.manufacturer_id || '-'}</div>
+                        </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${item.department_name || '未知部门'}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${item.accuracy_level || '-'}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${item.measurement_range || '-'}</td>
@@ -922,7 +925,7 @@
                                 </div>
                             </div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${record.serial_number || '-'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${record.internal_id || '-'}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${record.department_name || '未知部门'}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${record.calibration_date || '-'}</td>
                         <td class="px-6 py-4 whitespace-nowrap">

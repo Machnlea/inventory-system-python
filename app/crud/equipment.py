@@ -374,7 +374,7 @@ def search_equipments_count(db: Session, search: EquipmentSearch, user_id: Optio
         search_conditions.extend([
             Equipment.name.ilike(search_term),
             Equipment.model.ilike(search_term),
-            Equipment.serial_number.ilike(search_term),
+            Equipment.internal_id.ilike(search_term),
             Equipment.manufacturer.ilike(search_term),
             Equipment.installation_location.ilike(search_term),
             Equipment.notes.ilike(search_term),
@@ -463,7 +463,7 @@ def search_equipments(db: Session, search: EquipmentSearch, user_id: Optional[in
         search_conditions.extend([
             Equipment.name.ilike(search_term),
             Equipment.model.ilike(search_term),
-            Equipment.serial_number.ilike(search_term),
+            Equipment.internal_id.ilike(search_term),
             Equipment.manufacturer.ilike(search_term),
             Equipment.installation_location.ilike(search_term),
             Equipment.notes.ilike(search_term),

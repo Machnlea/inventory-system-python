@@ -123,8 +123,13 @@
 
                         <div class="form-group">
                             <label class="form-label required-field" for="equipmentName">计量器具名称</label>
-                            <input type="text" id="equipmentName" name="equipmentName" class="form-input" 
-                                   required placeholder="请输入设备名称">
+                            <div class="relative">
+                                <select id="equipmentNameSelect" name="equipmentNameSelect" class="form-select mb-2" onchange="handlePredefinedNameSelect()">
+                                    <option value="">从预定义名称中选择</option>
+                                </select>
+                                <input type="text" id="equipmentName" name="equipmentName" class="form-input" 
+                                       required placeholder="或手动输入设备名称">
+                            </div>
                         </div>
 
                         <div class="form-group">
@@ -156,10 +161,11 @@
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="form-group">
-                            <label class="form-label required-field" for="equipmentCode">计量编号</label>
+                            <label class="form-label required-field" for="equipmentCode">厂内编号</label>
                             <input type="text" id="equipmentCode" name="equipmentCode" class="form-input" 
-                                   required placeholder="请输入计量编号">
-                            <div class="success-message" id="codeValidation"></div>
+                                   readonly placeholder="系统自动生成" style="background-color: #f3f4f6;">
+                            <div class="text-sm text-gray-500 mt-1">系统根据部门和类别自动生成厂内编号，选择好部门和设备类别后即可查看</div>
+                            <div id="codeValidation" class="text-sm text-red-500 mt-1" style="display: none;"></div>
                         </div>
 
                         <div class="form-group">
@@ -169,9 +175,9 @@
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label" for="division">分度值</label>
-                            <input type="text" id="division" name="division" class="form-input" 
-                                   placeholder="请输入分度值">
+                            <label class="form-label" for="manufacturerId">出厂编号</label>
+                            <input type="text" id="manufacturerId" name="manufacturerId" class="form-input" 
+                                   placeholder="请输入出厂编号">
                         </div>
                     </div>
                 </div>
@@ -359,6 +365,51 @@
         let allCategories = [];
         let isEditMode = false;
 
+        // 加载指定类别的预定义器具名称
+        async function loadPredefinedNamesForCategory() {
+            const categoryId = document.getElementById('category').value;
+            const nameSelect = document.getElementById('equipmentNameSelect');
+            
+            // 清空现有的选项
+            nameSelect.innerHTML = '<option value="">从预定义名称中选择</option>';
+            
+            if (!categoryId) {
+                return;
+            }
+
+            try {
+                const data = await CategoryAPI.getPredefinedNames(categoryId);
+                
+                if (data.predefined_names && data.predefined_names.length > 0) {
+                    data.predefined_names.forEach(name => {
+                        const option = document.createElement('option');
+                        option.value = name;
+                        option.textContent = name;
+                        nameSelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('加载预定义器具名称失败:', error);
+            }
+        }
+
+        // 处理预定义器具名称选择
+        function handlePredefinedNameSelect() {
+            const nameSelect = document.getElementById('equipmentNameSelect');
+            const nameInput = document.getElementById('equipmentName');
+            
+            if (nameSelect.value) {
+                nameInput.value = nameSelect.value;
+                // 清空选择以允许用户修改
+                setTimeout(() => {
+                    nameSelect.value = '';
+                }, 100);
+                
+                // 重新生成编号（现在包含设备名称）
+                generateAutoId();
+            }
+        }
+
         // 初始化页面
         document.addEventListener('DOMContentLoaded', async function() {
             try {
@@ -456,9 +507,9 @@
             document.getElementById('measureRange').value = equipment.measurement_range || '';
 
             // 标识信息
-            document.getElementById('equipmentCode').value = equipment.serial_number;
+            document.getElementById('equipmentCode').value = equipment.internal_id;
             document.getElementById('installLocation').value = equipment.installation_location || '';
-            document.getElementById('division').value = equipment.scale_value || '';
+            document.getElementById('manufacturerId').value = equipment.manufacturer_id || '';
 
             // 生产信息
             document.getElementById('manufacturer').value = equipment.manufacturer || '';
@@ -501,26 +552,46 @@
             const pageTitle = document.getElementById('pageTitle');
             const pageDescription = document.getElementById('pageDescription');
 
+            if (!pageTitle || !pageDescription) {
+                console.warn('页面标题元素未找到，跳过初始化');
+                return;
+            }
+
             if (mode === 'add') {
                 pageTitle.textContent = '添加新设备';
                 pageDescription.innerHTML = '填写设备的详细信息，带 <span class="text-red-500">*</span> 的字段为必填项';
                 
                 // 新增模式下清空表单并设置合理的默认值
-                document.getElementById('equipmentForm').reset();
+                const equipmentForm = document.getElementById('equipmentForm');
+                if (equipmentForm) {
+                    equipmentForm.reset();
+                }
                 
                 // 设置一些合理的默认值
-                document.getElementById('equipmentStatus').value = '在用';
-                document.getElementById('calibrationMethod').value = '内检';
-                document.getElementById('calibrationPeriod').value = '12个月';
+                const elements = {
+                    equipmentStatus: document.getElementById('equipmentStatus'),
+                    calibrationMethod: document.getElementById('calibrationMethod'),
+                    calibrationPeriod: document.getElementById('calibrationPeriod')
+                };
+                
+                if (elements.equipmentStatus) elements.equipmentStatus.value = '在用';
+                if (elements.calibrationMethod) elements.calibrationMethod.value = '内检';
+                if (elements.calibrationPeriod) elements.calibrationPeriod.value = '12个月';
                 // 不设置检定日期的默认值，让用户根据检定周期来决定是否填写
                 
                 // 清空验证消息
-                document.getElementById('codeValidation').textContent = '';
+                const codeValidation = document.getElementById('codeValidation');
+                if (codeValidation) {
+                    codeValidation.textContent = '';
+                    codeValidation.style.display = 'none';
+                }
                 
                 // 重新初始化表单状态
-                toggleExternalFields();
-                toggleStatusChangeDate();
-                calculateValidDate();
+                setTimeout(() => {
+                    toggleExternalFields();
+                    toggleStatusChangeDate();
+                    calculateValidDate();
+                }, 100);
             } else {
                 pageTitle.textContent = '编辑设备信息';
                 pageDescription.innerHTML = '修改设备的详细信息，带 <span class="text-red-500">*</span> 的字段为必填项';
@@ -530,17 +601,51 @@
         // 初始化表单事件
         function initializeFormEvents() {
             // 检定周期和日期变化时计算有效期
-            document.getElementById('calibrationPeriod').addEventListener('change', calculateValidDate);
-            document.getElementById('calibrationDate').addEventListener('change', calculateValidDate);
+            const elements = {
+                calibrationPeriod: document.getElementById('calibrationPeriod'),
+                calibrationDate: document.getElementById('calibrationDate'),
+                calibrationMethod: document.getElementById('calibrationMethod'),
+                equipmentStatus: document.getElementById('equipmentStatus'),
+                department: document.getElementById('department'),
+                category: document.getElementById('category'),
+                equipmentName: document.getElementById('equipmentName')
+            };
+
+            // 安全地添加事件监听器
+            if (elements.calibrationPeriod) {
+                elements.calibrationPeriod.addEventListener('change', calculateValidDate);
+            }
+            if (elements.calibrationDate) {
+                elements.calibrationDate.addEventListener('change', calculateValidDate);
+            }
 
             // 检定方式变化时切换外检字段
-            document.getElementById('calibrationMethod').addEventListener('change', toggleExternalFields);
+            if (elements.calibrationMethod) {
+                elements.calibrationMethod.addEventListener('change', toggleExternalFields);
+            }
 
             // 设备状态变化时切换状态变更时间
-            document.getElementById('equipmentStatus').addEventListener('change', toggleStatusChangeDate);
+            if (elements.equipmentStatus) {
+                elements.equipmentStatus.addEventListener('change', toggleStatusChangeDate);
+            }
 
-            // 计量编号验证
-            document.getElementById('equipmentCode').addEventListener('input', validateEquipmentCode);
+            // 部门和类别变化时自动生成编号
+            if (elements.department) {
+                elements.department.addEventListener('change', generateAutoId);
+            }
+            if (elements.category) {
+                elements.category.addEventListener('change', generateAutoId);
+            }
+            
+            // 设备名称变化时自动生成编号
+            if (elements.equipmentName) {
+                elements.equipmentName.addEventListener('input', generateAutoId);
+            }
+
+            // 类别变化时加载预定义器具名称
+            if (elements.category) {
+                elements.category.addEventListener('change', loadPredefinedNamesForCategory);
+            }
         }
 
         // 保存设备
@@ -603,9 +708,9 @@
                 calibration_cycle: calibrationPeriod,
                 calibration_date: calibrationDate || null, // 随坏随换设备也可以有检定日期
                 calibration_method: calibrationMethod,
-                serial_number: document.getElementById('equipmentCode').value,
+                internal_id: document.getElementById('equipmentCode').value,
                 installation_location: document.getElementById('installLocation').value || null,
-                scale_value: document.getElementById('division').value || null,
+                manufacturer_id: document.getElementById('manufacturerId').value || null,
                 manufacturer: document.getElementById('manufacturer').value || null,
                 manufacture_date: document.getElementById('manufactureDate').value || null,
                 original_value: document.getElementById('originalValue').value ? 
@@ -684,21 +789,67 @@
             return isValid;
         }
 
+        // 自动生成厂内编号
+        async function generateAutoId() {
+            const departmentId = document.getElementById('department').value;
+            const categoryId = document.getElementById('category').value;
+            const equipmentName = document.getElementById('equipmentName').value;
+            const codeInput = document.getElementById('equipmentCode');
+            
+            if (departmentId && categoryId) {
+                try {
+                    // 显示加载状态
+                    codeInput.value = '正在生成...';
+                    
+                    // 构建API URL，包含设备名称参数
+                    let apiUrl = `/api/equipment/utils/generate-internal-id?department_id=${departmentId}&category_id=${categoryId}`;
+                    if (equipmentName) {
+                        apiUrl += `&equipment_name=${encodeURIComponent(equipmentName)}`;
+                    }
+                    
+                    // 调用API生成编号
+                    const response = await fetch(apiUrl, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        codeInput.value = data.internal_id;
+                    } else {
+                        codeInput.value = '';
+                    }
+                } catch (error) {
+                    console.error('生成编号失败:', error);
+                    codeInput.value = '';
+                }
+            } else {
+                codeInput.value = '';
+            }
+        }
+
         // 验证计量编号唯一性
         async function validateEquipmentCode() {
             const code = document.getElementById('equipmentCode').value;
             const validation = document.getElementById('codeValidation');
             
-            if (code) {
-                if (code.length >= 3) {
-                    validation.textContent = '编号格式正确';
-                    validation.className = 'success-message';
+            if (validation) {
+                if (code) {
+                    if (code.length >= 3) {
+                        validation.textContent = '编号格式正确';
+                        validation.className = 'text-sm text-green-600 mt-1';
+                        validation.style.display = 'block';
+                    } else {
+                        validation.textContent = '编号至少需要3个字符';
+                        validation.className = 'text-sm text-red-500 mt-1';
+                        validation.style.display = 'block';
+                    }
                 } else {
-                    validation.textContent = '编号至少需要3个字符';
-                    validation.className = 'error-message';
+                    validation.textContent = '';
+                    validation.style.display = 'none';
                 }
-            } else {
-                validation.textContent = '';
             }
         }
 

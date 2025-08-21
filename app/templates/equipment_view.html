@@ -725,7 +725,7 @@
                 // 基本信息
                 document.getElementById('equipmentName').textContent = equipmentData.name || '-';
                 document.getElementById('equipmentModel').textContent = equipmentData.model || '-';
-                document.getElementById('equipmentSerial').textContent = equipmentData.serial_number || '-';
+                document.getElementById('equipmentSerial').textContent = equipmentData.internal_id || '-';
                 document.getElementById('equipmentDepartment').textContent = equipmentData.department?.name || '-';
                 document.getElementById('equipmentCategory').textContent = equipmentData.category?.name || '-';
                 document.getElementById('equipmentAccuracy').textContent = equipmentData.accuracy_level || '-';
@@ -1010,7 +1010,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="flex items-center space-x-2 ml-4">
+                        <div class="flex items-center space-x-2 flex-shrink-0">
                             <button onclick="previewAttachment(${attachment.id})" 
                                     class="text-green-600 hover:text-green-800 p-2 rounded-full hover:bg-green-50 transition-colors" 
                                     title="预览">
@@ -1516,8 +1516,8 @@
             try {
                 showNotification('正在保存备注...', 'info');
                 
-                // 调用API保存备注
-                const response = await fetch(`/api/equipment/${currentEquipmentId}/notes`, {
+                // 调用API保存备注 - 使用通用的设备更新端点
+                const response = await fetch(`/api/equipment/${currentEquipmentId}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',

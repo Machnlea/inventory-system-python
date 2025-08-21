@@ -517,7 +517,8 @@ async def get_equipment_stats(
             "id": equipment.id,
             "name": equipment.name,
             "model": equipment.model,
-            "serial_number": equipment.serial_number,
+            "internal_id": equipment.internal_id or "",
+            "manufacturer_id": equipment.manufacturer_id or "",
             "department_name": equipment.department.name if equipment.department else "未知部门",
             "category_name": equipment.category.name if equipment.category else "其他",
             "original_value": equipment.original_value or 0,
@@ -640,7 +641,8 @@ async def get_calibration_records(
             "id": equipment.id,
             "equipment_name": equipment.name,
             "equipment_model": equipment.model,
-            "serial_number": equipment.serial_number,
+            "internal_id": equipment.internal_id or "",
+            "manufacturer_id": equipment.manufacturer_id or "",
             "department_name": equipment.department.name if equipment.department else "未知部门",
             "category_name": equipment.category.name if equipment.category else "其他",
             "calibration_date": equipment.calibration_date.strftime("%Y-%m-%d") if equipment.calibration_date else None,
@@ -698,7 +700,8 @@ async def export_reports(
         data = []
         for equipment in equipments:
             data.append({
-                "计量编号": equipment.serial_number or "",
+                "厂内编号": equipment.internal_id or "",
+                "出厂编号": equipment.manufacturer_id or "",
                 "设备名称": equipment.name or "",
                 "型号规格": equipment.model or "",
                 "所属部门": equipment.department.name if equipment.department else "未知部门",

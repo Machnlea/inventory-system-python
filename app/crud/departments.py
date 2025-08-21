@@ -4,7 +4,21 @@ from app.schemas.schemas import DepartmentCreate
 from typing import List
 
 def get_departments(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(Department).offset(skip).limit(limit).all()
+    departments = db.query(Department).offset(skip).limit(limit).all()
+    
+    # 转换为字典并确保包含所有字段
+    result = []
+    for department in departments:
+        department_dict = {
+            "id": department.id,
+            "name": department.name,
+            "code": department.code,
+            "description": department.description,
+            "created_at": department.created_at
+        }
+        result.append(department_dict)
+    
+    return result
 
 def get_department(db: Session, department_id: int):
     return db.query(Department).filter(Department.id == department_id).first()
@@ -63,6 +77,7 @@ def get_department_with_equipment_count(db: Session, skip: int = 0, limit: int =
         department_dict = {
             "id": department.id,
             "name": department.name,
+            "code": department.code,  # 添加部门编号字段
             "description": department.description,
             "created_at": department.created_at,
             "equipment_count": count

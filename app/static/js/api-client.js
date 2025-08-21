@@ -390,6 +390,28 @@ const CategoryAPI = {
     // 删除类别
     async deleteCategory(id) {
         return api.delete(`/api/categories/${id}`);
+    },
+
+    // 预定义器具名称管理
+    async getPredefinedNames(categoryId) {
+        return api.get(`/api/categories/${categoryId}/predefined-names`);
+    },
+
+    async addPredefinedName(categoryId, name) {
+        return api.post(`/api/categories/${categoryId}/predefined-names`, { name });
+    },
+
+    async removePredefinedName(categoryId, name) {
+        return api.delete(`/api/categories/${categoryId}/predefined-names/${encodeURIComponent(name)}`);
+    },
+
+    async updatePredefinedNames(categoryId, names) {
+        return api.put(`/api/categories/${categoryId}/predefined-names`, { names });
+    },
+
+    // 获取类别下设备使用情况
+    async getEquipmentUsage(categoryId) {
+        return api.get(`/api/categories/${categoryId}/equipment-usage`);
     }
 };
 

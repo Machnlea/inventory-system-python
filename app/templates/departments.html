@@ -197,6 +197,7 @@
                             <thead class="bg-gray-50">
                                 <tr>
                                     <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">部门名称</th>
+                                    <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">部门编号</th>
                                     <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">描述</th>
                                     <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">设备数量</th>
                                     <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">创建时间</th>
@@ -260,6 +261,13 @@
                         <input type="text" id="departmentName" name="name" required
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                placeholder="请输入部门名称">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">部门编号 <span class="text-red-500">*</span></label>
+                        <input type="text" id="departmentCode" name="code" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="请输入部门编号（如：TC、JS等）" maxlength="10">
+                        <div class="text-sm text-gray-500 mt-1">部门编号将用于设备自动编号，请使用简洁的字母缩写</div>
                     </div>
                     <div class="mb-6">
                         <label class="block text-sm font-medium text-gray-700 mb-2">描述</label>
@@ -447,7 +455,7 @@
             if (!departments || departments.length === 0) {
                 tableBody.innerHTML = `
                     <tr>
-                        <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+                        <td colspan="6" class="px-6 py-12 text-center text-gray-500">
                             <div class="flex flex-col items-center">
                                 <i class="fas fa-building text-gray-300 text-4xl mb-4"></i>
                                 <p class="text-lg font-medium text-gray-500 mb-2">暂无部门数据</p>
@@ -479,6 +487,11 @@
                                 </div>
                             </div>
                         </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                ${department.code || '-'}
+                            </span>
+                        </td>
                         <td class="px-6 py-4 text-sm text-gray-900">${department.description || '-'}</td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
@@ -487,7 +500,7 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatDate(department.created_at)}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button class="text-blue-600 hover:text-blue-900 mr-3" onclick="editDepartment(${department.id}, '${department.name}', '${department.description || ''}')">
+                            <button class="text-blue-600 hover:text-blue-900 mr-3" onclick="editDepartment(${department.id}, '${department.name}', '${department.code || ''}', '${department.description || ''}')">
                                 <i class="fas fa-edit mr-1"></i>编辑
                             </button>
                             ${department.equipment_count > 0 ? 
@@ -513,6 +526,7 @@
             if (department) {
                 modalTitle.textContent = '编辑部门';
                 document.getElementById('departmentName').value = department.name;
+                document.getElementById('departmentCode').value = department.code || '';
                 document.getElementById('departmentDescription').value = department.description || '';
                 currentEditId = department.id;
             } else {
@@ -534,15 +548,21 @@
         // 保存部门
         async function saveDepartment() {
             const name = document.getElementById('departmentName').value.trim();
+            const code = document.getElementById('departmentCode').value.trim();
             const description = document.getElementById('departmentDescription').value.trim();
             
             if (!name) {
                 showNotification('请输入部门名称', 'warning');
                 return;
             }
+            
+            if (!code) {
+                showNotification('请输入部门编号', 'warning');
+                return;
+            }
 
             try {
-                const departmentData = { name, description };
+                const departmentData = { name, code, description };
                 
                 if (currentEditId) {
                     // 编辑模式
@@ -564,8 +584,8 @@
         }
 
         // 编辑部门
-        function editDepartment(id, name, description) {
-            openDepartmentModal({ id, name, description });
+        function editDepartment(id, name, code, description) {
+            openDepartmentModal({ id, name, code, description });
         }
 
         // 删除部门

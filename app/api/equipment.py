@@ -11,6 +11,7 @@ from app.crud import equipment
 from app.schemas.schemas import Equipment, EquipmentCreate, EquipmentUpdate, EquipmentFilter, EquipmentSearch, PaginatedEquipment
 from app.api.audit_logs import create_audit_log
 from app.api.auth import get_current_user, get_current_admin_user
+from app.utils.auto_id import generate_internal_id
 
 router = APIRouter()
 
@@ -42,7 +43,15 @@ def create_equipment(equipment_data: EquipmentCreate,
             )
     
     try:
-        new_equipment = equipment.create_equipment(db=db, equipment=equipment_data)
+        # 生成自动编号
+        internal_id = generate_internal_id(db, equipment_data.department_id, equipment_data.category_id, equipment_data.name)
+        
+        # 创建equipment_data的副本并设置自动编号
+        equipment_dict = equipment_data.model_dump()
+        equipment_dict['internal_id'] = internal_id
+        
+        # 创建设备
+        new_equipment = equipment.create_equipment(db=db, equipment=EquipmentCreate(**equipment_dict))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     
@@ -52,7 +61,7 @@ def create_equipment(equipment_data: EquipmentCreate,
         user_id=current_user.id,
         equipment_id=new_equipment.id,
         action="创建",
-        description=f"创建设备: {new_equipment.name} ({new_equipment.serial_number})"
+        description=f"创建设备: {new_equipment.name} ({new_equipment.internal_id})"
     )
     
     return new_equipment
@@ -94,7 +103,7 @@ def update_equipment(equipment_id: int, equipment_update: EquipmentUpdate,
     if equipment_update.status and equipment_update.status != old_status:
         changes.append(f"状态从'{old_status}'改为'{equipment_update.status}'")
     
-    description = f"更新设备: {updated_equipment.name} ({updated_equipment.serial_number})"
+    description = f"更新设备: {updated_equipment.name} ({updated_equipment.internal_id})"
     if changes:
         description += f" - {', '.join(changes)}"
     
@@ -126,7 +135,7 @@ def delete_equipment(equipment_id: int,
         user_id=current_user.id,
         equipment_id=equipment_id,
         action="删除",
-        description=f"删除设备: {db_equipment.name} ({db_equipment.serial_number})"
+        description=f"删除设备: {db_equipment.name} ({db_equipment.internal_id})"
     )
     
     success = equipment.delete_equipment(db, equipment_id=equipment_id)
@@ -176,7 +185,8 @@ def export_monthly_plan(db: Session = Depends(get_db),
             '型号/规格': eq.model,
             '准确度等级': eq.accuracy_level,
             '测量范围': eq.measurement_range,
-            '计量编号': eq.serial_number,
+            '厂内编号': eq.internal_id,
+            '出厂编号': eq.manufacturer_id or '',
             '检定周期': eq.calibration_cycle,
             '检定（校准）日期': eq.calibration_date.strftime('%Y-%m-%d') if eq.calibration_date else '',
             '有效期至': eq.valid_until.strftime('%Y-%m-%d') if eq.valid_until else '',
@@ -219,8 +229,8 @@ def export_monthly_plan(db: Session = Depends(get_db),
     create_audit_log(
         db=db,
         user_id=current_user.id,
-        action="批量导出选中",
-        description=f"批量导出选中设备，共{len(selected_equipments)}台"
+        action="月度检定计划导出",
+        description=f"月度检定计划导出，共{len(equipments)}台"
     )
     
     return Response(
@@ -251,7 +261,8 @@ def export_filtered_equipments(filters: EquipmentFilter,
             '型号/规格': eq.model,
             '准确度等级': eq.accuracy_level,
             '测量范围': eq.measurement_range,
-            '计量编号': eq.serial_number,
+            '厂内编号': eq.internal_id,
+            '出厂编号': eq.manufacturer_id or '',
             '检定周期': eq.calibration_cycle,
             '检定（校准）日期': eq.calibration_date.strftime('%Y-%m-%d') if eq.calibration_date else '',
             '有效期至': eq.valid_until.strftime('%Y-%m-%d') if eq.valid_until else '',
@@ -477,7 +488,7 @@ def batch_delete_equipments(
                 continue
             
             equipment_name = db_equipment.name
-            equipment_serial = db_equipment.serial_number
+            equipment_serial = db_equipment.internal_id
             
             # 删除设备
             success = equipment.delete_equipment(db, equipment_id=equipment_id)
@@ -553,7 +564,8 @@ def batch_export_selected_equipments(
             '型号/规格': eq.model,
             '准确度等级': eq.accuracy_level,
             '测量范围': eq.measurement_range,
-            '计量编号': eq.serial_number,
+            '厂内编号': eq.internal_id,
+            '出厂编号': eq.manufacturer_id or '',
             '检定周期': eq.calibration_cycle,
             '检定（校准）日期': eq.calibration_date.strftime('%Y-%m-%d') if eq.calibration_date else '',
             '有效期至': eq.valid_until.strftime('%Y-%m-%d') if eq.valid_until else '',
@@ -595,7 +607,7 @@ def batch_export_selected_equipments(
     create_audit_log(
         db=db,
         user_id=current_user.id,
-        action="批量导出选中",
+        action="批量导出选中设备",
         description=f"批量导出选中设备，共{len(selected_equipments)}台"
     )
     
@@ -636,7 +648,8 @@ def export_search_equipments(search_params: EquipmentSearch,
             '型号/规格': eq.model,
             '准确度等级': eq.accuracy_level,
             '测量范围': eq.measurement_range,
-            '计量编号': eq.serial_number,
+            '厂内编号': eq.internal_id,
+            '出厂编号': eq.manufacturer_id or '',
             '检定周期': eq.calibration_cycle,
             '检定（校准）日期': eq.calibration_date.strftime('%Y-%m-%d') if eq.calibration_date else '',
             '有效期至': eq.valid_until.strftime('%Y-%m-%d') if eq.valid_until else '',
@@ -678,3 +691,17 @@ def export_search_equipments(search_params: EquipmentSearch,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"}
     )
+
+@router.get("/utils/generate-internal-id")
+def generate_internal_id_endpoint(department_id: int, category_id: int,
+                                equipment_name: str = None,
+                                db: Session = Depends(get_db),
+                                current_user = Depends(get_current_user)):
+    """生成内部编号"""
+    try:
+        internal_id = generate_internal_id(db, department_id, category_id, equipment_name)
+        return {"internal_id": internal_id}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="生成编号失败")

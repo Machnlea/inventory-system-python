@@ -365,7 +365,7 @@ function renderMonthlyDueTable(equipments) {
             <td>${equipment.department.name}</td>
             <td>${equipment.name}</td>
             <td>${equipment.model}</td>
-            <td>${equipment.serial_number}</td>
+            <td>${equipment.internal_id}</td>
             <td>${formatDate(equipment.valid_until)}</td>
             <td>
                 <span class="badge status-${equipment.status}">${equipment.status}</span>
@@ -671,7 +671,7 @@ function renderEquipmentTable(equipments) {
             <td>${equipment.department.name}</td>
             <td>${equipment.name}</td>
             <td>${equipment.model}</td>
-            <td>${equipment.serial_number}</td>
+            <td>${equipment.internal_id}</td>
             <td>${formatDate(equipment.valid_until)}</td>
             <td>
                 <span class="badge status-${equipment.status}">${equipment.status}</span>
@@ -1448,8 +1448,8 @@ function showEditEquipmentModal(equipment) {
                                     <input type="text" class="form-control" name="name" value="${equipment.name}" required>
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">计量编号 *</label>
-                                    <input type="text" class="form-control" name="serial_number" value="${equipment.serial_number}" required>
+                                    <label class="form-label">厂内编号 *</label>
+                                    <input type="text" class="form-control" name="internal_id" value="${equipment.internal_id}" required>
                                 </div>
                             </div>
                             <div class="row">
@@ -1808,8 +1808,9 @@ function showAddEquipmentModal() {
                                     <input type="text" class="form-control" name="name" required>
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">计量编号 *</label>
-                                    <input type="text" class="form-control" name="serial_number" required>
+                                    <label class="form-label">厂内编号 *</label>
+                                    <input type="text" class="form-control" name="internal_id" readonly placeholder="自动生成">
+                                    <small class="form-text text-muted">系统将根据部门和类别自动生成编号</small>
                                 </div>
                             </div>
                             <div class="row">
@@ -1998,9 +1999,46 @@ async function loadAddEquipmentOptions() {
                 categorySelect.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
             });
         }
+        
+        // 添加自动生成编号的事件监听器
+        setupAutoIdGeneration();
     } catch (error) {
         console.error('加载选项失败:', error);
     }
+}
+
+// 设置自动生成编号功能
+function setupAutoIdGeneration() {
+    const departmentSelect = document.querySelector('#addEquipmentModal select[name="department_id"]');
+    const categorySelect = document.querySelector('#addEquipmentModal select[name="category_id"]');
+    const equipmentNameInput = document.querySelector('#addEquipmentModal input[name="name"]');
+    const internalIdInput = document.querySelector('#addEquipmentModal input[name="internal_id"]');
+    
+    // 自动生成编号的函数
+    async function generateAutoId() {
+        const departmentId = departmentSelect.value;
+        const categoryId = categorySelect.value;
+        const equipmentName = equipmentNameInput.value;
+        
+        if (departmentId && categoryId && equipmentName) {
+            try {
+                // 调用后端API生成编号
+                const response = await apiCall(`/equipment/utils/generate-internal-id?department_id=${departmentId}&category_id=${categoryId}&equipment_name=${encodeURIComponent(equipmentName)}`, 'GET');
+                if (response && response.internal_id) {
+                    internalIdInput.value = response.internal_id;
+                }
+            } catch (error) {
+                console.error('自动生成编号失败:', error);
+            }
+        } else {
+            internalIdInput.value = '';
+        }
+    }
+    
+    // 监听部门和类别变化
+    departmentSelect.addEventListener('change', generateAutoId);
+    categorySelect.addEventListener('change', generateAutoId);
+    equipmentNameInput.addEventListener('input', generateAutoId);
 }
 
 // 状态变更时间显示控制
@@ -2077,8 +2115,8 @@ async function submitAddEquipment() {
         }
     }
     
-    // 验证必填字段
-    const requiredFields = ['name', 'serial_number', 'department_id', 'category_id', 'model', 'accuracy_level', 'calibration_cycle', 'calibration_date', 'calibration_method'];
+    // 验证必填字段（internal_id由系统自动生成，不需要验证）
+    const requiredFields = ['name', 'department_id', 'category_id', 'model', 'accuracy_level', 'calibration_cycle', 'calibration_date', 'calibration_method'];
     const missingFields = [];
     
     for (const field of requiredFields) {
@@ -2295,7 +2333,7 @@ function showImportResultModal(result) {
                                     ${result.detailed_results.map(item => `
                                         <tr class="${getStatusRowClass(item.status)}">
                                             <td>${item.row}</td>
-                                            <td>${item.serial_number}</td>
+                                            <td>${item.internal_id}</td>
                                             <td>${item.name}</td>
                                             <td>
                                                 <span class="badge ${getStatusBadgeClass(item.status)}">${item.status}</span>
@@ -3200,7 +3238,7 @@ function renderAuditTable(logs) {
     logs.forEach(log => {
         const row = document.createElement('tr');
         const equipmentInfo = log.equipment ? 
-            `${log.equipment.name} (${log.equipment.serial_number})` : '-';
+            `${log.equipment.name} (${log.equipment.internal_id})` : '-';
         
         row.innerHTML = `
             <td>${formatDateTime(log.created_at)}</td>

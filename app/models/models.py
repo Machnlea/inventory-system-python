@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Date, Boolean, Float
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Date, Boolean, Float, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.database import Base
@@ -20,18 +20,30 @@ class EquipmentCategory(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(50), unique=True, nullable=False)
+    code = Column(String(10), unique=True, nullable=False)  # 类别代码
     description = Column(Text)
+    predefined_names = Column(JSON)  # 预定义器具名称列表
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # 关联
     equipments = relationship("Equipment", back_populates="category")
     user_categories = relationship("UserCategory", back_populates="category")
+    
+    # 为了兼容API的字段名，添加category_code属性
+    @property
+    def category_code(self):
+        return self.code
+    
+    @category_code.setter
+    def category_code(self, value):
+        self.code = value
 
 class Department(Base):
     __tablename__ = "departments"
     
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(50), unique=True, nullable=False)
+    code = Column(String(10), unique=True, nullable=False)  # 部门代码
     description = Column(Text)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
@@ -75,7 +87,8 @@ class Equipment(Base):
     certificate_form = Column(String(50))  # 证书形式
     
     # 设备信息
-    serial_number = Column(String(100), unique=True, nullable=False)  # 计量编号
+    internal_id = Column(String(20), unique=True, nullable=False)  # 内部编号 (自动生成)
+    manufacturer_id = Column(String(100))  # 厂家编号/序列号
     installation_location = Column(String(100))  # 安装地点
     manufacturer = Column(String(100))  # 制造厂家
     manufacture_date = Column(Date)  # 出厂日期

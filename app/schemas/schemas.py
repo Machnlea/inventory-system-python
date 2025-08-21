@@ -1,6 +1,6 @@
 from pydantic import BaseModel, field_validator, model_validator
 from datetime import datetime, date
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 
 # 用户相关
 class UserBase(BaseModel):
@@ -25,7 +25,17 @@ class User(UserBase):
 # 设备类别相关
 class EquipmentCategoryBase(BaseModel):
     name: str
+    category_code: str
     description: Optional[str] = None
+    predefined_names: Optional[List[str]] = None
+    
+    @model_validator(mode='after')
+    def validate_category_code(self):
+        if not self.category_code or len(self.category_code) != 3:
+            raise ValueError("类别代码必须是3个字符")
+        if not self.category_code.isalnum():
+            raise ValueError("类别代码只能包含字母和数字")
+        return self
 
 class EquipmentCategoryCreate(EquipmentCategoryBase):
     pass
@@ -36,11 +46,30 @@ class EquipmentCategory(EquipmentCategoryBase):
     
     class Config:
         from_attributes = True
+    
+    # 为了兼容数据库中的code字段，我们需要进行字段映射
+    @model_validator(mode='before')
+    @classmethod
+    def map_fields(cls, data):
+        if isinstance(data, dict):
+            # 如果数据库返回的是code字段，映射为category_code
+            if 'code' in data and 'category_code' not in data:
+                data['category_code'] = data.pop('code')
+        return data
 
 # 部门相关
 class DepartmentBase(BaseModel):
     name: str
+    code: str
     description: Optional[str] = None
+    
+    @model_validator(mode='after')
+    def validate_department_code(self):
+        if not self.code or len(self.code) != 2:
+            raise ValueError("部门代码必须是2个字符")
+        if not self.code.isalnum():
+            raise ValueError("部门代码只能包含字母和数字")
+        return self
 
 class DepartmentCreate(DepartmentBase):
     pass
@@ -69,7 +98,8 @@ class EquipmentBase(BaseModel):
     verification_result: Optional[str] = None
     verification_agency: Optional[str] = None
     certificate_form: Optional[str] = None
-    serial_number: str
+    internal_id: Optional[str] = None  # 内部编号 (自动生成)
+    manufacturer_id: Optional[str] = None  # 厂家编号/序列号
     installation_location: Optional[str] = None
     manufacturer: Optional[str] = None
     manufacture_date: Optional[date] = None
@@ -126,7 +156,8 @@ class EquipmentUpdate(BaseModel):
     verification_result: Optional[str] = None
     verification_agency: Optional[str] = None
     certificate_form: Optional[str] = None
-    serial_number: Optional[str] = None
+    internal_id: Optional[str] = None  # 内部编号 (自动生成)
+    manufacturer_id: Optional[str] = None  # 厂家编号/序列号
     installation_location: Optional[str] = None
     manufacturer: Optional[str] = None
     manufacture_date: Optional[date] = None

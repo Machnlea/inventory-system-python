@@ -282,6 +282,11 @@
                             </button>
                         </div>
                     </div>
+                    
+                    <!-- 预定义器具名称管理 -->
+                    <button class="bg-gradient-to-r from-indigo-600 to-indigo-700 text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all duration-200 transform hover:-translate-y-1" onclick="openPredefinedNamesModal()">
+                        <i class="fas fa-list-alt mr-2"></i>器具名称管理
+                    </button>
                 </div>
             </div>
 
@@ -368,7 +373,8 @@
                                     <input type="checkbox" id="selectAll" class="rounded border-gray-300" onchange="toggleSelectAll()">
                                 </th>
                                 <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">设备信息</th>
-                                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">计量编号</th>
+                                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">厂内编号</th>
+                                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">出厂编号</th>
                                 <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">使用部门</th>
                                 <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">有效期至</th>
                                 <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700 uppercase tracking-wider">设备状态</th>
@@ -471,7 +477,7 @@
                         <ul class="text-sm text-blue-800 space-y-1">
                             <li>• 请先下载导入模板，按照模板格式填写数据</li>
                             <li>• 支持Excel格式(.xlsx, .xls)</li>
-                            <li>• 必填字段：使用部门、设备类别、计量器具名称、型号/规格、检定周期、检定(校准)日期、计量编号、检定方式</li>
+                            <li>• 必填字段：使用部门、设备类别、计量器具名称、型号/规格、检定周期、检定(校准)日期、厂内编号、出厂编号、检定方式</li>
                             <li>• 检定周期可选值：6个月、12个月、24个月、36个月、随坏随换</li>
                             <li>• 随坏随换设备无需填写检定日期</li>
                             <li>• 外检设备需要填写证书编号、检定结果、检定机构、证书形式</li>
@@ -511,7 +517,7 @@
                 <div class="mb-6">
                     <label class="flex items-center">
                         <input type="checkbox" id="overwriteExisting" class="mr-2">
-                        <span class="text-sm text-gray-700">覆盖已存在的设备数据（根据计量编号）</span>
+                        <span class="text-sm text-gray-700">覆盖已存在的设备数据（根据厂内编号）</span>
                     </label>
                 </div>
                 
@@ -564,7 +570,7 @@
                         <div class="bg-gray-50 px-4 py-3 border-b border-gray-200">
                             <div class="grid grid-cols-12 gap-4 text-sm font-medium text-gray-700">
                                 <div class="col-span-1">行号</div>
-                                <div class="col-span-3">计量编号</div>
+                                <div class="col-span-3">厂内编号</div>
                                 <div class="col-span-3">设备名称</div>
                                 <div class="col-span-2">状态</div>
                                 <div class="col-span-3">说明</div>
@@ -735,6 +741,63 @@
                     </button>
                     <button id="batchCalibrationBtn" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed" onclick="performBatchCalibrationUpdate()" disabled>
                         <i class="fas fa-calendar-check mr-2"></i>确认更新
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 预定义器具名称管理模态框 -->
+    <div id="predefinedNamesModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-900">预定义器具名称管理</h3>
+                <button class="text-gray-400 hover:text-gray-600" onclick="closePredefinedNamesModal()">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <!-- 类别选择 -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">选择设备类别</label>
+                    <select id="predefinedNamesCategorySelect" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" onchange="loadPredefinedNames()">
+                        <option value="">请选择设备类别</option>
+                    </select>
+                </div>
+
+                <!-- 添加新器具名称 -->
+                <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                    <h4 class="text-md font-medium text-gray-900 mb-4">添加新器具名称</h4>
+                    <div class="flex gap-4">
+                        <input type="text" id="newPredefinedNameInput" placeholder="输入器具名称" class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <button id="addPredefinedNameBtn" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed" onclick="addPredefinedName()" disabled>
+                            <i class="fas fa-plus mr-2"></i>添加
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 现有器具名称列表 -->
+                <div class="mb-4">
+                    <h4 class="text-md font-medium text-gray-900 mb-4">现有器具名称</h4>
+                    <div class="bg-white border border-gray-200 rounded-lg">
+                        <div class="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                            <div class="grid grid-cols-12 gap-4 text-sm font-medium text-gray-700">
+                                <div class="col-span-1">#</div>
+                                <div class="col-span-6">器具名称</div>
+                                <div class="col-span-3">创建时间</div>
+                                <div class="col-span-2">操作</div>
+                            </div>
+                        </div>
+                        <div id="predefinedNamesList" class="divide-y divide-gray-200">
+                            <!-- 动态加载器具名称列表 -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 操作按钮 -->
+                <div class="flex justify-end space-x-3 mt-6">
+                    <button class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400" onclick="closePredefinedNamesModal()">
+                        关闭
                     </button>
                 </div>
             </div>
@@ -1046,7 +1109,8 @@
                                 </div>
                             </div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-left">${equipment.serial_number || '-'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-left">${equipment.internal_id || '-'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-left">${equipment.manufacturer_id || '-'}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-left">${departmentName}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-left">${formatDate(equipment.valid_until, equipment.calibration_cycle)}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-center">
@@ -1702,6 +1766,136 @@
             window.batchCalibrationEquipmentIds = null;
         }
 
+        // 预定义器具名称管理相关函数
+        function openPredefinedNamesModal() {
+            // 加载设备类别
+            loadCategoriesForPredefinedNames();
+            document.getElementById('predefinedNamesModal').classList.add('show');
+        }
+
+        function closePredefinedNamesModal() {
+            document.getElementById('predefinedNamesModal').classList.remove('show');
+            document.getElementById('predefinedNamesCategorySelect').value = '';
+            document.getElementById('newPredefinedNameInput').value = '';
+            document.getElementById('predefinedNamesList').innerHTML = '';
+        }
+
+        async function loadCategoriesForPredefinedNames() {
+            try {
+                const response = await CategoryAPI.getCategories();
+                const select = document.getElementById('predefinedNamesCategorySelect');
+                select.innerHTML = '<option value="">请选择设备类别</option>';
+                
+                response.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category.id;
+                    option.textContent = category.name;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('加载设备类别失败:', error);
+                showNotification('加载设备类别失败', 'error');
+            }
+        }
+
+        async function loadPredefinedNames() {
+            const categoryId = document.getElementById('predefinedNamesCategorySelect').value;
+            if (!categoryId) {
+                document.getElementById('predefinedNamesList').innerHTML = '';
+                document.getElementById('addPredefinedNameBtn').disabled = true;
+                return;
+            }
+
+            try {
+                const response = await CategoryAPI.getPredefinedNames(categoryId);
+                const listContainer = document.getElementById('predefinedNamesList');
+                listContainer.innerHTML = '';
+
+                const names = response.predefined_names || [];
+                if (names.length === 0) {
+                    listContainer.innerHTML = '<div class="px-4 py-8 text-center text-gray-500">暂无预定义器具名称</div>';
+                    return;
+                }
+
+                names.forEach((name, index) => {
+                    const row = document.createElement('div');
+                    row.className = 'px-4 py-3 hover:bg-gray-50';
+                    row.innerHTML = `
+                        <div class="grid grid-cols-12 gap-4 items-center">
+                            <div class="col-span-1 text-sm text-gray-500">${index + 1}</div>
+                            <div class="col-span-6 text-sm font-medium text-gray-900">${name}</div>
+                            <div class="col-span-3 text-sm text-gray-500">-</div>
+                            <div class="col-span-2">
+                                <button class="text-red-600 hover:text-red-800 text-sm" onclick="deletePredefinedName('${encodeURIComponent(name)}')">
+                                    <i class="fas fa-trash"></i> 删除
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    listContainer.appendChild(row);
+                });
+
+                document.getElementById('addPredefinedNameBtn').disabled = false;
+            } catch (error) {
+                console.error('加载预定义器具名称失败:', error);
+                showNotification('加载预定义器具名称失败', 'error');
+            }
+        }
+
+        async function addPredefinedName() {
+            const categoryId = document.getElementById('predefinedNamesCategorySelect').value;
+            const name = document.getElementById('newPredefinedNameInput').value.trim();
+
+            if (!categoryId) {
+                showNotification('请选择设备类别', 'warning');
+                return;
+            }
+
+            if (!name) {
+                showNotification('请输入器具名称', 'warning');
+                return;
+            }
+
+            try {
+                await CategoryAPI.addPredefinedName(categoryId, name);
+                showNotification('添加成功', 'success');
+                document.getElementById('newPredefinedNameInput').value = '';
+                await loadPredefinedNames();
+            } catch (error) {
+                console.error('添加预定义器具名称失败:', error);
+                showNotification('添加失败', 'error');
+            }
+        }
+
+        async function deletePredefinedName(name) {
+            if (!confirm('确定要删除这个预定义器具名称吗？')) {
+                return;
+            }
+
+            try {
+                const categoryId = document.getElementById('predefinedNamesCategorySelect').value;
+                await CategoryAPI.removePredefinedName(categoryId, decodeURIComponent(name));
+                showNotification('删除成功', 'success');
+                await loadPredefinedNames();
+            } catch (error) {
+                console.error('删除预定义器具名称失败:', error);
+                showNotification('删除失败', 'error');
+            }
+        }
+
+        // 监听输入框变化
+        document.addEventListener('DOMContentLoaded', function() {
+            const newPredefinedNameInput = document.getElementById('newPredefinedNameInput');
+            if (newPredefinedNameInput) {
+                newPredefinedNameInput.addEventListener('input', function() {
+                    const addBtn = document.getElementById('addPredefinedNameBtn');
+                    if (addBtn) {
+                        addBtn.disabled = !this.value.trim();
+                    }
+                });
+            }
+        });
+
         // 打开单个设备检定日期更新模态框
         function openSingleCalibrationModal(equipmentId) {
             // 获取设备信息
@@ -2264,7 +2458,7 @@
             resultsList.innerHTML = result.detailed_results.map(item => `
                 <div class="grid grid-cols-12 gap-4 px-4 py-3 items-center">
                     <div class="col-span-1 text-sm text-gray-500">${item.row}</div>
-                    <div class="col-span-3 text-sm font-medium text-gray-900">${item.serial_number}</div>
+                    <div class="col-span-3 text-sm font-medium text-gray-900">${item.internal_id}</div>
                     <div class="col-span-3 text-sm text-gray-900">${item.name}</div>
                     <div class="col-span-2">
                         <span class="px-2 py-1 text-xs font-medium rounded-full ${getResultStatusStyle(item.status)}">
@@ -2335,6 +2529,13 @@
         document.getElementById('batchCalibrationModal').addEventListener('click', function(e) {
             if (e.target === this) {
                 closeBatchCalibrationModal();
+            }
+        });
+
+        // 预定义器具名称管理模态框点击外部关闭
+        document.getElementById('predefinedNamesModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closePredefinedNamesModal();
             }
         });
     </script>

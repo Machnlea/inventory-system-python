@@ -385,59 +385,7 @@
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- 管理用户设备类别模态框 -->
-    <div id="userCategoriesModal" class="modal">
-        <div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 max-h-[80vh] overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                <h3 class="text-lg font-semibold text-gray-900">管理用户设备类别权限</h3>
-                <button class="text-gray-400 hover:text-gray-600" onclick="closeUserCategoriesModal()" aria-label="关闭对话框">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
-            </div>
-            <div class="p-6">
-                <div class="mb-4">
-                    <p class="text-sm text-gray-600 mb-2">用户: <span id="category-user-name" class="font-semibold"></span></p>
-                    <p class="text-xs text-gray-500">选择该用户可以管理的设备类别</p>
-                </div>
-                
-                <div class="mb-4">
-                    <div id="permission-stats" class="mb-3">
-                        <!-- 权限统计将在这里显示 -->
-                    </div>
-                </div>
-                
-                <div class="mb-6">
-                    <div class="flex justify-between items-center mb-3">
-                        <label class="block text-sm font-medium text-gray-700">设备类别</label>
-                        <div class="flex space-x-2">
-                            <button type="button" class="text-xs text-blue-600 hover:text-blue-800" onclick="selectAllCategories()">
-                                全选
-                            </button>
-                            <button type="button" class="text-xs text-gray-600 hover:text-gray-800" onclick="clearAllCategories()">
-                                清空
-                            </button>
-                        </div>
-                    </div>
-                    <div class="border border-gray-200 rounded-lg p-3 max-h-64 overflow-y-auto bg-gray-50" id="categories-checkboxes">
-                        <!-- 动态加载的设备类别复选框 -->
-                    </div>
-                    <p class="text-xs text-gray-500 mt-2">注意：每个设备类别只能由一个用户管理</p>
-                </div>
-                
-                <div class="flex justify-end space-x-3">
-                    <button type="button" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400" onclick="closeUserCategoriesModal()">
-                        取消
-                    </button>
-                    <button type="button" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700" onclick="saveUserCategories()">
-                        <i class="fas fa-save mr-2"></i>保存
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
+  
     <!-- 管理用户器具权限模态框 -->
     <div id="userEquipmentPermissionsModal" class="modal">
         <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[85vh] overflow-hidden">
@@ -1042,10 +990,7 @@
             if (user.is_admin) {
                 return `
                     <button class="text-gray-400 cursor-not-allowed px-2 py-1 rounded text-sm" title="管理员拥有所有权限，无需管理" disabled>
-                        <i class="fas fa-tags mr-1"></i>类别
-                    </button>
-                    <button class="text-gray-400 cursor-not-allowed px-2 py-1 rounded text-sm" title="管理员拥有所有权限，无需管理" disabled>
-                        <i class="fas fa-tools mr-1"></i>器具
+                        <i class="fas fa-tools mr-1"></i>器具权限
                     </button>
                 `;
             }
@@ -1054,21 +999,15 @@
             if (currentUser.id === user.id) {
                 return `
                     <button class="text-gray-400 cursor-not-allowed px-2 py-1 rounded text-sm" title="无法管理自己的权限" disabled>
-                        <i class="fas fa-tags mr-1"></i>类别
-                    </button>
-                    <button class="text-gray-400 cursor-not-allowed px-2 py-1 rounded text-sm" title="无法管理自己的权限" disabled>
-                        <i class="fas fa-tools mr-1"></i>器具
+                        <i class="fas fa-tools mr-1"></i>器具权限
                     </button>
                 `;
             }
             
-            // 普通用户显示正常的权限管理按钮
+            // 普通用户显示正常的权限管理按钮（只保留器具权限管理）
             return `
-                <button class="text-blue-600 hover:text-blue-900 px-2 py-1 rounded text-sm" onclick="manageUserCategories(${user.id}, '${user.username}')" title="管理设备类别权限">
-                    <i class="fas fa-tags mr-1"></i>类别
-                </button>
                 <button class="text-purple-600 hover:text-purple-900 px-2 py-1 rounded text-sm" onclick="manageUserEquipmentPermissions(${user.id}, '${user.username}')" title="管理器具权限">
-                    <i class="fas fa-tools mr-1"></i>器具
+                    <i class="fas fa-tools mr-1"></i>器具权限
                 </button>
             `;
         }

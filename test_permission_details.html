@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>权限详情功能测试</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-50 p-8">
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-2xl font-bold mb-6">权限详情功能测试</h1>
+        
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-lg font-semibold mb-4">测试用户权限显示</h2>
+            
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">用户信息</th>
+                            <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700">权限等级</th>
+                            <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700">管理权限</th>
+                            <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700">详情</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        <!-- zmms用户 -->
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="h-10 w-10 flex-shrink-0">
+                                        <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                            <i class="fas fa-user text-blue-600"></i>
+                                        </div>
+                                    </div>
+                                    <div class="ml-4">
+                                        <div class="text-sm font-medium text-gray-900">zmms</div>
+                                        <div class="text-sm text-gray-500">ID: 2</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-center">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                    普通用户
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-center">
+                                <div class="text-sm text-gray-900">
+                                    <div class="relative inline-block group">
+                                        <span class="text-sm text-gray-900 cursor-help border-b border-dotted border-gray-400">温湿度计, 工作用玻璃温度计+3</span>
+                                        <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-10">
+                                            <div class="text-center">类别:  | 器具: 温湿度计, 工作用玻璃温度计, 迷你温湿度计, 数显温度计, 标准水槽</div>
+                                            <div class="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
+                                                <div class="border-4 border-transparent border-t-gray-800"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-center">
+                                <div class="flex items-center justify-center">
+                                    <button onclick="togglePermissionDetails(2)" 
+                                            class="text-blue-600 hover:text-blue-800 p-1 rounded-full hover:bg-blue-50 transition-colors"
+                                            title="查看完整权限信息"
+                                            id="permission-detail-btn-2">
+                                        <i class="fas fa-info-circle"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr id="permission-details-2" class="hidden">
+                            <td colspan="4" class="px-6 py-4 bg-gray-50">
+                                <div class="bg-white rounded-lg p-4 shadow-sm">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <h4 class="text-sm font-semibold text-gray-900">
+                                            <i class="fas fa-key mr-2 text-blue-600"></i>
+                                            zmms 的完整权限信息
+                                        </h4>
+                                        <button onclick="togglePermissionDetails(2)" 
+                                                class="text-gray-400 hover:text-gray-600">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                    <div id="permission-details-content-2" class="space-y-3">
+                                        <!-- 权限详情将在这里显示 -->
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        
+                        <!-- admin用户 -->
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="h-10 w-10 flex-shrink-0">
+                                        <div class="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
+                                            <i class="fas fa-user-shield text-purple-600"></i>
+                                        </div>
+                                    </div>
+                                    <div class="ml-4">
+                                        <div class="text-sm font-medium text-gray-900">admin</div>
+                                        <div class="text-sm text-gray-500">ID: 1</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-center">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">
+                                    管理员
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-center">
+                                <div class="text-sm text-gray-900">
+                                    <span class="text-sm text-purple-600 font-medium">全部权限</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-center">
+                                <div class="flex items-center justify-center">
+                                    <button onclick="togglePermissionDetails(1)" 
+                                            class="text-blue-600 hover:text-blue-800 p-1 rounded-full hover:bg-blue-50 transition-colors"
+                                            title="查看完整权限信息"
+                                            id="permission-detail-btn-1">
+                                        <i class="fas fa-info-circle"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr id="permission-details-1" class="hidden">
+                            <td colspan="4" class="px-6 py-4 bg-gray-50">
+                                <div class="bg-white rounded-lg p-4 shadow-sm">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <h4 class="text-sm font-semibold text-gray-900">
+                                            <i class="fas fa-key mr-2 text-blue-600"></i>
+                                            admin 的完整权限信息
+                                        </h4>
+                                        <button onclick="togglePermissionDetails(1)" 
+                                                class="text-gray-400 hover:text-gray-600">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                    <div id="permission-details-content-1" class="space-y-3">
+                                        <!-- 权限详情将在这里显示 -->
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-lg font-semibold mb-4">功能说明</h2>
+            <div class="space-y-3 text-sm text-gray-600">
+                <div class="flex items-start">
+                    <i class="fas fa-info-circle text-blue-500 mt-1 mr-3"></i>
+                    <div>
+                        <strong>权限显示优化：</strong>
+                        <ul class="list-disc list-inside mt-1 space-y-1">
+                            <li>权限被截断时会显示虚线下划线，鼠标悬停显示完整权限</li>
+                            <li>类别权限最多显示2个，超出显示"+N"</li>
+                            <li>器具权限最多显示3个，超出显示"+N"</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="flex items-start">
+                    <i class="fas fa-mouse-pointer text-green-500 mt-1 mr-3"></i>
+                    <div>
+                        <strong>详情展开功能：</strong>
+                        <ul class="list-disc list-inside mt-1 space-y-1">
+                            <li>点击详情按钮展开完整的权限信息</li>
+                            <li>权限按类型分组显示，更清晰易读</li>
+                            <li>支持再次点击收起详情</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 模拟用户数据
+        const mockUsers = [
+            {
+                id: 1,
+                username: 'admin',
+                is_admin: true
+            },
+            {
+                id: 2,
+                username: 'zmms',
+                is_admin: false
+            }
+        ];
+
+        // 模拟权限数据
+        const mockPermissions = {
+            1: { // admin用户
+                categories: [],
+                equipment: []
+            },
+            2: { // zmms用户
+                categories: [],
+                equipment: [
+                    { category_name: '温度环境类', equipment_name: '温湿度计' },
+                    { category_name: '温度环境类', equipment_name: '工作用玻璃温度计' },
+                    { category_name: '温度环境类', equipment_name: '迷你温湿度计' },
+                    { category_name: '温度环境类', equipment_name: '数显温度计' },
+                    { category_name: '温度环境类', equipment_name: '标准水槽' }
+                ]
+            }
+        };
+
+        // 切换权限详情显示
+        async function togglePermissionDetails(userId) {
+            const detailsRow = document.getElementById(`permission-details-${userId}`);
+            const btn = document.getElementById(`permission-detail-btn-${userId}`);
+            
+            if (detailsRow.classList.contains('hidden')) {
+                // 展开详情
+                detailsRow.classList.remove('hidden');
+                btn.innerHTML = '<i class="fas fa-eye-slash"></i>';
+                btn.title = '隐藏权限信息';
+                
+                // 加载详细信息
+                await loadPermissionDetails(userId);
+            } else {
+                // 收起详情
+                detailsRow.classList.add('hidden');
+                btn.innerHTML = '<i class="fas fa-info-circle"></i>';
+                btn.title = '查看完整权限信息';
+            }
+        }
+
+        // 加载权限详细信息
+        async function loadPermissionDetails(userId) {
+            const contentElement = document.getElementById(`permission-details-content-${userId}`);
+            if (!contentElement) return;
+            
+            try {
+                // 使用模拟数据
+                const userCategories = mockPermissions[userId].categories;
+                const equipmentPermissions = mockPermissions[userId].equipment;
+                
+                // 查找用户信息
+                const user = mockUsers.find(u => u.id === userId);
+                
+                let detailsHTML = '';
+                
+                if (user && user.is_admin) {
+                    detailsHTML = `
+                        <div class="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                            <div class="flex items-center mb-2">
+                                <i class="fas fa-crown text-purple-600 mr-2"></i>
+                                <span class="font-medium text-purple-900">系统管理员</span>
+                            </div>
+                            <p class="text-sm text-purple-700">拥有系统的完整访问权限，可以管理所有设备类别和器具。</p>
+                        </div>
+                    `;
+                } else {
+                    const hasCategoryPermissions = userCategories && userCategories.length > 0;
+                    const hasEquipmentPermissions = equipmentPermissions && equipmentPermissions.length > 0;
+                    
+                    if (!hasCategoryPermissions && !hasEquipmentPermissions) {
+                        detailsHTML = `
+                            <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                                <div class="flex items-center">
+                                    <i class="fas fa-ban text-gray-400 mr-2"></i>
+                                    <span class="text-gray-600">暂无任何管理权限</span>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        detailsHTML = '<div class="space-y-3">';
+                        
+                        // 类别权限
+                        if (hasCategoryPermissions) {
+                            detailsHTML += `
+                                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                    <div class="flex items-center mb-2">
+                                        <i class="fas fa-tags text-blue-600 mr-2"></i>
+                                        <span class="font-medium text-blue-900">设备类别权限 (${userCategories.length})</span>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                                        ${userCategories.map(uc => `
+                                            <div class="bg-white rounded px-2 py-1 text-sm text-blue-700 border border-blue-200">
+                                                ${uc.category_name}
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
+                        // 器具权限
+                        if (hasEquipmentPermissions) {
+                            // 按类别分组显示器具权限
+                            const equipmentByCategory = {};
+                            equipmentPermissions.forEach(ep => {
+                                if (!equipmentByCategory[ep.category_name]) {
+                                    equipmentByCategory[ep.category_name] = [];
+                                }
+                                equipmentByCategory[ep.category_name].push(ep.equipment_name);
+                            });
+                            
+                            detailsHTML += `
+                                <div class="bg-green-50 border border-green-200 rounded-lg p-3">
+                                    <div class="flex items-center mb-2">
+                                        <i class="fas fa-tools text-green-600 mr-2"></i>
+                                        <span class="font-medium text-green-900">器具权限 (${equipmentPermissions.length})</span>
+                                    </div>
+                                    <div class="space-y-2">
+                                        ${Object.entries(equipmentByCategory).map(([categoryName, equipmentNames]) => `
+                                            <div class="bg-white rounded p-2 border border-green-200">
+                                                <div class="text-xs font-medium text-green-700 mb-1">${categoryName}</div>
+                                                <div class="flex flex-wrap gap-1">
+                                                    ${equipmentNames.map(name => `
+                                                        <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">${name}</span>
+                                                    `).join('')}
+                                                </div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
+                        detailsHTML += '</div>';
+                    }
+                }
+                
+                contentElement.innerHTML = detailsHTML;
+                
+            } catch (error) {
+                console.error('加载权限详情失败:', error);
+                contentElement.innerHTML = `
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-3">
+                        <div class="flex items-center text-red-700">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>
+                            <span class="text-sm">加载权限信息失败</span>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

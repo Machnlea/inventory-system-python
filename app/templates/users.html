@@ -248,7 +248,8 @@
                             <tr>
                                 <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">用户信息</th>
                                 <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700 uppercase tracking-wider">权限等级</th>
-                                <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700 uppercase tracking-wider">管理类别</th>
+                                <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700 uppercase tracking-wider">管理权限</th>
+                                <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700 uppercase tracking-wider">详情</th>
                                 <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700 uppercase tracking-wider">创建时间</th>
                                 <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700 uppercase tracking-wider">操作</th>
                             </tr>
@@ -800,29 +801,52 @@
                     categoryElement.innerHTML = '<span class="text-gray-400">无权限</span>';
                 } else {
                     let permissionTexts = [];
+                    let fullPermissionText = '';
                     
                     // 添加类别权限
                     if (hasCategoryPermissions) {
-                        const categoryNames = userCategories.map(uc => uc.category.name).slice(0, 2);
-                        if (userCategories.length > 2) {
-                            permissionTexts.push(`${categoryNames.join(', ')}+${userCategories.length - 2}`);
+                        const categoryNames = userCategories.map(uc => uc.category.name);
+                        const displayNames = categoryNames.slice(0, 2);
+                        if (categoryNames.length > 2) {
+                            permissionTexts.push(`${displayNames.join(', ')}+${categoryNames.length - 2}`);
                         } else {
-                            permissionTexts.push(categoryNames.join(', '));
+                            permissionTexts.push(displayNames.join(', '));
                         }
+                        fullPermissionText += `类别: ${categoryNames.join(', ')}`;
                     }
                     
                     // 添加器具权限
                     if (hasEquipmentPermissions) {
-                        const equipmentNames = equipmentPermissions.map(ep => ep.equipment_name).slice(0, 3);
+                        const equipmentNames = equipmentPermissions.map(ep => ep.equipment_name);
+                        const displayNames = equipmentNames.slice(0, 3);
                         if (equipmentPermissions.length > 3) {
-                            permissionTexts.push(`${equipmentNames.join(', ')}+${equipmentPermissions.length - 3}`);
+                            permissionTexts.push(`${displayNames.join(', ')}+${equipmentPermissions.length - 3}`);
                         } else {
-                            permissionTexts.push(equipmentNames.join(', '));
+                            permissionTexts.push(displayNames.join(', '));
                         }
+                        if (fullPermissionText) fullPermissionText += ' | ';
+                        fullPermissionText += `器具: ${equipmentNames.join(', ')}`;
                     }
                     
                     const displayText = permissionTexts.join(', ');
-                    categoryElement.innerHTML = `<span class="text-sm text-gray-900">${displayText}</span>`;
+                    
+                    // 如果权限被截断，添加Tooltip
+                    if ((hasCategoryPermissions && userCategories.length > 2) || 
+                        (hasEquipmentPermissions && equipmentPermissions.length > 3)) {
+                        categoryElement.innerHTML = `
+                            <div class="relative inline-block group">
+                                <span class="text-sm text-gray-900 cursor-help border-b border-dotted border-gray-400">${displayText}</span>
+                                <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-10">
+                                    <div class="text-center">${fullPermissionText}</div>
+                                    <div class="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
+                                        <div class="border-4 border-transparent border-t-gray-800"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        categoryElement.innerHTML = `<span class="text-sm text-gray-900">${displayText}</span>`;
+                    }
                 }
             }
             
@@ -895,6 +919,16 @@
                             <span class="text-gray-400">加载中...</span>
                         </div>
                     </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                        <div class="flex items-center justify-center">
+                            <button onclick="togglePermissionDetails(${user.id})" 
+                                    class="text-blue-600 hover:text-blue-800 p-1 rounded-full hover:bg-blue-50 transition-colors"
+                                    title="查看完整权限信息"
+                                    id="permission-detail-btn-${user.id}">
+                                <i class="fas fa-info-circle"></i>
+                            </button>
+                        </div>
+                    </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
                         ${formatDateTime(user.created_at)}
                     </td>
@@ -903,6 +937,25 @@
                             ${getUserPermissionManagementButtons(user)}
                             ${getUserEditButton(user)}
                             ${getUserDeleteButton(user)}
+                        </div>
+                    </td>
+                </tr>
+                <tr id="permission-details-${user.id}" class="hidden">
+                    <td colspan="6" class="px-6 py-4 bg-gray-50">
+                        <div class="bg-white rounded-lg p-4 shadow-sm">
+                            <div class="flex items-center justify-between mb-3">
+                                <h4 class="text-sm font-semibold text-gray-900">
+                                    <i class="fas fa-key mr-2 text-blue-600"></i>
+                                    ${user.username} 的完整权限信息
+                                </h4>
+                                <button onclick="togglePermissionDetails(${user.id})" 
+                                        class="text-gray-400 hover:text-gray-600">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <div id="permission-details-content-${user.id}" class="space-y-3">
+                                <div class="text-sm text-gray-500">正在加载权限信息...</div>
+                            </div>
                         </div>
                     </td>
                 </tr>
@@ -1901,6 +1954,160 @@
             
             currentPage = page;
             loadUsersData();
+        }
+
+        // 切换权限详情显示
+        async function togglePermissionDetails(userId) {
+            const detailsRow = document.getElementById(`permission-details-${userId}`);
+            const btn = document.getElementById(`permission-detail-btn-${userId}`);
+            
+            if (detailsRow.classList.contains('hidden')) {
+                // 展开详情
+                detailsRow.classList.remove('hidden');
+                btn.innerHTML = '<i class="fas fa-eye-slash"></i>';
+                btn.title = '隐藏权限信息';
+                
+                // 加载详细信息
+                await loadPermissionDetails(userId);
+            } else {
+                // 收起详情
+                detailsRow.classList.add('hidden');
+                btn.innerHTML = '<i class="fas fa-info-circle"></i>';
+                btn.title = '查看完整权限信息';
+            }
+        }
+
+        // 加载权限详细信息
+        async function loadPermissionDetails(userId) {
+            const contentElement = document.getElementById(`permission-details-content-${userId}`);
+            if (!contentElement) return;
+            
+            try {
+                // 并行加载类别权限和器具权限
+                const [categoriesResponse, equipmentResponse] = await Promise.all([
+                    fetch(`/api/users/${userId}/categories`, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                            'Content-Type': 'application/json'
+                        }
+                    }),
+                    fetch(`/api/users/${userId}/equipment-permissions`, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                ]);
+
+                if (!categoriesResponse.ok || !equipmentResponse.ok) {
+                    throw new Error('Failed to load permission details');
+                }
+
+                const userCategories = await categoriesResponse.json();
+                const equipmentPermissions = await equipmentResponse.json();
+                
+                // 查找用户信息
+                const user = currentUsers.find(u => u.id === userId);
+                
+                let detailsHTML = '';
+                
+                if (user && user.is_admin) {
+                    detailsHTML = `
+                        <div class="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                            <div class="flex items-center mb-2">
+                                <i class="fas fa-crown text-purple-600 mr-2"></i>
+                                <span class="font-medium text-purple-900">系统管理员</span>
+                            </div>
+                            <p class="text-sm text-purple-700">拥有系统的完整访问权限，可以管理所有设备类别和器具。</p>
+                        </div>
+                    `;
+                } else {
+                    const hasCategoryPermissions = userCategories && userCategories.length > 0;
+                    const hasEquipmentPermissions = equipmentPermissions && equipmentPermissions.length > 0;
+                    
+                    if (!hasCategoryPermissions && !hasEquipmentPermissions) {
+                        detailsHTML = `
+                            <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                                <div class="flex items-center">
+                                    <i class="fas fa-ban text-gray-400 mr-2"></i>
+                                    <span class="text-gray-600">暂无任何管理权限</span>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        detailsHTML = '<div class="space-y-3">';
+                        
+                        // 类别权限
+                        if (hasCategoryPermissions) {
+                            detailsHTML += `
+                                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                    <div class="flex items-center mb-2">
+                                        <i class="fas fa-tags text-blue-600 mr-2"></i>
+                                        <span class="font-medium text-blue-900">设备类别权限 (${userCategories.length})</span>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                                        ${userCategories.map(uc => `
+                                            <div class="bg-white rounded px-2 py-1 text-sm text-blue-700 border border-blue-200">
+                                                ${uc.category.name}
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
+                        // 器具权限
+                        if (hasEquipmentPermissions) {
+                            // 按类别分组显示器具权限
+                            const equipmentByCategory = {};
+                            equipmentPermissions.forEach(ep => {
+                                if (!equipmentByCategory[ep.category_name]) {
+                                    equipmentByCategory[ep.category_name] = [];
+                                }
+                                equipmentByCategory[ep.category_name].push(ep.equipment_name);
+                            });
+                            
+                            detailsHTML += `
+                                <div class="bg-green-50 border border-green-200 rounded-lg p-3">
+                                    <div class="flex items-center mb-2">
+                                        <i class="fas fa-tools text-green-600 mr-2"></i>
+                                        <span class="font-medium text-green-900">器具权限 (${equipmentPermissions.length})</span>
+                                    </div>
+                                    <div class="space-y-2">
+                                        ${Object.entries(equipmentByCategory).map(([categoryName, equipmentNames]) => `
+                                            <div class="bg-white rounded p-2 border border-green-200">
+                                                <div class="text-xs font-medium text-green-700 mb-1">${categoryName}</div>
+                                                <div class="flex flex-wrap gap-1">
+                                                    ${equipmentNames.map(name => `
+                                                        <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">${name}</span>
+                                                    `).join('')}
+                                                </div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
+                        detailsHTML += '</div>';
+                    }
+                }
+                
+                contentElement.innerHTML = detailsHTML;
+                
+            } catch (error) {
+                console.error('加载权限详情失败:', error);
+                contentElement.innerHTML = `
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-3">
+                        <div class="flex items-center text-red-700">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>
+                            <span class="text-sm">加载权限信息失败</span>
+                        </div>
+                    </div>
+                `;
+            }
         }
     </script>
 </body>

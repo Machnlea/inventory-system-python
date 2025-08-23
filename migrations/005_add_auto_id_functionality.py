@@ -3,7 +3,7 @@
 数据库迁移脚本：添加设备自动编号功能
 1. 在部门表中添加代码字段
 2. 在类别表中添加代码字段  
-3. 在设备表中添加厂内编号字段
+3. 在设备表中添加内部编号字段
 4. 将serial_number重命名为manufacturer_id（出厂编号）
 """
 
@@ -64,9 +64,9 @@ def migrate_database():
         columns = cursor.fetchall()
         column_names = [col[1] for col in columns]
         
-        # 4. 添加厂内编号字段
+        # 4. 添加内部编号字段
         if 'internal_id' not in column_names:
-            print("添加厂内编号字段...")
+            print("添加内部编号字段...")
             cursor.execute("ALTER TABLE equipments ADD COLUMN internal_id VARCHAR(20)")
         
         # 5. 重命名serial_number为manufacturer_id（出厂编号）
@@ -75,8 +75,8 @@ def migrate_database():
             # SQLite不支持直接重命名列，需要创建新表
             create_new_equipment_table(cursor)
         
-        # 6. 为现有设备生成厂内编号
-        print("为现有设备生成厂内编号...")
+        # 6. 为现有设备生成内部编号
+        print("为现有设备生成内部编号...")
         equipments = cursor.execute("""
             SELECT e.id, e.name, d.code as dept_code, c.code as cat_code 
             FROM equipments e
@@ -87,12 +87,12 @@ def migrate_database():
         
         for eq_id, eq_name, dept_code, cat_code in equipments:
             if dept_code and cat_code:
-                # 生成厂内编号
+                # 生成内部编号
                 internal_id = generate_internal_id(cursor, dept_code, cat_code)
                 cursor.execute("UPDATE equipments SET internal_id = ? WHERE id = ?", (internal_id, eq_id))
-                print(f"  设备 '{eq_name}' 厂内编号: {internal_id}")
+                print(f"  设备 '{eq_name}' 内部编号: {internal_id}")
         
-        # 7. 设置厂内编号为唯一约束
+        # 7. 设置内部编号为唯一约束
         cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_equipments_internal_id ON equipments(internal_id)")
         
         conn.commit()
@@ -137,7 +137,7 @@ def create_new_equipment_table(cursor):
             status VARCHAR(20) DEFAULT '在用',
             status_change_date DATE,
             notes TEXT,
-            internal_id VARCHAR(20),  -- 厂内编号
+            internal_id VARCHAR(20),  -- 内部编号
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME,
             FOREIGN KEY (department_id) REFERENCES departments (id),
@@ -220,7 +220,7 @@ def generate_category_code(cat_name):
     return cat_name[:2].upper() if len(cat_name) >= 2 else cat_name.upper()
 
 def generate_internal_id(cursor, dept_code, cat_code):
-    """生成厂内编号：DD-CC-NNN"""
+    """生成内部编号：DD-CC-NNN"""
     # 查询该部门+类别的最大序号
     cursor.execute("""
         SELECT MAX(CAST(SUBSTR(internal_id, 7, 3) AS INTEGER)) as max_seq

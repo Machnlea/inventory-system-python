@@ -700,7 +700,7 @@ async def export_reports(
         data = []
         for equipment in equipments:
             data.append({
-                "厂内编号": equipment.internal_id or "",
+                "内部编号": equipment.internal_id or "",
                 "出厂编号": equipment.manufacturer_id or "",
                 "设备名称": equipment.name or "",
                 "型号规格": equipment.model or "",

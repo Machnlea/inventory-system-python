@@ -78,23 +78,20 @@ def generate_category_code(category_name: str) -> str:
     # 如果无法生成，返回默认代码
     return "OT"  # Other
 
-def generate_internal_id(db: Session, department_id: int, category_id: int, equipment_name: str = None) -> str:
+def generate_internal_id(db: Session, category_id: int, equipment_name: str = None) -> str:
     """
-    生成内部编号 (DD-CC-TT-NNN格式)
-    DD: 部门代码 (2位)
+    生成内部编号 (CC-TT-NNN格式)
     CC: 类别代码 (3位)
     TT: 设备类型编号 (格式: 类别代码-序列号)
-    NNN: 部门内该类型设备的序列号 (001-999)
+    NNN: 该类型设备的序列号 (001-999)
     """
-    # 获取部门和类别信息
-    department = db.query(Department).filter(Department.id == department_id).first()
+    # 获取类别信息
     category = db.query(EquipmentCategory).filter(EquipmentCategory.id == category_id).first()
     
-    if not department or not category:
-        raise ValueError("找不到指定的部门或类别")
+    if not category:
+        raise ValueError("找不到指定的类别")
     
-    # 生成部门和类别代码
-    dept_code = department.code if department.code else generate_department_code(department.name)
+    # 生成类别代码
     cat_code = category.code if category.code else generate_category_code(category.name)
     
     # 获取设备类型编号
@@ -109,10 +106,10 @@ def generate_internal_id(db: Session, department_id: int, category_id: int, equi
         # 如果没有提供设备名称，使用默认类型编号
         simplified_type_code = "99"
     
-    # 查询该部门-类别-设备类型组合下的最大序列号
-    pattern = f"{dept_code}-{cat_code}-{simplified_type_code}-(\\d{{3}})"
+    # 查询该类别-设备类型组合下的最大序列号
+    pattern = f"{cat_code}-{simplified_type_code}-(\\d{{3}})"
     result = db.query(Equipment).filter(
-        Equipment.internal_id.like(f"{dept_code}-{cat_code}-{simplified_type_code}-%")
+        Equipment.internal_id.like(f"{cat_code}-{simplified_type_code}-%")
     ).all()
     
     # 提取现有的序列号
@@ -133,38 +130,37 @@ def generate_internal_id(db: Session, department_id: int, category_id: int, equi
     
     # 确保序列号不超过999
     if next_number > 999:
-        raise ValueError(f"部门 {dept_code}-{cat_code}-{simplified_type_code} 下的设备数量已达到上限(999)")
+        raise ValueError(f"类别 {cat_code}-{simplified_type_code} 下的设备数量已达到上限(999)")
     
     # 格式化序列号为3位数字
     sequence = f"{next_number:03d}"
     
     # 返回完整的内部编号
-    return f"{dept_code}-{cat_code}-{simplified_type_code}-{sequence}"
+    return f"{cat_code}-{simplified_type_code}-{sequence}"
 
 def validate_internal_id(internal_id: str) -> bool:
     """
     验证内部编号格式是否正确
-    新格式: DD-CC-TT-NNN (如: FF-TEM-TEM-1-001)
+    新格式: CC-TT-NNN (如: TIM-1-001)
     """
-    pattern = r'^[A-Z0-9]{2}-[A-Z0-9]{3}-[A-Z0-9]{2,}-\d{3}$'
+    pattern = r'^[A-Z0-9]{3}-[A-Z0-9]+-\d{3}$'
     return bool(re.match(pattern, internal_id))
 
 def parse_internal_id(internal_id: str) -> dict:
     """
-    解析内部编号，返回部门代码、类别代码、设备类型编号和序列号
+    解析内部编号，返回类别代码、设备类型编号和序列号
     """
     if not validate_internal_id(internal_id):
         raise ValueError("内部编号格式不正确")
     
     parts = internal_id.split('-')
-    if len(parts) != 4:
+    if len(parts) != 3:
         raise ValueError("内部编号格式不正确")
     
     return {
-        'department_code': parts[0],
-        'category_code': parts[1],
-        'equipment_type_code': parts[2],
-        'sequence_number': int(parts[3])
+        'category_code': parts[0],
+        'equipment_type_code': parts[1],
+        'sequence_number': int(parts[2])
     }
 
 def get_next_sequence_number(db: Session, department_code: str, category_code: str) -> int:

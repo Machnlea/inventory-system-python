@@ -373,7 +373,7 @@
                                     <input type="checkbox" id="selectAll" class="rounded border-gray-300" onchange="toggleSelectAll()">
                                 </th>
                                 <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">设备信息</th>
-                                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">厂内编号</th>
+                                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">内部编号</th>
                                 <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">出厂编号</th>
                                 <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">使用部门</th>
                                 <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">有效期至</th>
@@ -477,7 +477,7 @@
                         <ul class="text-sm text-blue-800 space-y-1">
                             <li>• 请先下载导入模板，按照模板格式填写数据</li>
                             <li>• 支持Excel格式(.xlsx, .xls)</li>
-                            <li>• 必填字段：使用部门、设备类别、计量器具名称、型号/规格、检定周期、检定(校准)日期、厂内编号、出厂编号、检定方式</li>
+                            <li>• 必填字段：使用部门、设备类别、计量器具名称、型号/规格、检定周期、检定(校准)日期、内部编号、出厂编号、检定方式</li>
                             <li>• 检定周期可选值：6个月、12个月、24个月、36个月、随坏随换</li>
                             <li>• 随坏随换设备无需填写检定日期</li>
                             <li>• 外检设备需要填写证书编号、检定结果、检定机构、证书形式</li>
@@ -517,7 +517,7 @@
                 <div class="mb-6">
                     <label class="flex items-center">
                         <input type="checkbox" id="overwriteExisting" class="mr-2">
-                        <span class="text-sm text-gray-700">覆盖已存在的设备数据（根据厂内编号）</span>
+                        <span class="text-sm text-gray-700">覆盖已存在的设备数据（根据内部编号）</span>
                     </label>
                 </div>
                 
@@ -570,7 +570,7 @@
                         <div class="bg-gray-50 px-4 py-3 border-b border-gray-200">
                             <div class="grid grid-cols-12 gap-4 text-sm font-medium text-gray-700">
                                 <div class="col-span-1">行号</div>
-                                <div class="col-span-3">厂内编号</div>
+                                <div class="col-span-3">内部编号</div>
                                 <div class="col-span-3">设备名称</div>
                                 <div class="col-span-2">状态</div>
                                 <div class="col-span-3">说明</div>

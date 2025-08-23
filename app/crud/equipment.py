@@ -5,6 +5,10 @@ from app.schemas.schemas import EquipmentCreate, EquipmentUpdate, EquipmentFilte
 from datetime import date, timedelta, datetime
 from typing import List, Optional
 
+def get_equipments_by_category(db: Session, category_id: int) -> List[Equipment]:
+    """获取指定类别下的所有设备"""
+    return db.query(Equipment).filter(Equipment.category_id == category_id).all()
+
 def calculate_valid_until(calibration_date: date, calibration_cycle: str) -> date:
     """计算有效期至"""
     if calibration_cycle == "随坏随换":

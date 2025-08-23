@@ -80,6 +80,21 @@ def assign_category_to_user(db: Session, user_id: int, category_id: int):
         if category_existing:
             raise ValueError(f"设备类别已被其他用户管理，不能重复分配")
         
+        # 检查该类别下是否有器具已被其他用户通过器具权限管理
+        from .equipment import get_equipments_by_category
+        category_equipments = get_equipments_by_category(db, category_id)
+        
+        for equipment in category_equipments:
+            # 检查该器具是否已被其他用户管理
+            equipment_existing = db.query(UserEquipmentPermission).filter(
+                UserEquipmentPermission.category_id == category_id,
+                UserEquipmentPermission.equipment_name == equipment.name,
+                UserEquipmentPermission.user_id != user_id
+            ).first()
+            
+            if equipment_existing:
+                raise ValueError(f"该类别下的器具 '{equipment.name}' 已被用户 '{equipment_existing.user.username}' 通过器具权限管理，无法分配整个类别权限")
+        
         # 添加新的设备类别权限
         user_category = UserCategory(user_id=user_id, category_id=category_id)
         db.add(user_category)
@@ -111,6 +126,21 @@ def update_user_categories(db: Session, user_id: int, category_ids: List[int]):
         category_existing = db.query(UserCategory).filter(UserCategory.category_id == category_id).first()
         if category_existing:
             raise ValueError(f"设备类别已被其他用户管理，不能重复分配")
+        
+        # 检查该类别下是否有器具已被其他用户通过器具权限管理
+        from .equipment import get_equipments_by_category
+        category_equipments = get_equipments_by_category(db, category_id)
+        
+        for equipment in category_equipments:
+            # 检查该器具是否已被其他用户管理
+            equipment_existing = db.query(UserEquipmentPermission).filter(
+                UserEquipmentPermission.category_id == category_id,
+                UserEquipmentPermission.equipment_name == equipment.name,
+                UserEquipmentPermission.user_id != user_id
+            ).first()
+            
+            if equipment_existing:
+                raise ValueError(f"该类别下的器具 '{equipment.name}' 已被用户 '{equipment_existing.user.username}' 通过器具权限管理，无法分配整个类别权限")
         
         user_category = UserCategory(user_id=user_id, category_id=category_id)
         db.add(user_category)

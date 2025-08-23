@@ -209,14 +209,30 @@ def assign_equipment_permission(user_id: int, permission_data: UserEquipmentPerm
     from app.models.models import UserEquipmentPermission as UserEquipmentPermissionModel
     
     try:
-        # 检查该器具是否已被其他用户管理
-        existing = db.query(UserEquipmentPermissionModel).filter(
+        # 检查该器具是否已被其他用户管理（包括器具权限和类别权限）
+        
+        # 1. 检查其他用户的器具权限
+        existing_equipment = db.query(UserEquipmentPermissionModel).filter(
             UserEquipmentPermissionModel.category_id == permission_data.category_id,
             UserEquipmentPermissionModel.equipment_name == permission_data.equipment_name
         ).first()
         
-        if existing and existing.user_id != user_id:
-            raise ValueError(f"器具 '{permission_data.equipment_name}' 已被其他用户管理")
+        if existing_equipment and existing_equipment.user_id != user_id:
+            raise ValueError(f"器具 '{permission_data.equipment_name}' 已被用户 '{existing_equipment.user.username}' 通过器具权限管理")
+        
+        # 2. 检查其他用户的类别权限（该类别下的所有器具）
+        from app.models.models import UserCategory, EquipmentCategory
+        existing_category = db.query(UserCategory).filter(
+            UserCategory.category_id == permission_data.category_id,
+            UserCategory.user_id != user_id
+        ).first()
+        
+        if existing_category:
+            category_info = db.query(EquipmentCategory).filter(
+                EquipmentCategory.id == permission_data.category_id
+            ).first()
+            if category_info:
+                raise ValueError(f"器具 '{permission_data.equipment_name}' 所属的类别 '{category_info.name}' 已被用户 '{existing_category.user.username}' 通过类别权限管理")
         
         # 删除用户对该器具的现有权限
         db.query(UserEquipmentPermissionModel).filter(
@@ -262,14 +278,30 @@ def update_user_equipment_permissions(user_id: int, permissions_data: dict,
         
         # 添加新的权限
         for equipment_name in equipment_names:
-            # 检查该器具是否已被其他用户管理
-            existing = db.query(UserEquipmentPermissionModel).filter(
+            # 检查该器具是否已被其他用户管理（包括器具权限和类别权限）
+            
+            # 1. 检查其他用户的器具权限
+            existing_equipment = db.query(UserEquipmentPermissionModel).filter(
                 UserEquipmentPermissionModel.category_id == category_id,
                 UserEquipmentPermissionModel.equipment_name == equipment_name
             ).first()
             
-            if existing and existing.user_id != user_id:
-                raise ValueError(f"器具 '{equipment_name}' 已被其他用户管理")
+            if existing_equipment and existing_equipment.user_id != user_id:
+                raise ValueError(f"器具 '{equipment_name}' 已被用户 '{existing_equipment.user.username}' 通过器具权限管理")
+            
+            # 2. 检查其他用户的类别权限（该类别下的所有器具）
+            from app.models.models import UserCategory, EquipmentCategory
+            existing_category = db.query(UserCategory).filter(
+                UserCategory.category_id == category_id,
+                UserCategory.user_id != user_id
+            ).first()
+            
+            if existing_category:
+                category_info = db.query(EquipmentCategory).filter(
+                    EquipmentCategory.id == category_id
+                ).first()
+                if category_info:
+                    raise ValueError(f"器具 '{equipment_name}' 所属的类别 '{category_info.name}' 已被用户 '{existing_category.user.username}' 通过类别权限管理")
             
             permission = UserEquipmentPermissionModel(
                 user_id=user_id,

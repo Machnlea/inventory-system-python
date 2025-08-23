@@ -781,6 +781,49 @@
             }
         }
 
+        // 加载用户权限信息并更新显示
+        async function loadUserPermissions(userId) {
+            try {
+                // 并行加载类别权限和器具权限
+                const [categoriesResponse, equipmentResponse] = await Promise.all([
+                    fetch(`/api/users/${userId}/categories`, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                            'Content-Type': 'application/json'
+                        }
+                    }),
+                    fetch(`/api/users/${userId}/equipment-permissions`, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                ]);
+
+                if (!categoriesResponse.ok || !equipmentResponse.ok) {
+                    throw new Error('Failed to load user permissions');
+                }
+
+                const userCategories = await categoriesResponse.json();
+                const equipmentPermissions = await equipmentResponse.json();
+                
+                // 更新权限显示
+                updateUserPermissionsDisplay(userId, userCategories, equipmentPermissions);
+                
+                // 更新删除按钮状态
+                updateUserDeleteButton(userId);
+                
+            } catch (error) {
+                console.error('加载用户权限失败:', error);
+                const categoryElement = document.getElementById(`user-categories-${userId}`);
+                if (categoryElement) {
+                    categoryElement.innerHTML = '<span class="text-red-500">权限加载失败</span>';
+                }
+            }
+        }
+
         // 更新用户权限显示（类别权限 + 器具权限）
         function updateUserPermissionsDisplay(userId, userCategories, equipmentPermissions) {
             const categoryElement = document.getElementById(`user-categories-${userId}`);
@@ -1772,6 +1815,15 @@
 
                 showNotification('用户器具权限更新成功', 'success');
                 
+                // 重新加载该用户的权限显示
+                await loadUserPermissions(managingEquipmentPermissionsUserId);
+                
+                // 如果详情面板是展开状态，也更新详情内容
+                const detailsRow = document.getElementById(`permission-details-${managingEquipmentPermissionsUserId}`);
+                if (!detailsRow.classList.contains('hidden')) {
+                    await loadPermissionDetails(managingEquipmentPermissionsUserId);
+                }
+                
                 // 等待一小段时间确保显示更新后再关闭模态框
                 setTimeout(() => {
                     closeUserEquipmentPermissionsModal();
@@ -1830,8 +1882,14 @@
 
                 showNotification('用户设备类别权限更新成功', 'success');
                 
-                // 重新加载该用户的设备类别显示
-                await loadUserCategories(managingCategoriesUserId);
+                // 重新加载该用户的权限显示（类别+器具）
+                await loadUserPermissions(managingCategoriesUserId);
+                
+                // 如果详情面板是展开状态，也更新详情内容
+                const detailsRow = document.getElementById(`permission-details-${managingCategoriesUserId}`);
+                if (!detailsRow.classList.contains('hidden')) {
+                    await loadPermissionDetails(managingCategoriesUserId);
+                }
                 
                 // 等待一小段时间确保显示更新后再关闭模态框
                 setTimeout(() => {

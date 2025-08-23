@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户设备权限管理</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <nav class="col-md-2 d-none d-md-block bg-light sidebar">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#" onclick="showUserManagement()">
+                                <i class="fas fa-users"></i> 用户权限管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" onclick="showCategoryManagement()">
+                                <i class="fas fa-tags"></i> 设备类别管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" onclick="showEquipmentAssignment()">
+                                <i class="fas fa-tools"></i> 设备分配
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">用户设备权限管理</h1>
+                </div>
+
+                <!-- 用户权限管理 -->
+                <div id="userManagement" class="content-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">用户权限分配</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>选择用户</h6>
+                                    <select id="userSelect" class="form-select" onchange="loadUserPermissions()">
+                                        <option value="">请选择用户</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>可分配的设备类别</h6>
+                                    <div id="categoryList" class="border rounded p-3" style="height: 200px; overflow-y: auto;">
+                                        <!-- 动态加载类别 -->
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <button class="btn btn-primary" onclick="saveUserPermissions()">
+                                        <i class="fas fa-save"></i> 保存权限
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">当前权限状态</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="permissionsList">
+                                <!-- 动态加载权限列表 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 设备类别管理 -->
+                <div id="categoryManagement" class="content-section" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">设备类别列表</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="categoryTable">
+                                <!-- 动态加载类别表格 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 设备分配 -->
+                <div id="equipmentAssignment" class="content-section" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">设备分配管理</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <h6>选择用户</h6>
+                                    <select id="equipmentUserSelect" class="form-select" onchange="loadUserEquipments()">
+                                        <option value="">请选择用户</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-8">
+                                    <h6>可管理的设备</h6>
+                                    <div id="userEquipmentList" class="border rounded p-3" style="height: 300px; overflow-y: auto;">
+                                        <!-- 动态加载设备列表 -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 全局变量
+        let currentUser = null;
+        let users = [];
+        let categories = [];
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUsers();
+            loadCategories();
+            loadAllPermissions();
+        });
+
+        // 加载用户列表
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/users/');
+                users = await response.json();
+                
+                const userSelect = document.getElementById('userSelect');
+                const equipmentUserSelect = document.getElementById('equipmentUserSelect');
+                
+                userSelect.innerHTML = '<option value="">请选择用户</option>';
+                equipmentUserSelect.innerHTML = '<option value="">请选择用户</option>';
+                
+                users.forEach(user => {
+                    userSelect.innerHTML += `<option value="${user.id}">${user.username}</option>`;
+                    equipmentUserSelect.innerHTML += `<option value="${user.id}">${user.username}</option>`;
+                });
+            } catch (error) {
+                console.error('加载用户失败:', error);
+            }
+        }
+
+        // 加载设备类别
+        async function loadCategories() {
+            try {
+                const response = await fetch('/api/categories/');
+                categories = await response.json();
+                
+                const categoryList = document.getElementById('categoryList');
+                categoryList.innerHTML = '';
+                
+                categories.forEach(category => {
+                    categoryList.innerHTML += `
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="${category.id}" id="category_${category.id}">
+                            <label class="form-check-label" for="category_${category.id}">
+                                ${category.name} (${category.category_code})
+                                <br><small class="text-muted">${category.description}</small>
+                            </label>
+                        </div>
+                    `;
+                });
+            } catch (error) {
+                console.error('加载类别失败:', error);
+            }
+        }
+
+        // 加载用户权限
+        async function loadUserPermissions() {
+            const userId = document.getElementById('userSelect').value;
+            if (!userId) return;
+            
+            currentUser = users.find(u => u.id == userId);
+            
+            try {
+                const response = await fetch(`/api/users/${userId}/categories`);
+                const userCategories = await response.json();
+                
+                // 清除所有选择
+                document.querySelectorAll('#categoryList input[type="checkbox"]').forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+                
+                // 设置用户已有的权限
+                userCategories.forEach(uc => {
+                    const checkbox = document.getElementById(`category_${uc.category_id}`);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                    }
+                });
+            } catch (error) {
+                console.error('加载用户权限失败:', error);
+            }
+        }
+
+        // 保存用户权限
+        async function saveUserPermissions() {
+            if (!currentUser) {
+                alert('请先选择用户');
+                return;
+            }
+            
+            const selectedCategories = Array.from(document.querySelectorAll('#categoryList input[type="checkbox"]:checked'))
+                .map(checkbox => parseInt(checkbox.value));
+            
+            try {
+                const response = await fetch(`/api/users/${currentUser.id}/categories`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ category_ids: selectedCategories })
+                });
+                
+                if (response.ok) {
+                    alert('权限保存成功');
+                    loadAllPermissions();
+                } else {
+                    alert('权限保存失败');
+                }
+            } catch (error) {
+                console.error('保存权限失败:', error);
+                alert('权限保存失败');
+            }
+        }
+
+        // 加载所有权限状态
+        async function loadAllPermissions() {
+            try {
+                const response = await fetch('/api/users/');
+                const allUsers = await response.json();
+                
+                const permissionsList = document.getElementById('permissionsList');
+                permissionsList.innerHTML = '';
+                
+                for (const user of allUsers) {
+                    const userCategoriesResponse = await fetch(`/api/users/${user.id}/categories`);
+                    const userCategories = await userCategoriesResponse.json();
+                    
+                    const categoryNames = userCategories.map(uc => uc.category.name).join(', ');
+                    
+                    permissionsList.innerHTML += `
+                        <div class="row mb-2">
+                            <div class="col-md-3">
+                                <strong>${user.username}</strong>
+                            </div>
+                            <div class="col-md-7">
+                                ${categoryNames || '无权限'}
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-sm btn-outline-primary" onclick="editUser(${user.id})">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('加载权限状态失败:', error);
+            }
+        }
+
+        // 编辑用户
+        function editUser(userId) {
+            document.getElementById('userSelect').value = userId;
+            loadUserPermissions();
+        }
+
+        // 显示不同的管理页面
+        function showUserManagement() {
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.style.display = 'none';
+            });
+            document.getElementById('userManagement').style.display = 'block';
+        }
+
+        function showCategoryManagement() {
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.style.display = 'none';
+            });
+            document.getElementById('categoryManagement').style.display = 'block';
+            loadCategoryTable();
+        }
+
+        function showEquipmentAssignment() {
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.style.display = 'none';
+            });
+            document.getElementById('equipmentAssignment').style.display = 'block';
+        }
+
+        // 加载类别表格
+        async function loadCategoryTable() {
+            try {
+                const response = await fetch('/api/categories/');
+                const categories = await response.json();
+                
+                const categoryTable = document.getElementById('categoryTable');
+                categoryTable.innerHTML = `
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>类别名称</th>
+                                <th>类别代码</th>
+                                <th>描述</th>
+                                <th>预定义设备</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${categories.map(category => `
+                                <tr>
+                                    <td>${category.name}</td>
+                                    <td>${category.category_code}</td>
+                                    <td>${category.description || ''}</td>
+                                    <td>${category.predefined_names ? category.predefined_names.slice(0, 3).join(', ') + '...' : ''}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-info" onclick="viewCategory(${category.id})">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } catch (error) {
+                console.error('加载类别表格失败:', error);
+            }
+        }
+
+        // 加载用户设备
+        async function loadUserEquipments() {
+            const userId = document.getElementById('equipmentUserSelect').value;
+            if (!userId) return;
+            
+            try {
+                const response = await fetch(`/api/equipments/`);
+                const equipments = await response.json();
+                
+                const userEquipmentList = document.getElementById('userEquipmentList');
+                userEquipmentList.innerHTML = '';
+                
+                // 这里应该根据用户权限过滤设备，暂时显示所有设备
+                equipments.forEach(equipment => {
+                    userEquipmentList.innerHTML += `
+                        <div class="card mb-2">
+                            <div class="card-body">
+                                <h6 class="card-title">${equipment.name}</h6>
+                                <p class="card-text">
+                                    编号: ${equipment.internal_id}<br>
+                                    类别: ${equipment.category.name}<br>
+                                    状态: ${equipment.status}
+                                </p>
+                            </div>
+                        </div>
+                    `;
+                });
+            } catch (error) {
+                console.error('加载用户设备失败:', error);
+            }
+        }
+
+        // 查看类别详情
+        function viewCategory(categoryId) {
+            const category = categories.find(c => c.id == categoryId);
+            if (category) {
+                alert(`类别: ${category.name}\n代码: ${category.category_code}\n描述: ${category.description}\n预定义设备: ${category.predefined_names ? category.predefined_names.join(', ') : '无'}`);
+            }
+        }
+    </script>
+</body>
+</html>

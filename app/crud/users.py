@@ -75,6 +75,12 @@ def assign_category_to_user(db: Session, user_id: int, category_id: int):
     ).first()
     
     if not existing:
+        # 检查该设备类别是否已被其他用户管理
+        category_existing = db.query(UserCategory).filter(UserCategory.category_id == category_id).first()
+        if category_existing:
+            raise ValueError(f"设备类别已被其他用户管理，不能重复分配")
+        
+        # 添加新的设备类别权限
         user_category = UserCategory(user_id=user_id, category_id=category_id)
         db.add(user_category)
         db.commit()
@@ -96,11 +102,16 @@ def remove_category_from_user(db: Session, user_id: int, category_id: int):
 
 def update_user_categories(db: Session, user_id: int, category_ids: List[int]):
     """更新用户的设备类别权限"""
-    # 删除现有权限
+    # 删除用户现有的所有权限
     db.query(UserCategory).filter(UserCategory.user_id == user_id).delete()
     
-    # 添加新权限
+    # 添加新的权限，但要检查每个类别是否已被其他用户管理
     for category_id in category_ids:
+        # 检查该设备类别是否已被其他用户管理
+        category_existing = db.query(UserCategory).filter(UserCategory.category_id == category_id).first()
+        if category_existing:
+            raise ValueError(f"设备类别已被其他用户管理，不能重复分配")
+        
         user_category = UserCategory(user_id=user_id, category_id=category_id)
         db.add(user_category)
     

@@ -71,20 +71,57 @@ def get_user_categories(user_id: int,
                        current_user: User = Depends(get_current_admin_user)):
     return users.get_user_categories(db, user_id=user_id)
 
+@router.get("/categories/managed-status")
+def get_categories_managed_status(db: Session = Depends(get_db),
+                                 current_user: User = Depends(get_current_admin_user)):
+    """获取所有设备类别的管理状态"""
+    from app.models.models import EquipmentCategory, UserCategory as UserCategoryModel
+    
+    categories = db.query(EquipmentCategory).all()
+    managed_status = []
+    
+    for category in categories:
+        # 检查该类别是否被管理
+        user_category = db.query(UserCategoryModel).filter(UserCategoryModel.category_id == category.id).first()
+        if user_category:
+            managed_status.append({
+                "category_id": category.id,
+                "category_name": category.name,
+                "is_managed": True,
+                "managed_by_user_id": user_category.user_id,
+                "managed_by_username": user_category.user.username
+            })
+        else:
+            managed_status.append({
+                "category_id": category.id,
+                "category_name": category.name,
+                "is_managed": False,
+                "managed_by_user_id": None,
+                "managed_by_username": None
+            })
+    
+    return managed_status
+
 @router.post("/{user_id}/categories/{category_id}")
 def assign_category_to_user(user_id: int, category_id: int,
                            db: Session = Depends(get_db),
                            current_user: User = Depends(get_current_admin_user)):
-    user_category = users.assign_category_to_user(db, user_id=user_id, category_id=category_id)
-    return {"message": "Category assigned successfully", "user_category": user_category}
+    try:
+        user_category = users.assign_category_to_user(db, user_id=user_id, category_id=category_id)
+        return {"message": "Category assigned successfully", "user_category": user_category}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.put("/{user_id}/categories")
 def update_user_categories(user_id: int, category_data: dict,
                           db: Session = Depends(get_db),
                           current_user: User = Depends(get_current_admin_user)):
-    category_ids = category_data.get("category_ids", [])
-    success = users.update_user_categories(db, user_id=user_id, category_ids=category_ids)
-    if success:
-        return {"message": "User categories updated successfully"}
-    else:
-        raise HTTPException(status_code=400, detail="Failed to update user categories")
+    try:
+        category_ids = category_data.get("category_ids", [])
+        success = users.update_user_categories(db, user_id=user_id, category_ids=category_ids)
+        if success:
+            return {"message": "User categories updated successfully"}
+        else:
+            raise HTTPException(status_code=400, detail="Failed to update user categories")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))

@@ -110,6 +110,10 @@ async def test_settings(request: Request):
 async def test_api_fix(request: Request):
     return templates.TemplateResponse("test_api_fix.html", {"request": request})
 
+@app.get("/user-permissions", response_class=HTMLResponse)
+async def user_permissions(request: Request):
+    return templates.TemplateResponse("user_permission_management.html", {"request": request})
+
 @app.get("/test_page_size_feature", response_class=HTMLResponse)
 async def test_page_size_feature(request: Request):
     return templates.TemplateResponse("test_page_size_feature.html", {"request": request})

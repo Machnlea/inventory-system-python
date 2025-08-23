@@ -401,6 +401,7 @@
                     <div class="border border-gray-200 rounded-lg p-3 max-h-64 overflow-y-auto bg-gray-50" id="categories-checkboxes">
                         <!-- 动态加载的设备类别复选框 -->
                     </div>
+                    <p class="text-xs text-gray-500 mt-2">注意：每个设备类别只能由一个用户管理</p>
                 </div>
                 
                 <div class="flex justify-end space-x-3">
@@ -1022,20 +1023,38 @@
             document.getElementById('category-user-name').textContent = username;
             
             try {
-                // 加载用户当前的设备类别
-                const response = await fetch(`/api/users/${userId}/categories`, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
+                // 并行加载用户当前的设备类别和所有类别的管理状态
+                const [userCategoriesResponse, managedStatusResponse] = await Promise.all([
+                    fetch(`/api/users/${userId}/categories`, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                            'Content-Type': 'application/json'
+                        }
+                    }),
+                    fetch('/api/users/categories/managed-status', {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                ]);
 
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                if (!userCategoriesResponse.ok) {
+                    throw new Error(`HTTP ${userCategoriesResponse.status}: ${userCategoriesResponse.statusText}`);
                 }
 
-                const userCategories = await response.json();
+                if (!managedStatusResponse.ok) {
+                    throw new Error(`HTTP ${managedStatusResponse.status}: ${managedStatusResponse.statusText}`);
+                }
+
+                const userCategories = await userCategoriesResponse.json();
+                const managedStatus = await managedStatusResponse.json();
+                
+                // 保存管理状态到全局变量
+                window.categoriesManagedStatus = managedStatus;
+                
                 renderCategoriesCheckboxes(userCategories);
                 document.getElementById('userCategoriesModal').classList.add('show');
                 
@@ -1058,16 +1077,20 @@
             
             container.innerHTML = allCategories.map(category => {
                 const isChecked = userCategoryIds.includes(category.id);
+                // 检查该类别是否已被其他用户管理
+                const isManagedByOthers = isCategoryManagedByOtherUser(category.id, userCategoryIds);
                 return `
-                    <label class="flex items-center space-x-3 p-2 hover:bg-gray-100 rounded cursor-pointer ${isChecked ? 'bg-blue-50 border-l-4 border-blue-500' : ''}">
+                    <label class="flex items-center space-x-3 p-2 hover:bg-gray-100 rounded cursor-pointer ${isChecked ? 'bg-blue-50 border-l-4 border-blue-500' : ''} ${isManagedByOthers ? 'opacity-50 cursor-not-allowed' : ''}">
                         <input type="checkbox" 
                                class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-2" 
                                value="${category.id}"
                                ${isChecked ? 'checked' : ''}
+                               ${isManagedByOthers ? 'disabled' : ''}
                                id="category-${category.id}"
                                onchange="updateCategoryStyle(${category.id}, this.checked)">
                         <div class="flex-1">
                             <span class="text-sm font-medium ${isChecked ? 'text-blue-900' : 'text-gray-700'}">${category.name}</span>
+                            ${isManagedByOthers ? '<span class="text-xs text-red-500 ml-2">(已被管理)</span>' : ''}
                         </div>
                     </label>
                 `;
@@ -1075,6 +1098,17 @@
             
             // 更新权限统计
             updatePermissionStats(userCategories.length);
+        }
+
+        // 检查类别是否被其他用户管理
+        function isCategoryManagedByOtherUser(categoryId, currentUserCategoryIds) {
+            if (!window.categoriesManagedStatus) return false;
+            
+            const categoryStatus = window.categoriesManagedStatus.find(status => status.category_id === categoryId);
+            if (!categoryStatus) return false;
+            
+            // 如果该类别被管理，且不是由当前用户管理
+            return categoryStatus.is_managed && !currentUserCategoryIds.includes(categoryId);
         }
 
         // 更新类别样式
@@ -1126,7 +1160,7 @@
 
         // 全选设备类别
         function selectAllCategories() {
-            const checkboxes = document.querySelectorAll('#categories-checkboxes input[type="checkbox"]');
+            const checkboxes = document.querySelectorAll('#categories-checkboxes input[type="checkbox"]:not(:disabled)');
             
             checkboxes.forEach(checkbox => {
                 checkbox.checked = true;
@@ -1176,7 +1210,8 @@
                 });
 
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
                 }
 
                 showNotification('用户设备类别权限更新成功', 'success');

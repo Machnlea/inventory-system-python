@@ -2,7 +2,17 @@ from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, RedirectResponse
-from app.api import users, auth, equipment, departments, dashboard, audit_logs, categories, import_export, attachments, settings, reports
+from app.api.users import router as users_router
+from app.api.auth import router as auth_router
+from app.api.equipment import router as equipment_router
+from app.api.departments import router as departments_router
+from app.api.dashboard import router as dashboard_router
+from app.api.audit_logs import router as audit_logs_router
+from app.api.categories import router as categories_router
+from app.api.import_export import router as import_export_router
+from app.api.attachments import router as attachments_router
+from app.api.settings import router as settings_router
+from app.api.reports import router as reports_router
 from app.db.database import engine
 from app.models import models
 
@@ -23,17 +33,17 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
 
 # 路由
-app.include_router(auth.router, prefix="/api/auth", tags=["认证"])
-app.include_router(users.router, prefix="/api/users", tags=["用户管理"])
-app.include_router(categories.router, prefix="/api/categories", tags=["设备类别管理"])
-app.include_router(equipment.router, prefix="/api/equipment", tags=["设备管理"])
-app.include_router(departments.router, prefix="/api/departments", tags=["部门管理"])
-app.include_router(dashboard.router, prefix="/api/dashboard", tags=["仪表盘"])
-app.include_router(audit_logs.router, prefix="/api/audit", tags=["操作日志"])
-app.include_router(import_export.router, prefix="/api/import", tags=["数据导入导出"])
-app.include_router(attachments.router, prefix="/api/attachments", tags=["附件管理"])
-app.include_router(settings.router, prefix="/api/settings", tags=["系统设置"])
-app.include_router(reports.router, prefix="/api/reports", tags=["统计报表"])
+app.include_router(auth_router, prefix="/api/auth", tags=["认证"])
+app.include_router(users_router, prefix="/api/users", tags=["用户管理"])
+app.include_router(categories_router, prefix="/api/categories", tags=["设备类别管理"])
+app.include_router(equipment_router, prefix="/api/equipment", tags=["设备管理"])
+app.include_router(departments_router, prefix="/api/departments", tags=["部门管理"])
+app.include_router(dashboard_router, prefix="/api/dashboard", tags=["仪表盘"])
+app.include_router(audit_logs_router, prefix="/api/audit", tags=["操作日志"])
+app.include_router(import_export_router, prefix="/api/import", tags=["数据导入导出"])
+app.include_router(attachments_router, prefix="/api/attachments", tags=["附件管理"])
+app.include_router(settings_router, prefix="/api/settings", tags=["系统设置"])
+app.include_router(reports_router, prefix="/api/reports", tags=["统计报表"])
 
 @app.get("/favicon.ico")
 async def favicon():

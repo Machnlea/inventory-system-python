@@ -1,4 +1,3 @@
-from sqlalchemy.orm import Session
 from app.db.database import SessionLocal, engine
 from app.models import models
 from app.crud import users, departments, categories

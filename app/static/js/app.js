@@ -2742,7 +2742,6 @@ async function loadCategoriesSection() {
 async function loadCategoriesList() {
     try {
         const categories = await apiCall('/categories/with-counts');
-        console.log('Categories response:', categories); // 调试信息
         if (categories && Array.isArray(categories)) {
             renderCategoriesTable(categories);
         } else {
@@ -2959,7 +2958,6 @@ async function loadDepartmentsSection() {
 async function loadDepartmentsList() {
     try {
         const departments = await apiCall('/departments/with-counts');
-        console.log('Departments response:', departments); // 调试信息
         if (departments && Array.isArray(departments)) {
             renderDepartmentsTable(departments);
         } else {

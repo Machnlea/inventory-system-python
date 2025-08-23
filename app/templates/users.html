@@ -53,7 +53,7 @@
         .modal {
             display: none;
             position: fixed;
-            z-index: 1000;
+            z-index: 1000 !important;
             left: 0;
             top: 0;
             width: 100%;
@@ -545,6 +545,7 @@
                 if (e.key === 'Escape') {
                     closeUserModal();
                     closeDeleteUserModal();
+                    closeUserEquipmentPermissionsModal();
                 }
             });
 
@@ -555,6 +556,10 @@
 
             document.getElementById('deleteUserModal').addEventListener('click', function(e) {
                 if (e.target === this) closeDeleteUserModal();
+            });
+
+            document.getElementById('userEquipmentPermissionsModal').addEventListener('click', function(e) {
+                if (e.target === this) closeUserEquipmentPermissionsModal();
             });
             
             // 分页事件监听器
@@ -718,7 +723,19 @@
                 const userCategories = await categoriesResponse.json();
                 const equipmentPermissions = await equipmentResponse.json();
                 
+                // 保存权限数据到全局变量
+                if (!window.userPermissionsData) {
+                    window.userPermissionsData = {};
+                }
+                window.userPermissionsData[userId] = {
+                    category_permissions: userCategories,
+                    equipment_permissions: equipmentPermissions
+                };
+                
                 updateUserPermissionsDisplay(userId, userCategories, equipmentPermissions);
+                
+                // 更新删除按钮状态
+                updateUserDeleteButton(userId);
                 
             } catch (error) {
                 console.error('加载用户权限失败:', error);
@@ -848,14 +865,22 @@
         // 更新用户删除按钮状态
         function updateUserDeleteButton(userId) {
             const user = currentUsers.find(u => u.id === userId);
-            if (!user) return;
+            if (!user) {
+                return;
+            }
             
             // 找到该用户行的操作列
             const userRow = document.querySelector(`#user-categories-${userId}`).closest('tr');
-            if (!userRow) return;
+            if (!userRow) {
+                console.log('User row not found');
+                return;
+            }
             
             const actionCell = userRow.querySelector('td:last-child');
-            if (!actionCell) return;
+            if (!actionCell) {
+                console.log('Action cell not found');
+                return;
+            }
             
             // 重新生成删除按钮
             const deleteButtonHTML = getUserDeleteButton(user);
@@ -970,13 +995,10 @@
                 }
             }
             
-            // 检查用户是否有权限（类别权限或器具权限）
-            const userCategoryElement = document.getElementById(`user-categories-${user.id}`);
-            if (userCategoryElement) {
-                const categoryText = userCategoryElement.textContent.trim();
-                if (categoryText && categoryText !== '无权限' && categoryText !== '加载中...' && categoryText !== '加载失败' && categoryText !== '全部权限') {
-                    return { canDelete: false, reason: '该用户管理着设备或类别，无法删除' };
-                }
+            // 检查用户是否有权限（器具权限）
+            const userPermissions = window.userPermissionsData ? window.userPermissionsData[user.id] : null;
+            if (userPermissions && userPermissions.equipment_permissions && userPermissions.equipment_permissions.length > 0) {
+                return { canDelete: false, reason: '该用户管理着器具，无法删除' };
             }
             
             return { canDelete: true, reason: '' };
@@ -1555,7 +1577,31 @@
                 // 保存用户权限到全局变量
                 window.currentUserEquipmentPermissions = userPermissions;
                 
-                document.getElementById('userEquipmentPermissionsModal').classList.add('show');
+                const modal = document.getElementById('userEquipmentPermissionsModal');
+                
+                // 使用测试模态框的成功方法 - 移动模态框到body并设置样式
+                modal.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background-color: rgba(0, 0, 0, 0.5);
+                    z-index: 1000;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    -webkit-backdrop-filter: blur(4px);
+                    backdrop-filter: blur(4px);
+                `;
+                
+                // 强制重绘
+                modal.offsetHeight;
+                
+                // 确保模态框在body中
+                if (modal.parentNode !== document.body) {
+                    document.body.appendChild(modal);
+                }
                 
             } catch (error) {
                 console.error('加载用户器具权限失败:', error);
@@ -1776,7 +1822,8 @@
 
         // 关闭用户器具权限模态框
         function closeUserEquipmentPermissionsModal() {
-            document.getElementById('userEquipmentPermissionsModal').classList.remove('show');
+            const modal = document.getElementById('userEquipmentPermissionsModal');
+            modal.style.display = 'none';
             managingEquipmentPermissionsUserId = null;
             
             // 清理表单

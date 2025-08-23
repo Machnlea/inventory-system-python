@@ -1312,10 +1312,6 @@
 
         // 管理预定义器具名称
         function managePredefinedNames(categoryId, categoryName, names) {
-            console.log('=== 管理预定义器具名称调试信息 ===');
-            console.log('类别ID:', categoryId);
-            console.log('类别名称:', categoryName);
-            console.log('现有名称:', names);
             
             currentPredefinedNamesCategoryId = categoryId;
             currentPredefinedNamesCategoryName = categoryName;
@@ -1463,10 +1459,6 @@
 
         // 添加预定义器具名称
         async function addPredefinedName(name) {
-            console.log('=== 添加预定义器具名称调试信息 ===');
-            console.log('输入的名称:', name);
-            console.log('当前类别ID:', currentPredefinedNamesCategoryId);
-            console.log('当前类别名称:', currentPredefinedNamesCategoryName);
             
             if (!name || !name.trim()) {
                 showNotification('请输入预定义器具名称', 'warning');

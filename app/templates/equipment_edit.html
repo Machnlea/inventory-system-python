@@ -123,13 +123,10 @@
 
                         <div class="form-group">
                             <label class="form-label required-field" for="equipmentName">计量器具名称</label>
-                            <div class="relative">
-                                <select id="equipmentNameSelect" name="equipmentNameSelect" class="form-select mb-2" onchange="handlePredefinedNameSelect()">
-                                    <option value="">从预定义名称中选择</option>
-                                </select>
-                                <input type="text" id="equipmentName" name="equipmentName" class="form-input" 
-                                       required placeholder="或手动输入设备名称">
-                            </div>
+                            <select id="equipmentName" name="equipmentName" class="form-select" required onchange="handleEquipmentNameChange()">
+                                <option value="">请选择计量器具名称</option>
+                            </select>
+                            <div class="text-sm text-gray-500 mt-1">请先选择设备类别，然后从预定义名称中选择计量器具名称</div>
                         </div>
 
                         <div class="form-group">
@@ -161,10 +158,10 @@
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="form-group">
-                            <label class="form-label required-field" for="equipmentCode">厂内编号</label>
+                            <label class="form-label required-field" for="equipmentCode">内部编号</label>
                             <input type="text" id="equipmentCode" name="equipmentCode" class="form-input" 
                                    readonly placeholder="系统自动生成" style="background-color: #f3f4f6;">
-                            <div class="text-sm text-gray-500 mt-1">系统根据部门和类别自动生成厂内编号，选择好部门和设备类别后即可查看</div>
+                            <div class="text-sm text-gray-500 mt-1">系统根据类别自动生成内部编号，选择好部门和设备类别后即可查看</div>
                             <div id="codeValidation" class="text-sm text-red-500 mt-1" style="display: none;"></div>
                         </div>
 
@@ -368,10 +365,10 @@
         // 加载指定类别的预定义器具名称
         async function loadPredefinedNamesForCategory() {
             const categoryId = document.getElementById('category').value;
-            const nameSelect = document.getElementById('equipmentNameSelect');
+            const nameSelect = document.getElementById('equipmentName');
             
             // 清空现有的选项
-            nameSelect.innerHTML = '<option value="">从预定义名称中选择</option>';
+            nameSelect.innerHTML = '<option value="">请选择计量器具名称</option>';
             
             if (!categoryId) {
                 return;
@@ -387,24 +384,24 @@
                         option.textContent = name;
                         nameSelect.appendChild(option);
                     });
+                } else {
+                    // 如果没有预定义名称，添加一个提示选项
+                    const option = document.createElement('option');
+                    option.value = "";
+                    option.textContent = "该类别暂无预定义器具名称";
+                    option.disabled = true;
+                    nameSelect.appendChild(option);
                 }
             } catch (error) {
                 console.error('加载预定义器具名称失败:', error);
             }
         }
 
-        // 处理预定义器具名称选择
-        function handlePredefinedNameSelect() {
-            const nameSelect = document.getElementById('equipmentNameSelect');
-            const nameInput = document.getElementById('equipmentName');
+        // 处理计量器具名称选择
+        function handleEquipmentNameChange() {
+            const nameSelect = document.getElementById('equipmentName');
             
             if (nameSelect.value) {
-                nameInput.value = nameSelect.value;
-                // 清空选择以允许用户修改
-                setTimeout(() => {
-                    nameSelect.value = '';
-                }, 100);
-                
                 // 重新生成编号（现在包含设备名称）
                 generateAutoId();
             }
@@ -486,7 +483,7 @@
                 const equipment = await EquipmentAPI.getEquipment(equipmentId);
                 
                 // 填充表单数据
-                fillFormData(equipment);
+                await fillFormData(equipment);
                 
                 showNotification('设备数据加载成功', 'success');
             } catch (error) {
@@ -497,11 +494,27 @@
         }
 
         // 填充表单数据
-        function fillFormData(equipment) {
+        async function fillFormData(equipment) {
             // 基本信息
             document.getElementById('department').value = equipment.department_id;
             document.getElementById('category').value = equipment.category_id;
-            document.getElementById('equipmentName').value = equipment.name;
+            
+            // 加载该类别的预定义器具名称
+            await loadPredefinedNamesForCategory();
+            
+            // 设置设备名称
+            const nameSelect = document.getElementById('equipmentName');
+            nameSelect.value = equipment.name;
+            
+            // 如果当前设备名称不在预定义列表中，添加它
+            if (!nameSelect.value) {
+                const option = document.createElement('option');
+                option.value = equipment.name;
+                option.textContent = equipment.name;
+                option.selected = true;
+                nameSelect.appendChild(option);
+            }
+            
             document.getElementById('model').value = equipment.model;
             document.getElementById('accuracy').value = equipment.accuracy_level;
             document.getElementById('measureRange').value = equipment.measurement_range || '';
@@ -629,17 +642,22 @@
                 elements.equipmentStatus.addEventListener('change', toggleStatusChangeDate);
             }
 
-            // 部门和类别变化时自动生成编号
+            // 部门变化时（不用于自动编号，但可能需要其他逻辑）
             if (elements.department) {
-                elements.department.addEventListener('change', generateAutoId);
+                // 部门变化时不自动生成编号，但保留监听器以备其他用途
+                elements.department.addEventListener('change', function() {
+                    // 可以在这里添加部门变化时的其他逻辑
+                });
             }
+            
+            // 类别变化时自动生成编号
             if (elements.category) {
                 elements.category.addEventListener('change', generateAutoId);
             }
             
             // 设备名称变化时自动生成编号
             if (elements.equipmentName) {
-                elements.equipmentName.addEventListener('input', generateAutoId);
+                elements.equipmentName.addEventListener('change', handleEquipmentNameChange);
             }
 
             // 类别变化时加载预定义器具名称
@@ -789,20 +807,19 @@
             return isValid;
         }
 
-        // 自动生成厂内编号
+        // 自动生成内部编号
         async function generateAutoId() {
-            const departmentId = document.getElementById('department').value;
             const categoryId = document.getElementById('category').value;
             const equipmentName = document.getElementById('equipmentName').value;
             const codeInput = document.getElementById('equipmentCode');
             
-            if (departmentId && categoryId) {
+            if (categoryId) {
                 try {
                     // 显示加载状态
                     codeInput.value = '正在生成...';
                     
                     // 构建API URL，包含设备名称参数
-                    let apiUrl = `/api/equipment/utils/generate-internal-id?department_id=${departmentId}&category_id=${categoryId}`;
+                    let apiUrl = `/api/equipment/utils/generate-internal-id?category_id=${categoryId}`;
                     if (equipmentName) {
                         apiUrl += `&equipment_name=${encodeURIComponent(equipmentName)}`;
                     }

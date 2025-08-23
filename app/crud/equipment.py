@@ -235,8 +235,26 @@ def update_equipment(db: Session, equipment_id: int, equipment_update: Equipment
     return db_equipment
 
 def delete_equipment(db: Session, equipment_id: int):
+    import os
+    from app.models.models import EquipmentAttachment
+    
     db_equipment = db.query(Equipment).filter(Equipment.id == equipment_id).first()
     if db_equipment:
+        # 先删除关联的附件文件
+        attachments = db.query(EquipmentAttachment).filter(EquipmentAttachment.equipment_id == equipment_id).all()
+        for attachment in attachments:
+            try:
+                # 删除物理文件
+                if os.path.exists(attachment.file_path):
+                    os.remove(attachment.file_path)
+            except Exception as e:
+                # 文件删除失败不影响数据库操作，只记录日志
+                print(f"删除附件文件失败: {attachment.file_path}, 错误: {e}")
+        
+        # 删除数据库中的附件记录
+        db.query(EquipmentAttachment).filter(EquipmentAttachment.equipment_id == equipment_id).delete()
+        
+        # 删除设备
         db.delete(db_equipment)
         db.commit()
         return True

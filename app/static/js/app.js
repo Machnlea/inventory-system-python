@@ -814,10 +814,6 @@ function clearSelection() {
     updateSelectedCount();
 }
 
-function getSelectedEquipmentIds() {
-    const selectedCheckboxes = document.querySelectorAll('.equipment-checkbox:checked');
-    return Array.from(selectedCheckboxes).map(checkbox => parseInt(checkbox.value));
-}
 
 // 批量更新检定日期
 function showBatchUpdateCalibrationModal() {
@@ -1448,7 +1444,7 @@ function showEditEquipmentModal(equipment) {
                                     <input type="text" class="form-control" name="name" value="${equipment.name}" required>
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">厂内编号 *</label>
+                                    <label class="form-label">内部编号 *</label>
                                     <input type="text" class="form-control" name="internal_id" value="${equipment.internal_id}" required>
                                 </div>
                             </div>
@@ -1808,7 +1804,7 @@ function showAddEquipmentModal() {
                                     <input type="text" class="form-control" name="name" required>
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">厂内编号 *</label>
+                                    <label class="form-label">内部编号 *</label>
                                     <input type="text" class="form-control" name="internal_id" readonly placeholder="自动生成">
                                     <small class="form-text text-muted">系统将根据部门和类别自动生成编号</small>
                                 </div>

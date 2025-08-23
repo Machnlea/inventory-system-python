@@ -56,7 +56,7 @@ def create_equipment(equipment_data: EquipmentCreate,
     
     try:
         # 生成自动编号
-        internal_id = generate_internal_id(db, equipment_data.department_id, equipment_data.category_id, equipment_data.name)
+        internal_id = generate_internal_id(db, equipment_data.category_id, equipment_data.name)
         
         # 创建equipment_data的副本并设置自动编号
         equipment_dict = equipment_data.model_dump()
@@ -197,7 +197,7 @@ def export_monthly_plan(db: Session = Depends(get_db),
             '型号/规格': eq.model,
             '准确度等级': eq.accuracy_level,
             '测量范围': eq.measurement_range,
-            '厂内编号': eq.internal_id,
+            '内部编号': eq.internal_id,
             '出厂编号': eq.manufacturer_id or '',
             '检定周期': eq.calibration_cycle,
             '检定（校准）日期': eq.calibration_date.strftime('%Y-%m-%d') if eq.calibration_date else '',
@@ -273,7 +273,7 @@ def export_filtered_equipments(filters: EquipmentFilter,
             '型号/规格': eq.model,
             '准确度等级': eq.accuracy_level,
             '测量范围': eq.measurement_range,
-            '厂内编号': eq.internal_id,
+            '内部编号': eq.internal_id,
             '出厂编号': eq.manufacturer_id or '',
             '检定周期': eq.calibration_cycle,
             '检定（校准）日期': eq.calibration_date.strftime('%Y-%m-%d') if eq.calibration_date else '',
@@ -576,7 +576,7 @@ def batch_export_selected_equipments(
             '型号/规格': eq.model,
             '准确度等级': eq.accuracy_level,
             '测量范围': eq.measurement_range,
-            '厂内编号': eq.internal_id,
+            '内部编号': eq.internal_id,
             '出厂编号': eq.manufacturer_id or '',
             '检定周期': eq.calibration_cycle,
             '检定（校准）日期': eq.calibration_date.strftime('%Y-%m-%d') if eq.calibration_date else '',
@@ -660,7 +660,7 @@ def export_search_equipments(search_params: EquipmentSearch,
             '型号/规格': eq.model,
             '准确度等级': eq.accuracy_level,
             '测量范围': eq.measurement_range,
-            '厂内编号': eq.internal_id,
+            '内部编号': eq.internal_id,
             '出厂编号': eq.manufacturer_id or '',
             '检定周期': eq.calibration_cycle,
             '检定（校准）日期': eq.calibration_date.strftime('%Y-%m-%d') if eq.calibration_date else '',
@@ -705,13 +705,13 @@ def export_search_equipments(search_params: EquipmentSearch,
     )
 
 @router.get("/utils/generate-internal-id")
-def generate_internal_id_endpoint(department_id: int, category_id: int,
+def generate_internal_id_endpoint(category_id: int,
                                 equipment_name: str = None,
                                 db: Session = Depends(get_db),
                                 current_user = Depends(get_current_user)):
     """生成内部编号"""
     try:
-        internal_id = generate_internal_id(db, department_id, category_id, equipment_name)
+        internal_id = generate_internal_id(db, category_id, equipment_name)
         return {"internal_id": internal_id}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

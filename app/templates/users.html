@@ -380,12 +380,23 @@
                     <p class="text-xs text-gray-500">选择该用户可以管理的设备类别</p>
                 </div>
                 
+                <div class="mb-4">
+                    <div id="permission-stats" class="mb-3">
+                        <!-- 权限统计将在这里显示 -->
+                    </div>
+                </div>
+                
                 <div class="mb-6">
                     <div class="flex justify-between items-center mb-3">
                         <label class="block text-sm font-medium text-gray-700">设备类别</label>
-                        <button type="button" class="text-xs text-blue-600 hover:text-blue-800" onclick="selectAllCategories()">
-                            全选
-                        </button>
+                        <div class="flex space-x-2">
+                            <button type="button" class="text-xs text-blue-600 hover:text-blue-800" onclick="selectAllCategories()">
+                                全选
+                            </button>
+                            <button type="button" class="text-xs text-gray-600 hover:text-gray-800" onclick="clearAllCategories()">
+                                清空
+                            </button>
+                        </div>
                     </div>
                     <div class="border border-gray-200 rounded-lg p-3 max-h-64 overflow-y-auto bg-gray-50" id="categories-checkboxes">
                         <!-- 动态加载的设备类别复选框 -->
@@ -528,7 +539,9 @@
             try {
                 showNotification('正在加载用户数据...', 'info');
                 
-                const response = await fetch('/api/users/', {
+                // 使用分页参数加载用户数据
+                const skip = (currentPage - 1) * itemsPerPage;
+                const response = await fetch(`/api/users/?skip=${skip}&limit=${itemsPerPage}`, {
                     method: 'GET',
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
@@ -542,13 +555,29 @@
 
                 const users = await response.json();
                 currentUsers = users;
-                totalItems = users.length;
+                
+                // 获取总用户数用于分页
+                const totalResponse = await fetch('/api/users/', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (totalResponse.ok) {
+                    const allUsers = await totalResponse.json();
+                    totalItems = allUsers.length;
+                    updateUsersStats(allUsers);
+                } else {
+                    totalItems = users.length;
+                    updateUsersStats(users);
+                }
                 
                 renderUsersTable(users);
-                updateUsersStats(users);
                 updatePagination();
                 
-                // 加载每个用户的设备类别
+                // 加载当前页用户的设备类别
                 for (const user of users) {
                     loadUserCategories(user.id);
                 }
@@ -714,36 +743,34 @@
                         ${formatDateTime(user.created_at)}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button class="text-blue-600 hover:text-blue-900 mr-3" onclick="manageUserCategories(${user.id}, '${user.username}')">
-                            <i class="fas fa-tags mr-1"></i>管理类别
-                        </button>
-                        <button class="text-green-600 hover:text-green-900 mr-3" onclick="editUser(${user.id})">
-                            <i class="fas fa-edit mr-1"></i>编辑
-                        </button>
-                        ${getUserDeleteButton(user)}
+                        <div class="flex items-center justify-center space-x-2">
+                            <button class="text-blue-600 hover:text-blue-900 px-2 py-1 rounded text-sm" onclick="manageUserCategories(${user.id}, '${user.username}')" title="管理设备类别权限">
+                                <i class="fas fa-tags mr-1"></i>权限
+                            </button>
+                            <button class="text-green-600 hover:text-green-900 px-2 py-1 rounded text-sm" onclick="editUser(${user.id})" title="编辑用户信息">
+                                <i class="fas fa-edit mr-1"></i>编辑
+                            </button>
+                            ${getUserDeleteButton(user)}
+                        </div>
                     </td>
                 </tr>
             `).join('');
         }
 
-        // 获取用户删除按钮
-        function getUserDeleteButton(user) {
+        // 检查用户是否可以删除
+        function canDeleteUser(user) {
             const currentUser = JSON.parse(localStorage.getItem('user_info') || '{}');
             
             // 检查是否为当前登录用户
             if (currentUser.id === user.id) {
-                return `<button class="text-gray-400 cursor-not-allowed" title="无法删除当前登录用户" disabled>
-                    <i class="fas fa-trash mr-1"></i>删除
-                </button>`;
+                return { canDelete: false, reason: '无法删除当前登录用户' };
             }
             
             // 检查用户是否为系统管理员（不能删除最后一个管理员）
             if (user.is_admin) {
                 const adminUsers = currentUsers.filter(u => u.is_admin).length;
                 if (adminUsers <= 1) {
-                    return `<button class="text-gray-400 cursor-not-allowed" title="系统至少需要保留一个管理员用户" disabled>
-                        <i class="fas fa-trash mr-1"></i>删除
-                    </button>`;
+                    return { canDelete: false, reason: '系统至少需要保留一个管理员用户' };
                 }
             }
             
@@ -752,13 +779,23 @@
             if (userCategoryElement) {
                 const categoryText = userCategoryElement.textContent.trim();
                 if (categoryText && categoryText !== '无权限' && categoryText !== '加载中...' && categoryText !== '加载失败') {
-                    return `<button class="text-gray-400 cursor-not-allowed" title="该用户管理着设备类别，无法删除" disabled>
-                        <i class="fas fa-trash mr-1"></i>删除
-                    </button>`;
+                    return { canDelete: false, reason: '该用户管理着设备类别，无法删除' };
                 }
             }
             
-            // 如果没有限制，返回正常的删除按钮
+            return { canDelete: true, reason: '' };
+        }
+
+        // 获取用户删除按钮
+        function getUserDeleteButton(user) {
+            const deleteCheck = canDeleteUser(user);
+            
+            if (!deleteCheck.canDelete) {
+                return `<button class="text-gray-400 cursor-not-allowed" title="${deleteCheck.reason}" disabled>
+                    <i class="fas fa-trash mr-1"></i>删除
+                </button>`;
+            }
+            
             return `<button class="text-red-600 hover:text-red-900" onclick="deleteUser(${user.id}, '${user.username}')">
                 <i class="fas fa-trash mr-1"></i>删除
             </button>`;
@@ -790,6 +827,12 @@
             );
             
             renderUsersTable(filteredUsers);
+            
+            // 更新分页信息显示
+            const totalCountElement = document.getElementById('total-count');
+            if (totalCountElement) {
+                totalCountElement.textContent = filteredUsers.length;
+            }
         }
 
         // 打开创建用户模态框
@@ -900,38 +943,16 @@
 
         // 删除用户
         function deleteUser(userId, username) {
-            // 前端验证
             const user = currentUsers.find(u => u.id === userId);
             if (!user) {
                 showNotification('用户不存在', 'error');
                 return;
             }
             
-            const currentUser = JSON.parse(localStorage.getItem('user_info') || '{}');
-            
-            // 检查是否为当前登录用户
-            if (currentUser.id === user.id) {
-                showNotification('无法删除当前登录用户', 'warning');
+            const deleteCheck = canDeleteUser(user);
+            if (!deleteCheck.canDelete) {
+                showNotification(deleteCheck.reason, 'warning');
                 return;
-            }
-            
-            // 检查用户是否为系统管理员（不能删除最后一个管理员）
-            if (user.is_admin) {
-                const adminUsers = currentUsers.filter(u => u.is_admin).length;
-                if (adminUsers <= 1) {
-                    showNotification('系统至少需要保留一个管理员用户', 'warning');
-                    return;
-                }
-            }
-            
-            // 检查用户是否有设备类别权限
-            const userCategoryElement = document.getElementById(`user-categories-${userId}`);
-            if (userCategoryElement) {
-                const categoryText = userCategoryElement.textContent.trim();
-                if (categoryText && categoryText !== '无权限' && categoryText !== '加载中...' && categoryText !== '加载失败') {
-                    showNotification('该用户管理着设备类别，无法删除', 'warning');
-                    return;
-                }
             }
             
             // 通过验证，显示删除确认对话框
@@ -1035,26 +1056,91 @@
 
             const userCategoryIds = userCategories.map(uc => uc.category_id);
             
-            container.innerHTML = allCategories.map(category => `
-                <label class="flex items-center space-x-2 p-2 hover:bg-gray-100 rounded cursor-pointer">
-                    <input type="checkbox" 
-                           class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
-                           value="${category.id}"
-                           ${userCategoryIds.includes(category.id) ? 'checked' : ''}
-                           id="category-${category.id}">
-                    <span class="text-sm text-gray-700">${category.name}</span>
-                    ${category.description ? `<span class="text-xs text-gray-500">(${category.description})</span>` : ''}
-                </label>
-            `).join('');
+            container.innerHTML = allCategories.map(category => {
+                const isChecked = userCategoryIds.includes(category.id);
+                return `
+                    <label class="flex items-center space-x-3 p-2 hover:bg-gray-100 rounded cursor-pointer ${isChecked ? 'bg-blue-50 border-l-4 border-blue-500' : ''}">
+                        <input type="checkbox" 
+                               class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-2" 
+                               value="${category.id}"
+                               ${isChecked ? 'checked' : ''}
+                               id="category-${category.id}"
+                               onchange="updateCategoryStyle(${category.id}, this.checked)">
+                        <div class="flex-1">
+                            <span class="text-sm font-medium ${isChecked ? 'text-blue-900' : 'text-gray-700'}">${category.name}</span>
+                        </div>
+                    </label>
+                `;
+            }).join('');
+            
+            // 更新权限统计
+            updatePermissionStats(userCategories.length);
         }
 
-        // 全选/取消全选设备类别
+        // 更新类别样式
+        function updateCategoryStyle(categoryId, isChecked) {
+            const checkbox = document.getElementById(`category-${categoryId}`);
+            if (!checkbox) return;
+            
+            const label = checkbox.closest('label');
+            if (!label) return;
+            
+            if (isChecked) {
+                label.classList.add('bg-blue-50', 'border-l-4', 'border-blue-500');
+                label.classList.remove('hover:bg-gray-100');
+                const nameSpan = label.querySelector('span');
+                if (nameSpan) {
+                    nameSpan.classList.add('text-blue-900');
+                    nameSpan.classList.remove('text-gray-700');
+                }
+            } else {
+                label.classList.remove('bg-blue-50', 'border-l-4', 'border-blue-500');
+                label.classList.add('hover:bg-gray-100');
+                const nameSpan = label.querySelector('span');
+                if (nameSpan) {
+                    nameSpan.classList.remove('text-blue-900');
+                    nameSpan.classList.add('text-gray-700');
+                }
+            }
+            
+            // 更新权限统计
+            const checkedCount = document.querySelectorAll('#categories-checkboxes input[type="checkbox"]:checked').length;
+            updatePermissionStats(checkedCount);
+        }
+
+        // 更新权限统计
+        function updatePermissionStats(checkedCount) {
+            const statsElement = document.getElementById('permission-stats');
+            if (!statsElement) return;
+            
+            const totalCount = allCategories.length;
+            const percentage = totalCount > 0 ? Math.round((checkedCount / totalCount) * 100) : 0;
+            
+            statsElement.innerHTML = `
+                <div class="text-sm text-gray-600">
+                    已选择 <span class="font-semibold text-blue-600">${checkedCount}</span> / ${totalCount} 个类别
+                    <span class="text-gray-400 ml-2">(${percentage}%)</span>
+                </div>
+            `;
+        }
+
+        // 全选设备类别
         function selectAllCategories() {
             const checkboxes = document.querySelectorAll('#categories-checkboxes input[type="checkbox"]');
-            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
             
             checkboxes.forEach(checkbox => {
-                checkbox.checked = !allChecked;
+                checkbox.checked = true;
+                updateCategoryStyle(parseInt(checkbox.value), true);
+            });
+        }
+
+        // 清空所有类别选择
+        function clearAllCategories() {
+            const checkboxes = document.querySelectorAll('#categories-checkboxes input[type="checkbox"]');
+            
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = false;
+                updateCategoryStyle(parseInt(checkbox.value), false);
             });
         }
 
@@ -1062,6 +1148,12 @@
         function closeUserCategoriesModal() {
             document.getElementById('userCategoriesModal').classList.remove('show');
             managingCategoriesUserId = null;
+            
+            // 清理权限统计显示
+            const statsElement = document.getElementById('permission-stats');
+            if (statsElement) {
+                statsElement.innerHTML = '';
+            }
         }
 
         // 保存用户设备类别

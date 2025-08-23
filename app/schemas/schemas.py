@@ -9,11 +9,35 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str
+    
+    @field_validator('password')
+    @classmethod
+    def validate_password(cls, v):
+        if len(v) < 6:
+            raise ValueError('密码长度至少6位')
+        if not any(c.isalpha() for c in v):
+            raise ValueError('密码必须包含至少一个字母')
+        if not any(c.isdigit() for c in v):
+            raise ValueError('密码必须包含至少一个数字')
+        return v
 
 class UserUpdate(BaseModel):
     username: Optional[str] = None
     password: Optional[str] = None
     is_admin: Optional[bool] = None
+    
+    @field_validator('password')
+    @classmethod
+    def validate_password(cls, v):
+        if v is None:
+            return v
+        if len(v) < 6:
+            raise ValueError('密码长度至少6位')
+        if not any(c.isalpha() for c in v):
+            raise ValueError('密码必须包含至少一个字母')
+        if not any(c.isdigit() for c in v):
+            raise ValueError('密码必须包含至少一个数字')
+        return v
 
 class User(UserBase):
     id: int
@@ -220,6 +244,21 @@ class UserCategory(BaseModel):
     user_id: int
     category_id: int
     category: EquipmentCategory
+    
+    class Config:
+        from_attributes = True
+
+# 器具权限相关
+class UserEquipmentPermissionBase(BaseModel):
+    user_id: int
+    category_id: int
+    equipment_name: str
+
+class UserEquipmentPermissionCreate(UserEquipmentPermissionBase):
+    pass
+
+class UserEquipmentPermission(UserEquipmentPermissionBase):
+    id: int
     
     class Config:
         from_attributes = True

@@ -31,15 +31,27 @@ def read_equipments(skip: int = 0, limit: int = 999999,
 def create_equipment(equipment_data: EquipmentCreate,
                     db: Session = Depends(get_db),
                     current_user = Depends(get_current_user)):
-    # 检查用户是否有该设备类别的权限
+    # 检查用户是否有该设备的权限
     if not current_user.is_admin:
         from app.crud import users
+        from app.models.models import UserEquipmentPermission
+        
+        # 检查类别权限
         user_categories = users.get_user_categories(db, current_user.id)
         authorized_category_ids = [uc.category_id for uc in user_categories]
-        if equipment_data.category_id not in authorized_category_ids:
+        
+        # 检查器具权限
+        user_equipment_permissions = db.query(UserEquipmentPermission).filter(
+            UserEquipmentPermission.user_id == current_user.id
+        ).all()
+        authorized_equipment_names = [perm.equipment_name for perm in user_equipment_permissions]
+        
+        # 用户必须有该设备类别的权限，或者该设备名称的权限
+        if (equipment_data.category_id not in authorized_category_ids and 
+            equipment_data.name not in authorized_equipment_names):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Not authorized to manage this equipment category"
+                detail="Not authorized to manage this equipment"
             )
     
     try:

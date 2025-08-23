@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Date, Boolean, Float, JSON
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Date, Boolean, Float, JSON, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.database import Base
@@ -14,6 +14,7 @@ class User(Base):
     
     # 用户权限关联
     user_categories = relationship("UserCategory", back_populates="user")
+    equipment_permissions = relationship("UserEquipmentPermission", back_populates="user")
 
 class EquipmentCategory(Base):
     __tablename__ = "equipment_categories"
@@ -60,6 +61,23 @@ class UserCategory(Base):
     # 关联
     user = relationship("User", back_populates="user_categories")
     category = relationship("EquipmentCategory", back_populates="user_categories")
+
+class UserEquipmentPermission(Base):
+    __tablename__ = "user_equipment_permissions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    category_id = Column(Integer, ForeignKey("equipment_categories.id"), nullable=False)
+    equipment_name = Column(String(100), nullable=False)  # 器具名称
+    
+    # 添加唯一约束：每个器具只能由一个用户管理
+    __table_args__ = (
+        UniqueConstraint('category_id', 'equipment_name', name='uq_category_equipment'),
+    )
+    
+    # 关联
+    user = relationship("User", back_populates="equipment_permissions")
+    category = relationship("EquipmentCategory")
 
 class Equipment(Base):
     __tablename__ = "equipments"

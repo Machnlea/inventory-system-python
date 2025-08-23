@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from app.db.database import get_db
 from app.crud import users
-from app.schemas.schemas import User, UserCreate, UserUpdate, UserCategory
+from app.schemas.schemas import User, UserCreate, UserUpdate, UserCategory, UserEquipmentPermission, UserEquipmentPermissionCreate
 from app.api.auth import get_current_admin_user, get_current_user
 
 router = APIRouter()
@@ -56,6 +56,18 @@ def delete_user(user_id: int,
         raise HTTPException(
             status_code=400, 
             detail="无法删除该用户，因为该用户还管理着设备类别。请先移除该用户的设备类别权限后再删除。"
+        )
+    
+    # 检查用户是否有关联的器具权限
+    from app.models.models import UserEquipmentPermission as UserEquipmentPermissionModel
+    user_equipment_permissions = db.query(UserEquipmentPermissionModel).filter(
+        UserEquipmentPermissionModel.user_id == user_id
+    ).all()
+    
+    if user_equipment_permissions:
+        raise HTTPException(
+            status_code=400, 
+            detail="无法删除该用户，因为该用户还管理着具体器具。请先移除该用户的器具权限后再删除。"
         )
     
     # 删除用户
@@ -125,3 +137,169 @@ def update_user_categories(user_id: int, category_data: dict,
             raise HTTPException(status_code=400, detail="Failed to update user categories")
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+# 器具权限管理端点
+@router.get("/{user_id}/equipment-permissions", response_model=List[UserEquipmentPermission])
+def get_user_equipment_permissions(user_id: int,
+                                  db: Session = Depends(get_db),
+                                  current_user: User = Depends(get_current_admin_user)):
+    """获取用户的器具权限"""
+    from app.models.models import UserEquipmentPermission as UserEquipmentPermissionModel
+    permissions = db.query(UserEquipmentPermissionModel).filter(
+        UserEquipmentPermissionModel.user_id == user_id
+    ).all()
+    
+    result = []
+    for perm in permissions:
+        result.append(UserEquipmentPermission(
+            id=perm.id,
+            user_id=perm.user_id,
+            category_id=perm.category_id,
+            equipment_name=perm.equipment_name
+        ))
+    
+    return result
+
+@router.get("/equipment-permissions/managed-status")
+def get_equipment_permissions_managed_status(db: Session = Depends(get_db),
+                                          current_user: User = Depends(get_current_admin_user)):
+    """获取所有器具的管理状态"""
+    from app.models.models import UserEquipmentPermission as UserEquipmentPermissionModel, EquipmentCategory
+    
+    # 获取所有类别及其预定义器具
+    categories = db.query(EquipmentCategory).all()
+    managed_status = []
+    
+    for category in categories:
+        predefined_names = category.predefined_names or []
+        
+        for equipment_name in predefined_names:
+            # 检查该器具是否被管理
+            permission = db.query(UserEquipmentPermissionModel).filter(
+                UserEquipmentPermissionModel.category_id == category.id,
+                UserEquipmentPermissionModel.equipment_name == equipment_name
+            ).first()
+            
+            if permission:
+                managed_status.append({
+                    "category_id": category.id,
+                    "category_name": category.name,
+                    "equipment_name": equipment_name,
+                    "is_managed": True,
+                    "managed_by_user_id": permission.user_id,
+                    "managed_by_username": permission.user.username
+                })
+            else:
+                managed_status.append({
+                    "category_id": category.id,
+                    "category_name": category.name,
+                    "equipment_name": equipment_name,
+                    "is_managed": False,
+                    "managed_by_user_id": None,
+                    "managed_by_username": None
+                })
+    
+    return managed_status
+
+@router.post("/{user_id}/equipment-permissions")
+def assign_equipment_permission(user_id: int, permission_data: UserEquipmentPermissionCreate,
+                                db: Session = Depends(get_db),
+                                current_user: User = Depends(get_current_admin_user)):
+    """分配器具权限给用户"""
+    from app.models.models import UserEquipmentPermission as UserEquipmentPermissionModel
+    
+    try:
+        # 检查该器具是否已被其他用户管理
+        existing = db.query(UserEquipmentPermissionModel).filter(
+            UserEquipmentPermissionModel.category_id == permission_data.category_id,
+            UserEquipmentPermissionModel.equipment_name == permission_data.equipment_name
+        ).first()
+        
+        if existing and existing.user_id != user_id:
+            raise ValueError(f"器具 '{permission_data.equipment_name}' 已被其他用户管理")
+        
+        # 删除用户对该器具的现有权限
+        db.query(UserEquipmentPermissionModel).filter(
+            UserEquipmentPermissionModel.user_id == user_id,
+            UserEquipmentPermissionModel.category_id == permission_data.category_id,
+            UserEquipmentPermissionModel.equipment_name == permission_data.equipment_name
+        ).delete()
+        
+        # 添加新权限
+        permission = UserEquipmentPermissionModel(
+            user_id=user_id,
+            category_id=permission_data.category_id,
+            equipment_name=permission_data.equipment_name
+        )
+        db.add(permission)
+        db.commit()
+        db.refresh(permission)
+        
+        return {"message": "Equipment permission assigned successfully", "permission": permission}
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.put("/{user_id}/equipment-permissions")
+def update_user_equipment_permissions(user_id: int, permissions_data: dict,
+                                     db: Session = Depends(get_db),
+                                     current_user: User = Depends(get_current_admin_user)):
+    """更新用户的器具权限"""
+    from app.models.models import UserEquipmentPermission as UserEquipmentPermissionModel
+    
+    try:
+        equipment_names = permissions_data.get("equipment_names", [])
+        category_id = permissions_data.get("category_id")
+        
+        if not category_id:
+            raise HTTPException(status_code=400, detail="category_id is required")
+        
+        # 删除用户在该类别下的所有器具权限
+        db.query(UserEquipmentPermissionModel).filter(
+            UserEquipmentPermissionModel.user_id == user_id,
+            UserEquipmentPermissionModel.category_id == category_id
+        ).delete()
+        
+        # 添加新的权限
+        for equipment_name in equipment_names:
+            # 检查该器具是否已被其他用户管理
+            existing = db.query(UserEquipmentPermissionModel).filter(
+                UserEquipmentPermissionModel.category_id == category_id,
+                UserEquipmentPermissionModel.equipment_name == equipment_name
+            ).first()
+            
+            if existing and existing.user_id != user_id:
+                raise ValueError(f"器具 '{equipment_name}' 已被其他用户管理")
+            
+            permission = UserEquipmentPermissionModel(
+                user_id=user_id,
+                category_id=category_id,
+                equipment_name=equipment_name
+            )
+            db.add(permission)
+        
+        db.commit()
+        return {"message": "User equipment permissions updated successfully"}
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.delete("/{user_id}/equipment-permissions/{permission_id}")
+def delete_equipment_permission(user_id: int, permission_id: int,
+                                db: Session = Depends(get_db),
+                                current_user: User = Depends(get_current_admin_user)):
+    """删除用户的器具权限"""
+    from app.models.models import UserEquipmentPermission as UserEquipmentPermissionModel
+    
+    permission = db.query(UserEquipmentPermissionModel).filter(
+        UserEquipmentPermissionModel.id == permission_id,
+        UserEquipmentPermissionModel.user_id == user_id
+    ).first()
+    
+    if not permission:
+        raise HTTPException(status_code=404, detail="Permission not found")
+    
+    db.delete(permission)
+    db.commit()
+    
+    return {"message": "Equipment permission deleted successfully"}

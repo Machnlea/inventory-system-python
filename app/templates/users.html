@@ -313,6 +313,27 @@
                     <div class="mb-4" id="password-field">
                         <label for="user-password" class="block text-sm font-medium text-gray-700 mb-2">密码</label>
                         <input type="password" id="user-password" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="请输入密码" required>
+                        <div id="password-requirements" class="text-xs text-gray-500 mt-1">
+                            密码要求：至少6位，包含字母和数字
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4" id="change-password-field" style="display: none;">
+                        <label class="flex items-center mb-2">
+                            <input type="checkbox" id="change-password" class="mr-2 rounded border-gray-300">
+                            <span class="text-sm text-gray-700">修改密码</span>
+                        </label>
+                        <div id="new-password-fields" style="display: none;">
+                            <div class="mb-3">
+                                <label for="new-password" class="block text-sm font-medium text-gray-700 mb-1">新密码</label>
+                                <input type="password" id="new-password" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="请输入新密码">
+                                <div class="text-xs text-gray-500 mt-1">密码要求：至少6位，包含字母和数字</div>
+                            </div>
+                            <div>
+                                <label for="confirm-password" class="block text-sm font-medium text-gray-700 mb-1">确认密码</label>
+                                <input type="password" id="confirm-password" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="请再次输入新密码">
+                            </div>
+                        </div>
                     </div>
                     
                     <div class="mb-6">
@@ -416,13 +437,77 @@
         </div>
     </div>
 
+    <!-- 管理用户器具权限模态框 -->
+    <div id="userEquipmentPermissionsModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[85vh] overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-900">管理用户器具权限</h3>
+                <button class="text-gray-400 hover:text-gray-600" onclick="closeUserEquipmentPermissionsModal()" aria-label="关闭对话框">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-4">
+                    <p class="text-sm text-gray-600 mb-2">用户: <span id="equipment-permission-user-name" class="font-semibold"></span></p>
+                    <p class="text-xs text-gray-500">选择该用户可以管理的具体器具</p>
+                </div>
+                
+                <div class="mb-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <label class="block text-sm font-medium text-gray-700">设备类别</label>
+                        <select id="category-select" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" onchange="loadCategoryEquipment()">
+                            <option value="">选择类别</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <div id="equipment-permission-stats" class="mb-3">
+                        <!-- 权限统计将在这里显示 -->
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <div class="flex justify-between items-center mb-3">
+                        <label class="block text-sm font-medium text-gray-700">器具列表</label>
+                        <div class="flex space-x-2">
+                            <button type="button" class="text-xs text-blue-600 hover:text-blue-800" onclick="selectAllEquipment()">
+                                全选
+                            </button>
+                            <button type="button" class="text-xs text-gray-600 hover:text-gray-800" onclick="clearAllEquipment()">
+                                清空
+                            </button>
+                        </div>
+                    </div>
+                    <div class="border border-gray-200 rounded-lg p-3 max-h-64 overflow-y-auto bg-gray-50" id="equipment-checkboxes">
+                        <div class="text-center text-gray-500 py-8">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            请先选择一个设备类别
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end space-x-3">
+                    <button type="button" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400" onclick="closeUserEquipmentPermissionsModal()">
+                        取消
+                    </button>
+                    <button type="button" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700" onclick="saveUserEquipmentPermissions()">
+                        <i class="fas fa-save mr-2"></i>保存
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // 全局变量
         let currentUsers = [];
         let editingUserId = null;
         let deletingUserId = null;
         let managingCategoriesUserId = null;
+        let managingEquipmentPermissionsUserId = null;
         let allCategories = [];
+        let equipmentManagedStatus = [];
         let currentPage = 1;
         let itemsPerPage = parseInt(localStorage.getItem('users_page_size') || '20');
         let totalItems = 0;
@@ -464,6 +549,44 @@
 
             // 用户表单提交
             document.getElementById('user-form').addEventListener('submit', handleUserFormSubmit);
+
+            // 密码修改复选框
+            const changePasswordCheckbox = document.getElementById('change-password');
+            if (changePasswordCheckbox) {
+                changePasswordCheckbox.addEventListener('change', function() {
+                    const newPasswordFields = document.getElementById('new-password-fields');
+                    const newPassword = document.getElementById('new-password');
+                    const confirmPassword = document.getElementById('confirm-password');
+                    
+                    if (this.checked) {
+                        newPasswordFields.style.display = 'block';
+                        newPassword.required = true;
+                        confirmPassword.required = true;
+                    } else {
+                        newPasswordFields.style.display = 'none';
+                        newPassword.required = false;
+                        confirmPassword.required = false;
+                        newPassword.value = '';
+                        confirmPassword.value = '';
+                        // 清除验证样式
+                        newPassword.classList.remove('border-red-500', 'border-green-500');
+                        newPassword.classList.add('border-gray-300');
+                        confirmPassword.classList.remove('border-red-500', 'border-green-500');
+                        confirmPassword.classList.add('border-gray-300');
+                    }
+                });
+            }
+
+            // 密码输入实时验证
+            const passwordInputs = ['user-password', 'new-password', 'confirm-password'];
+            passwordInputs.forEach(inputId => {
+                const input = document.getElementById(inputId);
+                if (input) {
+                    input.addEventListener('input', function() {
+                        validatePassword(inputId, this.value);
+                    });
+                }
+            });
 
             // 侧边栏导航
             setupSidebarNavigation();
@@ -615,26 +738,41 @@
             }
         }
 
-        // 加载用户的设备类别
+        // 加载用户的权限信息（类别权限 + 器具权限）
         async function loadUserCategories(userId) {
             try {
-                const response = await fetch(`/api/users/${userId}/categories`, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
+                // 并行加载类别权限和器具权限
+                const [categoriesResponse, equipmentResponse] = await Promise.all([
+                    fetch(`/api/users/${userId}/categories`, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                            'Content-Type': 'application/json'
+                        }
+                    }),
+                    fetch(`/api/users/${userId}/equipment-permissions`, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                ]);
 
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                if (!categoriesResponse.ok) {
+                    throw new Error(`加载类别权限失败: HTTP ${categoriesResponse.status}`);
+                }
+                if (!equipmentResponse.ok) {
+                    throw new Error(`加载器具权限失败: HTTP ${equipmentResponse.status}`);
                 }
 
-                const userCategories = await response.json();
-                updateUserCategoriesDisplay(userId, userCategories);
+                const userCategories = await categoriesResponse.json();
+                const equipmentPermissions = await equipmentResponse.json();
+                
+                updateUserPermissionsDisplay(userId, userCategories, equipmentPermissions);
                 
             } catch (error) {
-                console.error('加载用户设备类别失败:', error);
+                console.error('加载用户权限失败:', error);
                 const categoryElement = document.getElementById(`user-categories-${userId}`);
                 if (categoryElement) {
                     categoryElement.innerHTML = '<span class="text-gray-400">加载失败</span>';
@@ -642,8 +780,8 @@
             }
         }
 
-        // 更新用户设备类别显示
-        function updateUserCategoriesDisplay(userId, userCategories) {
+        // 更新用户权限显示（类别权限 + 器具权限）
+        function updateUserPermissionsDisplay(userId, userCategories, equipmentPermissions) {
             const categoryElement = document.getElementById(`user-categories-${userId}`);
             if (!categoryElement) return;
             
@@ -654,18 +792,36 @@
             if (isAdmin) {
                 // 管理员显示所有权限
                 categoryElement.innerHTML = '<span class="text-sm text-purple-600 font-medium">全部权限</span>';
-            } else if (!userCategories || userCategories.length === 0) {
-                categoryElement.innerHTML = '<span class="text-gray-400">无权限</span>';
             } else {
-                const categoryNames = userCategories.map(uc => uc.category.name).slice(0, 2);
-                const displayText = categoryNames.join(', ');
+                const hasCategoryPermissions = userCategories && userCategories.length > 0;
+                const hasEquipmentPermissions = equipmentPermissions && equipmentPermissions.length > 0;
                 
-                if (userCategories.length > 2) {
-                    categoryElement.innerHTML = `
-                        <span class="text-sm text-gray-900">${displayText}</span>
-                        <span class="text-xs text-gray-500 ml-1">+${userCategories.length - 2}</span>
-                    `;
+                if (!hasCategoryPermissions && !hasEquipmentPermissions) {
+                    categoryElement.innerHTML = '<span class="text-gray-400">无权限</span>';
                 } else {
+                    let permissionTexts = [];
+                    
+                    // 添加类别权限
+                    if (hasCategoryPermissions) {
+                        const categoryNames = userCategories.map(uc => uc.category.name).slice(0, 2);
+                        if (userCategories.length > 2) {
+                            permissionTexts.push(`${categoryNames.join(', ')}+${userCategories.length - 2}`);
+                        } else {
+                            permissionTexts.push(categoryNames.join(', '));
+                        }
+                    }
+                    
+                    // 添加器具权限
+                    if (hasEquipmentPermissions) {
+                        const equipmentNames = equipmentPermissions.map(ep => ep.equipment_name).slice(0, 3);
+                        if (equipmentPermissions.length > 3) {
+                            permissionTexts.push(`${equipmentNames.join(', ')}+${equipmentPermissions.length - 3}`);
+                        } else {
+                            permissionTexts.push(equipmentNames.join(', '));
+                        }
+                    }
+                    
+                    const displayText = permissionTexts.join(', ');
                     categoryElement.innerHTML = `<span class="text-sm text-gray-900">${displayText}</span>`;
                 }
             }
@@ -689,11 +845,10 @@
             // 重新生成删除按钮
             const deleteButtonHTML = getUserDeleteButton(user);
             
-            // 替换操作列的内容（保持其他按钮不变）
-            const buttons = actionCell.querySelectorAll('button');
-            if (buttons.length >= 3) {
-                // 替换最后一个按钮（删除按钮）
-                buttons[2].outerHTML = deleteButtonHTML;
+            // 找到删除按钮并替换
+            const deleteButton = actionCell.querySelector('button[onclick*="deleteUser"]');
+            if (deleteButton) {
+                deleteButton.outerHTML = deleteButtonHTML;
             }
         }
 
@@ -745,12 +900,8 @@
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div class="flex items-center justify-center space-x-2">
-                            <button class="text-blue-600 hover:text-blue-900 px-2 py-1 rounded text-sm" onclick="manageUserCategories(${user.id}, '${user.username}')" title="管理设备类别权限">
-                                <i class="fas fa-tags mr-1"></i>权限
-                            </button>
-                            <button class="text-green-600 hover:text-green-900 px-2 py-1 rounded text-sm" onclick="editUser(${user.id})" title="编辑用户信息">
-                                <i class="fas fa-edit mr-1"></i>编辑
-                            </button>
+                            ${getUserPermissionManagementButtons(user)}
+                            ${getUserEditButton(user)}
                             ${getUserDeleteButton(user)}
                         </div>
                     </td>
@@ -775,16 +926,85 @@
                 }
             }
             
-            // 检查用户是否有设备类别权限
+            // 检查用户是否有权限（类别权限或器具权限）
             const userCategoryElement = document.getElementById(`user-categories-${user.id}`);
             if (userCategoryElement) {
                 const categoryText = userCategoryElement.textContent.trim();
-                if (categoryText && categoryText !== '无权限' && categoryText !== '加载中...' && categoryText !== '加载失败') {
-                    return { canDelete: false, reason: '该用户管理着设备类别，无法删除' };
+                if (categoryText && categoryText !== '无权限' && categoryText !== '加载中...' && categoryText !== '加载失败' && categoryText !== '全部权限') {
+                    return { canDelete: false, reason: '该用户管理着设备或类别，无法删除' };
                 }
             }
             
             return { canDelete: true, reason: '' };
+        }
+
+        // 获取用户权限管理按钮
+        function getUserPermissionManagementButtons(user) {
+            const currentUser = JSON.parse(localStorage.getItem('user_info') || '{}');
+            
+            // 如果是管理员账号，显示灰色不可点击的按钮
+            if (user.is_admin) {
+                return `
+                    <button class="text-gray-400 cursor-not-allowed px-2 py-1 rounded text-sm" title="管理员拥有所有权限，无需管理" disabled>
+                        <i class="fas fa-tags mr-1"></i>类别
+                    </button>
+                    <button class="text-gray-400 cursor-not-allowed px-2 py-1 rounded text-sm" title="管理员拥有所有权限，无需管理" disabled>
+                        <i class="fas fa-tools mr-1"></i>器具
+                    </button>
+                `;
+            }
+            
+            // 如果是当前登录用户，显示灰色不可点击的按钮
+            if (currentUser.id === user.id) {
+                return `
+                    <button class="text-gray-400 cursor-not-allowed px-2 py-1 rounded text-sm" title="无法管理自己的权限" disabled>
+                        <i class="fas fa-tags mr-1"></i>类别
+                    </button>
+                    <button class="text-gray-400 cursor-not-allowed px-2 py-1 rounded text-sm" title="无法管理自己的权限" disabled>
+                        <i class="fas fa-tools mr-1"></i>器具
+                    </button>
+                `;
+            }
+            
+            // 普通用户显示正常的权限管理按钮
+            return `
+                <button class="text-blue-600 hover:text-blue-900 px-2 py-1 rounded text-sm" onclick="manageUserCategories(${user.id}, '${user.username}')" title="管理设备类别权限">
+                    <i class="fas fa-tags mr-1"></i>类别
+                </button>
+                <button class="text-purple-600 hover:text-purple-900 px-2 py-1 rounded text-sm" onclick="manageUserEquipmentPermissions(${user.id}, '${user.username}')" title="管理器具权限">
+                    <i class="fas fa-tools mr-1"></i>器具
+                </button>
+            `;
+        }
+        
+        // 获取用户编辑按钮
+        function getUserEditButton(user) {
+            const currentUser = JSON.parse(localStorage.getItem('user_info') || '{}');
+            
+            // 如果是管理员账号，显示灰色不可点击的按钮
+            if (user.is_admin) {
+                return `
+                    <button class="text-gray-400 cursor-not-allowed px-2 py-1 rounded text-sm" title="无法编辑管理员账号" disabled>
+                        <i class="fas fa-edit mr-1"></i>编辑
+                    </button>
+                `;
+            }
+            
+            // 如果是当前登录用户，显示灰色不可点击的按钮
+            if (currentUser.id === user.id) {
+                return `
+                    <button class="text-gray-400 cursor-not-allowed px-2 py-1 rounded text-sm" title="无法编辑自己的账号" disabled>
+                        <i class="fas fa-edit mr-1"></i>编辑
+                    </button>
+                `;
+            }
+            
+            // 普通用户显示正常的编辑按钮
+            return `
+                <button class="text-green-600 hover:text-green-900 px-2 py-1 rounded text-sm" onclick="editUser(${user.id})" title="编辑用户信息">
+                    <i class="fas fa-edit mr-1"></i>编辑
+                </button>
+            `;
         }
 
         // 获取用户删除按钮
@@ -843,6 +1063,7 @@
             document.getElementById('user-form').reset();
             document.getElementById('password-field').style.display = 'block';
             document.getElementById('user-password').required = true;
+            document.getElementById('change-password-field').style.display = 'none';
             document.getElementById('save-user-btn').innerHTML = '<i class="fas fa-save mr-2"></i>创建';
             document.getElementById('userModal').classList.add('show');
         }
@@ -856,8 +1077,18 @@
             document.getElementById('modal-title').textContent = '编辑用户';
             document.getElementById('user-username').value = user.username;
             document.getElementById('user-is-admin').checked = user.is_admin;
+            
+            // 编辑用户时显示密码修改选项
             document.getElementById('password-field').style.display = 'none';
             document.getElementById('user-password').required = false;
+            document.getElementById('change-password-field').style.display = 'block';
+            document.getElementById('change-password').checked = false;
+            document.getElementById('new-password-fields').style.display = 'none';
+            document.getElementById('new-password').value = '';
+            document.getElementById('confirm-password').value = '';
+            document.getElementById('new-password').required = false;
+            document.getElementById('confirm-password').required = false;
+            
             document.getElementById('save-user-btn').innerHTML = '<i class="fas fa-save mr-2"></i>保存';
             document.getElementById('userModal').classList.add('show');
         }
@@ -868,12 +1099,43 @@
             editingUserId = null;
         }
 
+        // 密码验证函数
+        function validatePassword(inputId, password) {
+            const input = document.getElementById(inputId);
+            const requirementsDiv = document.getElementById(inputId === 'user-password' ? 'password-requirements' : 
+                                                          (inputId === 'new-password' ? 'new-password' : 'confirm-password') + '-requirements');
+            
+            if (!password) {
+                input.classList.remove('border-red-500', 'border-green-500');
+                input.classList.add('border-gray-300');
+                return true;
+            }
+            
+            // 验证密码规则：至少6位，包含字母和数字
+            const hasLetter = /[a-zA-Z]/.test(password);
+            const hasNumber = /[0-9]/.test(password);
+            const hasMinLength = password.length >= 6;
+            
+            if (hasLetter && hasNumber && hasMinLength) {
+                input.classList.remove('border-red-500');
+                input.classList.add('border-green-500');
+                return true;
+            } else {
+                input.classList.remove('border-green-500');
+                input.classList.add('border-red-500');
+                return false;
+            }
+        }
+        
         // 处理用户表单提交
         async function handleUserFormSubmit(e) {
             e.preventDefault();
             
             const username = document.getElementById('user-username').value.trim();
             const password = document.getElementById('user-password').value;
+            const changePassword = document.getElementById('change-password')?.checked || false;
+            const newPassword = document.getElementById('new-password')?.value || '';
+            const confirmPassword = document.getElementById('confirm-password')?.value || '';
             const isAdmin = document.getElementById('user-is-admin').checked;
             
             if (!username) {
@@ -881,9 +1143,32 @@
                 return;
             }
             
-            if (!editingUserId && !password) {
-                showNotification('请输入密码', 'warning');
-                return;
+            // 创建用户时密码验证
+            if (!editingUserId) {
+                if (!password) {
+                    showNotification('请输入密码', 'warning');
+                    return;
+                }
+                if (!validatePassword('user-password', password)) {
+                    showNotification('密码不符合要求：至少6位，包含字母和数字', 'warning');
+                    return;
+                }
+            }
+            
+            // 编辑用户时密码修改验证
+            if (editingUserId && changePassword) {
+                if (!newPassword) {
+                    showNotification('请输入新密码', 'warning');
+                    return;
+                }
+                if (!validatePassword('new-password', newPassword)) {
+                    showNotification('新密码不符合要求：至少6位，包含字母和数字', 'warning');
+                    return;
+                }
+                if (newPassword !== confirmPassword) {
+                    showNotification('两次输入的密码不一致', 'warning');
+                    return;
+                }
             }
             
             try {
@@ -895,16 +1180,16 @@
                 };
                 
                 if (!editingUserId) {
+                    // 创建用户
                     userData.password = password;
+                } else if (changePassword) {
+                    // 编辑用户且修改密码
+                    userData.password = newPassword;
                 }
                 
                 let response;
                 if (editingUserId) {
                     // 更新用户
-                    if (password) {
-                        userData.password = password;
-                    }
-                    
                     response = await fetch(`/api/users/${editingUserId}`, {
                         method: 'PUT',
                         headers: {
@@ -1185,6 +1470,282 @@
             
             // 清理权限统计显示
             const statsElement = document.getElementById('permission-stats');
+            if (statsElement) {
+                statsElement.innerHTML = '';
+            }
+        }
+
+        // 管理用户器具权限
+        async function manageUserEquipmentPermissions(userId, username) {
+            managingEquipmentPermissionsUserId = userId;
+            document.getElementById('equipment-permission-user-name').textContent = username;
+            
+            try {
+                // 并行加载类别、器具管理状态和用户当前权限
+                const [categoriesResponse, managedStatusResponse, userPermissionsResponse] = await Promise.all([
+                    fetch('/api/categories/', {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                            'Content-Type': 'application/json'
+                        }
+                    }),
+                    fetch('/api/users/equipment-permissions/managed-status', {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                            'Content-Type': 'application/json'
+                        }
+                    }),
+                    fetch(`/api/users/${userId}/equipment-permissions`, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                ]);
+
+                if (!categoriesResponse.ok || !managedStatusResponse.ok || !userPermissionsResponse.ok) {
+                    throw new Error('Failed to load data');
+                }
+
+                allCategories = await categoriesResponse.json();
+                equipmentManagedStatus = await managedStatusResponse.json();
+                const userPermissions = await userPermissionsResponse.json();
+                
+                // 填充类别选择器
+                populateCategorySelector();
+                
+                // 保存用户权限到全局变量
+                window.currentUserEquipmentPermissions = userPermissions;
+                
+                document.getElementById('userEquipmentPermissionsModal').classList.add('show');
+                
+            } catch (error) {
+                console.error('加载用户器具权限失败:', error);
+                showNotification('加载用户器具权限失败: ' + error.message, 'error');
+            }
+        }
+
+        // 填充类别选择器
+        function populateCategorySelector() {
+            const selectElement = document.getElementById('category-select');
+            selectElement.innerHTML = '<option value="">选择类别</option>';
+            
+            allCategories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category.id;
+                option.textContent = category.name;
+                selectElement.appendChild(option);
+            });
+        }
+
+        // 加载类别下的器具
+        function loadCategoryEquipment() {
+            const categoryId = document.getElementById('category-select').value;
+            
+            if (!categoryId) {
+                document.getElementById('equipment-checkboxes').innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        请先选择一个设备类别
+                    </div>
+                `;
+                return;
+            }
+            
+            const category = allCategories.find(c => c.id == categoryId);
+            if (!category || !category.predefined_names) {
+                document.getElementById('equipment-checkboxes').innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        该类别下没有预定义器具
+                    </div>
+                `;
+                return;
+            }
+            
+            renderEquipmentCheckboxes(categoryId, category.predefined_names);
+        }
+
+        // 渲染器具复选框
+        function renderEquipmentCheckboxes(categoryId, equipmentNames) {
+            const container = document.getElementById('equipment-checkboxes');
+            
+            // 获取用户当前在该类别下的权限
+            const userPermissions = window.currentUserEquipmentPermissions || [];
+            const userEquipmentNames = userPermissions
+                .filter(p => p.category_id == categoryId)
+                .map(p => p.equipment_name);
+            
+            container.innerHTML = equipmentNames.map(equipmentName => {
+                const isChecked = userEquipmentNames.includes(equipmentName);
+                // 检查该器具是否已被其他用户管理
+                const isManagedByOthers = isEquipmentManagedByOtherUser(categoryId, equipmentName);
+                return `
+                    <label class="flex items-center space-x-3 p-2 hover:bg-gray-100 rounded cursor-pointer ${isChecked ? 'bg-purple-50 border-l-4 border-purple-500' : ''} ${isManagedByOthers ? 'opacity-50 cursor-not-allowed' : ''}">
+                        <input type="checkbox" 
+                               class="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500 focus:ring-2" 
+                               value="${equipmentName}"
+                               ${isChecked ? 'checked' : ''}
+                               ${isManagedByOthers ? 'disabled' : ''}
+                               id="equipment-${equipmentName.replace(/[^a-zA-Z0-9]/g, '-')}"
+                               onchange="updateEquipmentStyle('${equipmentName}', this.checked)">
+                        <div class="flex-1">
+                            <span class="text-sm font-medium ${isChecked ? 'text-purple-900' : 'text-gray-700'}">${equipmentName}</span>
+                            ${isManagedByOthers ? '<span class="text-xs text-red-500 ml-2">(已被管理)</span>' : ''}
+                        </div>
+                    </label>
+                `;
+            }).join('');
+            
+            // 更新权限统计
+            updateEquipmentPermissionStats(userEquipmentNames.length, equipmentNames.length);
+        }
+
+        // 检查器具是否被其他用户管理
+        function isEquipmentManagedByOtherUser(categoryId, equipmentName) {
+            const managedItem = equipmentManagedStatus.find(item => 
+                item.category_id == categoryId && item.equipment_name == equipmentName
+            );
+            // 如果该器具被管理，且不是由当前用户管理
+            return managedItem && managedItem.is_managed && managedItem.managed_by_user_id != managingEquipmentPermissionsUserId;
+        }
+
+        // 更新器具样式
+        function updateEquipmentStyle(equipmentName, isChecked) {
+            const checkboxId = `equipment-${equipmentName.replace(/[^a-zA-Z0-9]/g, '-')}`;
+            const checkbox = document.getElementById(checkboxId);
+            if (!checkbox) return;
+            
+            const label = checkbox.closest('label');
+            if (!label) return;
+            
+            if (isChecked) {
+                label.classList.add('bg-purple-50', 'border-l-4', 'border-purple-500');
+                label.classList.remove('hover:bg-gray-100');
+                const nameSpan = label.querySelector('span');
+                if (nameSpan) {
+                    nameSpan.classList.add('text-purple-900');
+                    nameSpan.classList.remove('text-gray-700');
+                }
+            } else {
+                label.classList.remove('bg-purple-50', 'border-l-4', 'border-purple-500');
+                label.classList.add('hover:bg-gray-100');
+                const nameSpan = label.querySelector('span');
+                if (nameSpan) {
+                    nameSpan.classList.remove('text-purple-900');
+                    nameSpan.classList.add('text-gray-700');
+                }
+            }
+            
+            // 更新权限统计
+            const categoryId = document.getElementById('category-select').value;
+            if (categoryId) {
+                const category = allCategories.find(c => c.id == categoryId);
+                if (category && category.predefined_names) {
+                    const checkedCount = document.querySelectorAll('#equipment-checkboxes input[type="checkbox"]:checked').length;
+                    updateEquipmentPermissionStats(checkedCount, category.predefined_names.length);
+                }
+            }
+        }
+
+        // 更新器具权限统计
+        function updateEquipmentPermissionStats(checkedCount, totalCount) {
+            const statsElement = document.getElementById('equipment-permission-stats');
+            if (!statsElement) return;
+            
+            const percentage = totalCount > 0 ? Math.round((checkedCount / totalCount) * 100) : 0;
+            
+            statsElement.innerHTML = `
+                <div class="text-sm text-gray-600">
+                    已选择 <span class="font-semibold text-purple-600">${checkedCount}</span> / ${totalCount} 个器具
+                    <span class="text-gray-400 ml-2">(${percentage}%)</span>
+                </div>
+            `;
+        }
+
+        // 全选器具
+        function selectAllEquipment() {
+            const checkboxes = document.querySelectorAll('#equipment-checkboxes input[type="checkbox"]:not(:disabled)');
+            
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = true;
+                updateEquipmentStyle(checkbox.value, true);
+            });
+        }
+
+        // 清空所有器具选择
+        function clearAllEquipment() {
+            const checkboxes = document.querySelectorAll('#equipment-checkboxes input[type="checkbox"]');
+            
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = false;
+                updateEquipmentStyle(checkbox.value, false);
+            });
+        }
+
+        // 保存用户器具权限
+        async function saveUserEquipmentPermissions() {
+            if (!managingEquipmentPermissionsUserId) return;
+
+            const categoryId = document.getElementById('category-select').value;
+            if (!categoryId) {
+                showNotification('请选择一个设备类别', 'warning');
+                return;
+            }
+
+            const checkboxes = document.querySelectorAll('#equipment-checkboxes input[type="checkbox"]:checked');
+            const equipmentNames = Array.from(checkboxes).map(cb => cb.value);
+
+            try {
+                const response = await fetch(`/api/users/${managingEquipmentPermissionsUserId}/equipment-permissions`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        category_id: parseInt(categoryId),
+                        equipment_names: equipmentNames
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                showNotification('用户器具权限更新成功', 'success');
+                
+                // 等待一小段时间确保显示更新后再关闭模态框
+                setTimeout(() => {
+                    closeUserEquipmentPermissionsModal();
+                }, 300);
+                
+            } catch (error) {
+                console.error('保存用户器具权限失败:', error);
+                showNotification('保存用户器具权限失败: ' + error.message, 'error');
+            }
+        }
+
+        // 关闭用户器具权限模态框
+        function closeUserEquipmentPermissionsModal() {
+            document.getElementById('userEquipmentPermissionsModal').classList.remove('show');
+            managingEquipmentPermissionsUserId = null;
+            
+            // 清理表单
+            document.getElementById('category-select').value = '';
+            document.getElementById('equipment-checkboxes').innerHTML = `
+                <div class="text-center text-gray-500 py-8">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    请先选择一个设备类别
+                </div>
+            `;
+            
+            // 清理权限统计显示
+            const statsElement = document.getElementById('equipment-permission-stats');
             if (statsElement) {
                 statsElement.innerHTML = '';
             }

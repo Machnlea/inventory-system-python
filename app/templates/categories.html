@@ -183,6 +183,7 @@
                                     <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">类别名称</th>
                                     <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">类别编号</th>
                                     <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">预定义器具名称</th>
+                                    <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700 uppercase tracking-wider">详情</th>
                                     <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">设备数量</th>
                                     <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">创建时间</th>
                                     <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">操作</th>
@@ -761,6 +762,16 @@
                                 </button>
                             </div>
                         </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <div class="flex items-center justify-center">
+                                <button onclick="toggleCategoryDetails(${category.id})" 
+                                        class="text-blue-600 hover:text-blue-800 p-1 rounded-full hover:bg-blue-50 transition-colors"
+                                        title="查看类别详细信息"
+                                        id="category-detail-btn-${category.id}">
+                                    <i class="fas fa-info-circle"></i>
+                                </button>
+                            </div>
+                        </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
                                 ${category.equipment_count || 0} 台设备
@@ -792,6 +803,25 @@
                                     <i class="fas fa-trash mr-1"></i>删除
                                 </button>`
                             }
+                        </td>
+                    </tr>
+                    <tr id="category-details-${category.id}" class="hidden">
+                        <td colspan="7" class="px-6 py-4 bg-gray-50">
+                            <div class="bg-white rounded-lg p-4 shadow-sm">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h4 class="text-sm font-semibold text-gray-900">
+                                        <i class="fas fa-info-circle mr-2 text-blue-600"></i>
+                                        ${category.name} 的详细信息
+                                    </h4>
+                                    <button onclick="toggleCategoryDetails(${category.id})" 
+                                            class="text-gray-400 hover:text-gray-600">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <div id="category-details-content-${category.id}" class="space-y-3">
+                                    <div class="text-sm text-gray-500">正在加载详细信息...</div>
+                                </div>
+                            </div>
                         </td>
                     </tr>
                 `;
@@ -1728,6 +1758,211 @@
             } catch (error) {
                 console.error('删除预定义器具名称失败:', error);
                 showNotification('删除预定义器具名称失败: ' + error.message, 'error');
+            }
+        }
+
+        // 切换类别详情显示
+        async function toggleCategoryDetails(categoryId) {
+            const detailsRow = document.getElementById(`category-details-${categoryId}`);
+            const btn = document.getElementById(`category-detail-btn-${categoryId}`);
+            
+            if (detailsRow.classList.contains('hidden')) {
+                // 展开详情
+                detailsRow.classList.remove('hidden');
+                btn.innerHTML = '<i class="fas fa-eye-slash"></i>';
+                btn.title = '隐藏详细信息';
+                
+                // 加载详细信息
+                await loadCategoryDetails(categoryId);
+            } else {
+                // 收起详情
+                detailsRow.classList.add('hidden');
+                btn.innerHTML = '<i class="fas fa-info-circle"></i>';
+                btn.title = '查看类别详细信息';
+            }
+        }
+
+        // 格式化日期函数
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            return new Date(dateString).toLocaleDateString('zh-CN');
+        }
+
+        // 加载类别详细信息
+        async function loadCategoryDetails(categoryId) {
+            const contentElement = document.getElementById(`category-details-content-${categoryId}`);
+            if (!contentElement) return;
+            
+            try {
+                // 获取类别和使用情况信息
+                const [categoryInfo, predefinedInfo] = await Promise.all([
+                    fetch(`/api/categories/${categoryId}`, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                            'Content-Type': 'application/json'
+                        }
+                    }),
+                    fetch(`/api/categories/${categoryId}/predefined-names`, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                ]);
+
+                if (!categoryInfo.ok || !predefinedInfo.ok) {
+                    throw new Error('Failed to load category details');
+                }
+
+                const category = await categoryInfo.json();
+                const predefinedData = await predefinedInfo.json();
+                
+                // 获取设备使用情况
+                let usageData = null;
+                try {
+                    const usageResponse = await fetch(`/api/categories/${categoryId}/equipment-usage`, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    if (usageResponse.ok) {
+                        usageData = await usageResponse.json();
+                    }
+                } catch (error) {
+                    console.log('获取使用情况失败，将显示基本信息');
+                }
+                
+                // 构建详细信息HTML - 重点展示所有预定义器具名称
+                let detailsHTML = '';
+                
+                // 预定义器具名称列表 - 显示所有名称，包括没有设备的
+                const allPredefinedNames = predefinedData.predefined_names || [];
+                if (allPredefinedNames.length > 0) {
+                    // 获取名称编号映射和使用统计
+                    const nameMapping = usageData?.name_mapping || {};
+                    const usageStats = usageData?.usage_stats || {};
+                    
+                    // 按编号排序，如果没有编号则按原顺序
+                    const sortedNames = [...allPredefinedNames].sort((a, b) => {
+                        const numA = parseInt(nameMapping[a] || '999');
+                        const numB = parseInt(nameMapping[b] || '999');
+                        return numA - numB;
+                    });
+
+                    // 计算总设备数
+                    const totalEquipment = Object.values(usageStats).reduce((sum, count) => sum + count, 0);
+                    const usedTypes = Object.values(usageStats).filter(count => count > 0).length;
+
+                    detailsHTML += `
+                        <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-3">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center">
+                                    <i class="fas fa-list text-green-600 mr-2"></i>
+                                    <span class="font-semibold text-green-900">${category.name} - 预定义器具名称列表</span>
+                                </div>
+                                <span class="text-sm text-green-700 bg-green-100 px-3 py-1 rounded-full">
+                                    共 ${allPredefinedNames.length} 种器具
+                                </span>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                                ${sortedNames.map((name, index) => {
+                                    const equipmentCount = usageStats[name] || 0;
+                                    const nameNumber = nameMapping[name] || (index + 1);
+                                    return `
+                                        <div class="bg-white rounded-lg px-3 py-3 border border-green-200 shadow-sm hover:shadow-md transition-shadow h-24 flex flex-col">
+                                            <div class="flex items-center justify-between mb-2">
+                                                <span class="inline-flex items-center justify-center w-6 h-6 bg-green-100 text-green-800 text-xs font-bold rounded-full">
+                                                    ${nameNumber}
+                                                </span>
+                                                <span class="text-lg font-bold ${equipmentCount > 0 ? 'text-blue-600' : 'text-gray-400'}">
+                                                    ${equipmentCount}
+                                                </span>
+                                            </div>
+                                            <div class="flex-1 flex flex-col items-center justify-center text-center">
+                                                <div class="font-medium text-gray-900 text-sm mb-1 leading-tight">${name}</div>
+                                                ${equipmentCount > 0 ? `
+                                                    <div class="text-xs text-blue-600">
+                                                        有 ${equipmentCount} 台设备在使用
+                                                    </div>
+                                                ` : `
+                                                    <div class="text-xs text-gray-500">
+                                                        暂无设备
+                                                    </div>
+                                                `}
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                            <div class="mt-4 pt-3 border-t border-green-200">
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-green-700">
+                                    <div class="text-center">
+                                        <span class="block text-xl font-bold">${allPredefinedNames.length}</span>
+                                        <span class="text-xs text-green-600">器具种类</span>
+                                    </div>
+                                    <div class="text-center">
+                                        <span class="block text-xl font-bold">${totalEquipment}</span>
+                                        <span class="text-xs text-green-600">设备总数</span>
+                                    </div>
+                                    <div class="text-center">
+                                        <span class="block text-xl font-bold">${usedTypes}</span>
+                                        <span class="text-xs text-green-600">在用种类</span>
+                                    </div>
+                                    <div class="text-center">
+                                        <span class="block text-xl font-bold">${allPredefinedNames.length - usedTypes}</span>
+                                        <span class="text-xs text-green-600">空闲种类</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    detailsHTML += `
+                        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                            <div class="text-center py-6">
+                                <i class="fas fa-inbox text-gray-300 text-3xl mb-3"></i>
+                                <h4 class="text-lg font-medium text-gray-600 mb-2">${category.name}</h4>
+                                <p class="text-sm text-gray-500">该类别暂无预定义器具名称</p>
+                                <p class="text-xs text-gray-400 mt-1">可在类别管理中添加预定义器具名称</p>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                // 基本信息 - 作为补充信息
+                const totalEquipmentCount = usageData ? Object.values(usageData.usage_stats || {}).reduce((sum, count) => sum + count, 0) : 0;
+                detailsHTML += `
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <div class="flex items-center mb-2">
+                            <i class="fas fa-info text-blue-600 mr-2"></i>
+                            <span class="font-medium text-blue-900">类别基本信息</span>
+                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                            <div><span class="text-gray-600">类别编号:</span> <span class="font-medium">${category.category_code || category.code || '-'}</span></div>
+                            <div><span class="text-gray-600">创建时间:</span> <span class="font-medium">${formatDate(category.created_at)}</span></div>
+                            <div><span class="text-gray-600">器具种类:</span> <span class="font-medium">${allPredefinedNames.length} 种</span></div>
+                            <div><span class="text-gray-600">设备总数:</span> <span class="font-medium">${totalEquipmentCount} 台</span></div>
+                        </div>
+                        ${category.description ? `<div class="mt-2 pt-2 border-t border-blue-200"><span class="text-gray-600">描述:</span> <span class="font-medium">${category.description}</span></div>` : ''}
+                    </div>
+                `;
+                
+                contentElement.innerHTML = detailsHTML;
+                
+            } catch (error) {
+                console.error('加载类别详情失败:', error);
+                contentElement.innerHTML = `
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-3">
+                        <div class="flex items-center text-red-700">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>
+                            <span class="text-sm">加载详细信息失败</span>
+                        </div>
+                    </div>
+                `;
             }
         }
     </script>

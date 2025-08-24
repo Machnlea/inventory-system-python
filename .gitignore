@@ -49,3 +49,5 @@ app/static/uploads/*
 # Temporary shell scripts (except important ones)
 # Important shell scripts (start.sh, restart_system.sh, etc.) are tracked
 1753683727739-0b3a4f6e84284f1b9afa951ab7873c29.sh
+
+.claude/*

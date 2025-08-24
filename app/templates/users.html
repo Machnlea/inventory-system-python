@@ -462,6 +462,20 @@
         let itemsPerPage = parseInt(localStorage.getItem('users_page_size') || '20');
         let totalItems = 0;
 
+        // 动态获取token的辅助函数
+        function getCurrentToken() {
+            return sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
+        }
+
+        // 获取带token的请求头
+        function getAuthHeaders() {
+            const token = getCurrentToken();
+            return {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            };
+        }
+
         // 页面加载完成后初始化
         document.addEventListener('DOMContentLoaded', function() {
             try {
@@ -594,9 +608,21 @@
             if (logoutBtn) {
                 logoutBtn.addEventListener('click', function() {
                     if (confirm('确定要退出登录吗？')) {
+                        // 清除当前标签页的会话数据
+                        sessionStorage.removeItem('access_token');
+                        sessionStorage.removeItem('refresh_token');
+                        sessionStorage.removeItem('user_info');
+                        
+                        // 兼容旧系统：同时清除localStorage
                         localStorage.removeItem('access_token');
                         localStorage.removeItem('refresh_token');
                         localStorage.removeItem('user_info');
+                        
+                        // 通知标签页会话管理器
+                        if (window.tabSessionManager) {
+                            tabSessionManager.clearSession();
+                        }
+                        
                         window.location.href = '/login';
                     }
                 });
@@ -622,10 +648,7 @@
                 const skip = (currentPage - 1) * itemsPerPage;
                 const response = await fetch(`/api/users/?skip=${skip}&limit=${itemsPerPage}`, {
                     method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-                        'Content-Type': 'application/json'
-                    }
+                    headers: getAuthHeaders()
                 });
 
                 if (!response.ok) {
@@ -638,10 +661,7 @@
                 // 获取总用户数用于分页
                 const totalResponse = await fetch('/api/users/', {
                     method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-                        'Content-Type': 'application/json'
-                    }
+                    headers: getAuthHeaders()
                 });
                 
                 if (totalResponse.ok) {
@@ -675,10 +695,7 @@
             try {
                 const response = await fetch('/api/categories/', {
                     method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-                        'Content-Type': 'application/json'
-                    }
+                    headers: getAuthHeaders()
                 });
 
                 if (!response.ok) {
@@ -701,14 +718,14 @@
                     fetch(`/api/users/${userId}/categories`, {
                         method: 'GET',
                         headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                            'Authorization': `Bearer ${getCurrentToken()}`,
                             'Content-Type': 'application/json'
                         }
                     }),
                     fetch(`/api/users/${userId}/equipment-permissions`, {
                         method: 'GET',
                         headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                            'Authorization': `Bearer ${getCurrentToken()}`,
                             'Content-Type': 'application/json'
                         }
                     })
@@ -755,14 +772,14 @@
                     fetch(`/api/users/${userId}/categories`, {
                         method: 'GET',
                         headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                            'Authorization': `Bearer ${getCurrentToken()}`,
                             'Content-Type': 'application/json'
                         }
                     }),
                     fetch(`/api/users/${userId}/equipment-permissions`, {
                         method: 'GET',
                         headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                            'Authorization': `Bearer ${getCurrentToken()}`,
                             'Content-Type': 'application/json'
                         }
                     })
@@ -1251,7 +1268,7 @@
                     response = await fetch(`/api/users/${editingUserId}`, {
                         method: 'PUT',
                         headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                            'Authorization': `Bearer ${getCurrentToken()}`,
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify(userData)
@@ -1261,7 +1278,7 @@
                     response = await fetch('/api/users/', {
                         method: 'POST',
                         headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                            'Authorization': `Bearer ${getCurrentToken()}`,
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify(userData)
@@ -1319,7 +1336,7 @@
                 const response = await fetch(`/api/users/${deletingUserId}`, {
                     method: 'DELETE',
                     headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                        'Authorization': `Bearer ${getCurrentToken()}`
                     }
                 });
                 
@@ -1371,14 +1388,14 @@
                     fetch(`/api/users/${userId}/categories`, {
                         method: 'GET',
                         headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                            'Authorization': `Bearer ${getCurrentToken()}`,
                             'Content-Type': 'application/json'
                         }
                     }),
                     fetch('/api/users/categories/managed-status', {
                         method: 'GET',
                         headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                            'Authorization': `Bearer ${getCurrentToken()}`,
                             'Content-Type': 'application/json'
                         }
                     })
@@ -1544,21 +1561,21 @@
                     fetch('/api/categories/', {
                         method: 'GET',
                         headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                            'Authorization': `Bearer ${getCurrentToken()}`,
                             'Content-Type': 'application/json'
                         }
                     }),
                     fetch('/api/users/equipment-permissions/managed-status', {
                         method: 'GET',
                         headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                            'Authorization': `Bearer ${getCurrentToken()}`,
                             'Content-Type': 'application/json'
                         }
                     }),
                     fetch(`/api/users/${userId}/equipment-permissions`, {
                         method: 'GET',
                         headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                            'Authorization': `Bearer ${getCurrentToken()}`,
                             'Content-Type': 'application/json'
                         }
                     })
@@ -1785,7 +1802,7 @@
                 const response = await fetch(`/api/users/${managingEquipmentPermissionsUserId}/equipment-permissions`, {
                     method: 'PUT',
                     headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                        'Authorization': `Bearer ${getCurrentToken()}`,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
@@ -1854,7 +1871,7 @@
                 const response = await fetch(`/api/users/${managingCategoriesUserId}/categories`, {
                     method: 'PUT',
                     headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                        'Authorization': `Bearer ${getCurrentToken()}`,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
@@ -2033,14 +2050,14 @@
                     fetch(`/api/users/${userId}/categories`, {
                         method: 'GET',
                         headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                            'Authorization': `Bearer ${getCurrentToken()}`,
                             'Content-Type': 'application/json'
                         }
                     }),
                     fetch(`/api/users/${userId}/equipment-permissions`, {
                         method: 'GET',
                         headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                            'Authorization': `Bearer ${getCurrentToken()}`,
                             'Content-Type': 'application/json'
                         }
                     })

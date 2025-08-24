@@ -134,7 +134,23 @@ class TabSessionManager {
      * 处理强制退出登录
      */
     handleForceLogout(data) {
-        if (data.targetTabs && data.targetTabs.includes(this.tabId)) {
+        // 检查当前用户是否与被强制退出的用户匹配
+        const currentUser = this.getCurrentUser();
+        
+        if (!currentUser || currentUser.username !== data.username) {
+            return; // 不是同一用户，不处理
+        }
+        
+        // 检查是否应该被强制退出
+        const shouldLogout = data.targetTabs === null || // null表示所有其他标签页
+                           (data.targetTabs && data.targetTabs.includes(this.tabId));
+        
+        // 排除发送消息的标签页（不要退出自己）
+        if (data.fromTab === this.tabId) {
+            return;
+        }
+        
+        if (shouldLogout) {
             console.log('被其他标签页强制退出登录');
             this.clearSession();
             
@@ -166,6 +182,49 @@ class TabSessionManager {
     async login(credentials) {
         const { username, password } = credentials;
         
+        // 首先尝试正常登录（不强制）
+        try {
+            const response = await this.attemptLogin(username, password, false);
+            return response;
+        } catch (error) {
+            // 检查是否是409冲突错误（服务器端检测到会话冲突）
+            if (error.response && error.response.status === 409) {
+                const conflictData = error.response.data;
+                console.log('检测到服务器端会话冲突:', conflictData);
+                
+                if (conflictData && conflictData.conflict_type === 'session_exists') {
+                    // 显示服务器端会话冲突对话框
+                    const shouldForceLogin = await this.showServerSessionConflictDialog(
+                        username, 
+                        conflictData.active_sessions,
+                        conflictData.message
+                    );
+                    
+                    if (shouldForceLogin) {
+                        // 用户选择强制登录
+                        try {
+                            const response = await this.attemptLogin(username, password, true);
+                            return response;
+                        } catch (forceError) {
+                            console.error('强制登录失败:', forceError);
+                            throw forceError;
+                        }
+                    } else {
+                        throw new Error('登录已取消');
+                    }
+                }
+            }
+            
+            // 其他错误，回退到客户端检测逻辑
+            console.log('服务器端冲突检测失败，使用客户端检测:', error);
+            return this.handleClientSideLogin(username, password);
+        }
+    }
+    
+    /**
+     * 处理客户端登录逻辑（原逻辑的备份）
+     */
+    async handleClientSideLogin(username, password) {
         // 检查登录冲突
         const conflictResult = await this.checkLoginConflict(username);
         
@@ -183,11 +242,26 @@ class TabSessionManager {
         }
         
         // 执行实际登录
+        const response = await this.attemptLogin(username, password, false);
+        return response;
+    }
+    
+    /**
+     * 尝试登录
+     */
+    async attemptLogin(username, password, force = false) {
         try {
-            const response = await api.post('/api/auth/login/json', {
+            const loginData = {
                 username: username,
                 password: password
-            });
+            };
+            
+            // 如果是强制登录，添加force参数
+            if (force) {
+                loginData.force = true;
+            }
+            
+            const response = await api.post('/api/auth/login/json', loginData);
             
             // 将数据存储到sessionStorage（标签页独立）
             this.setSession(response);
@@ -206,6 +280,89 @@ class TabSessionManager {
             console.error('登录失败:', error);
             throw error;
         }
+    }
+    
+    /**
+     * 显示服务器端会话冲突对话框
+     */
+    async showServerSessionConflictDialog(username, activeSessions, message) {
+        return new Promise((resolve) => {
+            // 创建模态框
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[10000]';
+            
+            // 格式化会话信息
+            const sessionsInfo = activeSessions.map(session => {
+                const createdTime = new Date(session.created_at * 1000).toLocaleString();
+                const lastActivity = new Date(session.last_activity * 1000).toLocaleString();
+                const userAgent = session.user_agent.substring(0, 50) + (session.user_agent.length > 50 ? '...' : '');
+                
+                return `
+                    <div class="bg-gray-50 rounded p-2 text-xs">
+                        <div><strong>IP:</strong> ${session.ip_address}</div>
+                        <div><strong>浏览器:</strong> ${userAgent}</div>
+                        <div><strong>登录时间:</strong> ${createdTime}</div>
+                        <div><strong>最后活动:</strong> ${lastActivity}</div>
+                    </div>
+                `;
+            }).join('');
+            
+            modal.innerHTML = `
+                <div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 p-6">
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-exclamation-triangle text-yellow-500 text-2xl mr-3"></i>
+                        <h3 class="text-lg font-semibold text-gray-900">检测到活跃会话</h3>
+                    </div>
+                    <div class="mb-6">
+                        <p class="text-gray-700 mb-3">
+                            用户 <span class="font-semibold text-blue-600">${username}</span> 已在其他设备登录。
+                        </p>
+                        <div class="bg-yellow-50 border border-yellow-200 rounded p-3 mb-4">
+                            <p class="text-sm text-yellow-800">
+                                <i class="fas fa-info-circle mr-2"></i>
+                                ${message}
+                            </p>
+                        </div>
+                        <div class="space-y-2">
+                            <p class="text-sm font-medium text-gray-700">活跃会话详情：</p>
+                            ${sessionsInfo}
+                        </div>
+                    </div>
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <button id="cancelLogin" class="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors">
+                            <i class="fas fa-times mr-2"></i>取消登录
+                        </button>
+                        <button id="forceLogin" class="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
+                            <i class="fas fa-sign-in-alt mr-2"></i>强制登录
+                        </button>
+                    </div>
+                    <div class="mt-4 text-xs text-gray-500 text-center">
+                        选择"强制登录"将会终止其他设备的登录会话
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // 绑定事件
+            modal.querySelector('#cancelLogin').addEventListener('click', () => {
+                document.body.removeChild(modal);
+                resolve(false);
+            });
+            
+            modal.querySelector('#forceLogin').addEventListener('click', () => {
+                document.body.removeChild(modal);
+                resolve(true);
+            });
+            
+            // 点击背景关闭
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    document.body.removeChild(modal);
+                    resolve(false);
+                }
+            });
+        });
     }
     
     /**

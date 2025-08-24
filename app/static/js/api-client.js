@@ -14,8 +14,11 @@ class ApiClient {
             'Content-Type': 'application/json'
         };
         
-        if (this.token) {
-            headers['Authorization'] = `Bearer ${this.token}`;
+        // 每次获取请求头时都重新获取token，确保使用最新的token
+        const currentToken = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
+        if (currentToken) {
+            this.token = currentToken; // 同步更新实例的token
+            headers['Authorization'] = `Bearer ${currentToken}`;
         }
         
         return headers;
@@ -55,6 +58,21 @@ class ApiClient {
                     throw new Error('登录已过期, 请重新登录');
                 }
 
+                // 处理409冲突错误（会话冲突），不要当作常规错误
+                if (response.status === 409) {
+                    const errorData = await response.json().catch(() => ({}));
+                    console.log('409冲突错误详情:', errorData);
+                    
+                    // 构造错误对象，确保数据结构正确
+                    const conflictData = errorData.detail || errorData;
+                    const error = new Error(conflictData.message || '会话冲突');
+                    error.response = { 
+                        status: 409, 
+                        data: conflictData
+                    };
+                    throw error;
+                }
+
                 // 处理其他HTTP错误
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
@@ -66,6 +84,11 @@ class ApiClient {
             } catch (error) {
                 lastError = error;
                 console.error(`API请求失败 (尝试 ${attempt}/${retryCount}):`, error);
+                
+                // 409冲突错误不重试，直接抛出
+                if (error.response && error.response.status === 409) {
+                    break;
+                }
                 
                 // 如果是网络错误且还有重试次数, 则等待后重试
                 if ((error.name === 'TypeError' || error.message.includes('网络')) && attempt < retryCount) {
@@ -138,7 +161,11 @@ class ApiClient {
         
         return new Promise((resolve, reject) => {
             xhr.open('POST', `${this.baseURL}${endpoint}`, true);
-            xhr.setRequestHeader('Authorization', `Bearer ${this.token}`);
+            // 动态获取最新的token
+            const currentToken = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
+            if (currentToken) {
+                xhr.setRequestHeader('Authorization', `Bearer ${currentToken}`);
+            }
 
             if (onProgress) {
                 xhr.upload.onprogress = (event) => {
@@ -553,11 +580,16 @@ const ImportExportAPI = {
             overwriteType: typeof overwrite
         });
 
+        // 动态获取最新的token
+        const currentToken = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
+        const headers = {};
+        if (currentToken) {
+            headers['Authorization'] = `Bearer ${currentToken}`;
+        }
+
         const response = await fetch('/api/import/upload', {
             method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${api.token}`
-            },
+            headers: headers,
             body: formData
         });
 

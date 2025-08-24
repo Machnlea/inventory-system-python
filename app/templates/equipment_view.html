@@ -159,7 +159,7 @@
             <!-- 页面头部 -->
             <div class="mb-8">
                 <div class="flex items-center gap-4 mb-4">
-                    <button onclick="history.back()" class="text-gray-600 hover:text-gray-900">
+                    <button onclick="goBackToEquipmentList()" class="text-gray-600 hover:text-gray-900">
                         <i class="fas fa-arrow-left text-xl"></i>
                     </button>
                     <div class="flex-1">
@@ -951,6 +951,16 @@
             window.print();
         }
 
+        // 返回到设备管理页面并刷新数据
+        function goBackToEquipmentList() {
+            // 导航到设备管理页面，添加刷新参数
+            const equipmentUrl = new URL('/equipment', window.location.origin);
+            equipmentUrl.searchParams.set('refresh', 'true');
+            equipmentUrl.searchParams.set('timestamp', Date.now().toString());
+            
+            window.location.href = equipmentUrl.toString();
+        }
+
         // 页面加载完成后的初始化
         document.addEventListener('DOMContentLoaded', function() {
             console.log('设备详情页面加载完成');
@@ -1219,34 +1229,11 @@
                 showNotification('正在下载附件...', 'info');
                 
                 // 首先获取附件信息来得到文件名
-                const response = await fetch(`/api/attachments/${attachmentId}`, {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-                    }
-                });
-                const attachment = await response.json();
+                const attachment = await AttachmentAPI.getAttachment(attachmentId);
                 const filename = attachment.original_filename || attachment.filename;
                 
-                const downloadResponse = await fetch(`/api/attachments/${attachmentId}/download`, {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-                    }
-                });
-                
-                if (!downloadResponse.ok) {
-                    throw new Error('附件下载失败');
-                }
-
-                // 创建下载链接
-                const blob = await downloadResponse.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
+                // 使用AttachmentAPI进行下载
+                await AttachmentAPI.downloadAttachment(attachmentId, filename);
                 
                 showNotification('附件下载成功', 'success');
             } catch (error) {
@@ -1318,27 +1305,11 @@
             try {
                 showNotification('正在上传照片...', 'info');
                 
-                // 创建FormData对象
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('equipment_id', currentEquipmentId);
-
-                // 这里需要调用API上传照片
-                // 使用附件上传API，注意正确的URL路径
-                const response = await fetch(`/api/attachments/equipment/${currentEquipmentId}/attachments`, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-                    }
+                // 使用AttachmentAPI上传照片
+                const result = await AttachmentAPI.uploadAttachment(currentEquipmentId, file, (progress) => {
+                    console.log(`上传进度: ${progress}%`);
                 });
 
-                if (!response.ok) {
-                    throw new Error('照片上传失败');
-                }
-
-                const result = await response.json();
-                
                 // 更新照片显示
                 const photoElement = document.getElementById('equipmentPhoto');
                 const reader = new FileReader();
@@ -1349,7 +1320,8 @@
                         filename: result.filename,
                         original_filename: result.original_filename || file.name,
                         file_path: result.file_path,
-                        file_type: file.type
+                        file_type: file.type,
+                        file_size: file.size
                     };
                 };
                 reader.readAsDataURL(file);
@@ -1407,28 +1379,9 @@
             try {
                 showNotification('正在下载照片...', 'info');
                 
-                // 使用附件下载API下载照片
-                const response = await fetch(`/api/attachments/${currentEquipmentPhoto.id}/download`, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error('照片下载失败');
-                }
-
-                // 创建下载链接
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = currentEquipmentPhoto.original_filename || '设备照片.jpg';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
+                // 使用AttachmentAPI下载照片
+                const filename = currentEquipmentPhoto.original_filename || '设备照片.jpg';
+                await AttachmentAPI.downloadAttachment(currentEquipmentPhoto.id, filename);
 
                 showNotification('照片下载成功', 'success');
             } catch (error) {
@@ -1440,20 +1393,23 @@
         // 更新附件计数显示
         async function updateAttachmentCount(equipmentId) {
             try {
-                const response = await fetch(`/api/attachments/equipment/${equipmentId}/attachments`, {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-                    }
-                });
-                const attachments = await response.json();
-                const count = attachments.length;
+                const attachments = await AttachmentAPI.getEquipmentAttachments(equipmentId);
+                const count = Array.isArray(attachments) ? attachments.length : 0;
+                
                 // 更新详情页面上的附件计数
                 const attachmentBadge = document.getElementById('attachmentCountBadge');
                 if (attachmentBadge) {
                     attachmentBadge.textContent = `${count}个`;
                 }
+                
+                console.log(`附件计数更新：设备${equipmentId}有${count}个附件`);
             } catch (error) {
                 console.error('更新附件计数失败:', error);
+                // 错误时显示0个，避免显示undefined
+                const attachmentBadge = document.getElementById('attachmentCountBadge');
+                if (attachmentBadge) {
+                    attachmentBadge.textContent = '0个';
+                }
             }
         }
 

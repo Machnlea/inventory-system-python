@@ -837,6 +837,17 @@
         // 页面加载完成后初始化
         document.addEventListener('DOMContentLoaded', async function() {
             try {
+                // 检查是否有刷新参数，如果有则清除并准备强制刷新
+                const urlParams = new URLSearchParams(window.location.search);
+                const shouldRefresh = urlParams.has('refresh') || urlParams.has('timestamp');
+                
+                if (shouldRefresh) {
+                    // 清除URL参数以避免重复刷新
+                    const cleanUrl = window.location.pathname;
+                    window.history.replaceState({}, document.title, cleanUrl);
+                    console.log('检测到刷新参数，将强制刷新设备数据');
+                }
+                
                 // 等待 API 客户端加载完成
                 await checkApiClientLoaded();
                 
@@ -850,6 +861,10 @@
                 await initializePage();
                 await loadEquipmentData();
                 setupEventListeners();
+                
+                if (shouldRefresh) {
+                    showNotification('页面数据已刷新', 'success');
+                }
             } catch (error) {
                 console.error('页面初始化失败:', error);
                 showNotification('页面初始化失败，请刷新页面重试', 'error');

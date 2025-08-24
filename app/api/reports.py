@@ -401,8 +401,12 @@ async def get_equipment_stats(
     elif sort_by == "status":
         primary_order = Equipment.status.desc() if sort_order == "desc" else Equipment.status.asc()
     elif sort_by == "department":
+        # 按部门排序需要JOIN
+        query = query.join(Department)
         primary_order = Department.name.desc() if sort_order == "desc" else Department.name.asc()
     elif sort_by == "category":
+        # 按类别排序需要JOIN
+        query = query.join(EquipmentCategory)
         primary_order = EquipmentCategory.name.desc() if sort_order == "desc" else EquipmentCategory.name.asc()
     else:
         primary_order = Equipment.original_value.desc()
@@ -418,8 +422,12 @@ async def get_equipment_stats(
         elif sort_by2 == "status":
             secondary_order = Equipment.status.desc() if sort_order2 == "desc" else Equipment.status.asc()
         elif sort_by2 == "department":
+            # 按部门排序需要JOIN
+            query = query.join(Department)
             secondary_order = Department.name.desc() if sort_order2 == "desc" else Department.name.asc()
         elif sort_by2 == "category":
+            # 按类别排序需要JOIN
+            query = query.join(EquipmentCategory)
             secondary_order = EquipmentCategory.name.desc() if sort_order2 == "desc" else EquipmentCategory.name.asc()
         else:
             secondary_order = Equipment.name.asc()  # 默认次排序为名称升序
@@ -495,20 +503,38 @@ async def get_equipment_stats(
     a_grade_rate = (a_grade_count / mandatory_inspection_count * 100) if mandatory_inspection_count > 0 else 0
     
     # 按部门统计
-    department_stats = query.with_entities(
-        Department.name,
-        func.count(Equipment.id).label('count'),
-        func.sum(Equipment.original_value).label('total_value'),
-        func.avg(Equipment.original_value).label('avg_value')
-    ).join(Department).group_by(Department.id, Department.name).all()
+    # 检查是否已经JOIN了Department
+    if sort_by == "department" or sort_by2 == "department":
+        department_stats = query.with_entities(
+            Department.name,
+            func.count(Equipment.id).label('count'),
+            func.sum(Equipment.original_value).label('total_value'),
+            func.avg(Equipment.original_value).label('avg_value')
+        ).group_by(Department.id, Department.name).all()
+    else:
+        department_stats = query.with_entities(
+            Department.name,
+            func.count(Equipment.id).label('count'),
+            func.sum(Equipment.original_value).label('total_value'),
+            func.avg(Equipment.original_value).label('avg_value')
+        ).join(Department, Equipment.department_id == Department.id).group_by(Department.id, Department.name).all()
     
     # 按类别统计
-    category_stats = query.with_entities(
-        EquipmentCategory.name,
-        func.count(Equipment.id).label('count'),
-        func.sum(Equipment.original_value).label('total_value'),
-        func.avg(Equipment.original_value).label('avg_value')
-    ).join(EquipmentCategory).group_by(EquipmentCategory.id, EquipmentCategory.name).all()
+    # 检查是否已经JOIN了EquipmentCategory
+    if sort_by == "category" or sort_by2 == "category":
+        category_stats = query.with_entities(
+            EquipmentCategory.name,
+            func.count(Equipment.id).label('count'),
+            func.sum(Equipment.original_value).label('total_value'),
+            func.avg(Equipment.original_value).label('avg_value')
+        ).group_by(EquipmentCategory.id, EquipmentCategory.name).all()
+    else:
+        category_stats = query.with_entities(
+            EquipmentCategory.name,
+            func.count(Equipment.id).label('count'),
+            func.sum(Equipment.original_value).label('total_value'),
+            func.avg(Equipment.original_value).label('avg_value')
+        ).join(EquipmentCategory, Equipment.category_id == EquipmentCategory.id).group_by(EquipmentCategory.id, EquipmentCategory.name).all()
     
     # 构建设备列表
     equipment_list = []

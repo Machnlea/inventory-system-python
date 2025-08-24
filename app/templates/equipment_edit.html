@@ -375,13 +375,30 @@
             }
 
             try {
-                const data = await CategoryAPI.getPredefinedNames(categoryId);
+                // 获取预定义名称和编号映射
+                const [namesData, usageData] = await Promise.all([
+                    CategoryAPI.getPredefinedNames(categoryId),
+                    CategoryAPI.getEquipmentUsage(categoryId)
+                ]);
                 
-                if (data.predefined_names && data.predefined_names.length > 0) {
-                    data.predefined_names.forEach(name => {
+                if (namesData.predefined_names && namesData.predefined_names.length > 0) {
+                    const predefinedNames = namesData.predefined_names;
+                    const nameMapping = usageData.name_mapping || {};
+                    
+                    // 创建名称和编号的数组，然后按编号排序
+                    const nameNumberPairs = predefinedNames.map(name => ({
+                        name: name,
+                        number: parseInt(nameMapping[name] || '99')
+                    }));
+                    
+                    // 按编号排序
+                    nameNumberPairs.sort((a, b) => a.number - b.number);
+                    
+                    // 添加排序后的选项
+                    nameNumberPairs.forEach(pair => {
                         const option = document.createElement('option');
-                        option.value = name;
-                        option.textContent = name;
+                        option.value = pair.name;
+                        option.textContent = `${pair.name} (${pair.number})`;
                         nameSelect.appendChild(option);
                     });
                 } else {
@@ -399,12 +416,7 @@
 
         // 处理计量器具名称选择
         function handleEquipmentNameChange() {
-            const nameSelect = document.getElementById('equipmentName');
-            
-            if (nameSelect.value) {
-                // 重新生成编号（现在包含设备名称）
-                generateAutoId();
-            }
+            generateAutoId();
         }
 
         // 初始化页面
@@ -650,19 +662,17 @@
                 });
             }
             
-            // 类别变化时自动生成编号
+            // 类别变化时加载预定义器具名称并清空编号
             if (elements.category) {
-                elements.category.addEventListener('change', generateAutoId);
+                elements.category.addEventListener('change', function() {
+                    loadPredefinedNamesForCategory();
+                    generateAutoId(); // 清空编号
+                });
             }
             
             // 设备名称变化时自动生成编号
             if (elements.equipmentName) {
                 elements.equipmentName.addEventListener('change', handleEquipmentNameChange);
-            }
-
-            // 类别变化时加载预定义器具名称
-            if (elements.category) {
-                elements.category.addEventListener('change', loadPredefinedNamesForCategory);
             }
         }
 
@@ -813,7 +823,8 @@
             const equipmentName = document.getElementById('equipmentName').value;
             const codeInput = document.getElementById('equipmentCode');
             
-            if (categoryId) {
+            // 只有在类别和设备名称都选择时才生成编号
+            if (categoryId && equipmentName) {
                 try {
                     // 显示加载状态
                     codeInput.value = '正在生成...';

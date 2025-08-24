@@ -402,6 +402,56 @@
         </div>
     </div>
 
+    <!-- 编辑预定义器具名称模态框 -->
+    <div id="editPredefinedNameModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-900">编辑预定义器具名称</h3>
+                <button class="text-gray-400 hover:text-gray-600" onclick="closeEditPredefinedNameModal()">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-6">
+                    <div class="flex items-center mb-4">
+                        <div class="flex-shrink-0">
+                            <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                                <i class="fas fa-edit text-blue-600 text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm text-gray-600">为类别 "<span id="editPredefinedNameCategoryName" class="font-medium text-gray-900"></span>" 编辑预定义器具名称</p>
+                            <p class="text-sm text-gray-500 mt-1">修改名称后，将影响新增设备时的选择</p>
+                        </div>
+                    </div>
+                </div>
+                <form id="editPredefinedNameForm">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">当前名称</label>
+                        <input type="text" id="currentPredefinedName" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50" 
+                               readonly>
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">新名称 <span class="text-red-500">*</span></label>
+                        <input type="text" id="editedPredefinedName" name="newName" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="请输入新的预定义器具名称">
+                        <p class="text-sm text-gray-500 mt-1">如果该名称下有设备，则不能修改</p>
+                    </div>
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400" onclick="closeEditPredefinedNameModal()">
+                            取消
+                        </button>
+                        <button type="submit" class="btn-primary text-white font-medium py-2 px-4 rounded-lg hover:shadow-lg transition-all duration-200">
+                            <i class="fas fa-save mr-2"></i>保存
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- 模态框样式 -->
     <style>
         .modal {
@@ -430,6 +480,8 @@
         let currentPredefinedNamesCategoryId = null;
         let currentPredefinedNamesCategoryName = null;
         let currentPredefinedNames = [];
+        let currentEditPredefinedName = null;
+        let currentEditPredefinedNameIndex = null;
         let categoryChart = null;
         let currentChartType = 'bar';
         let currentPage = 1;
@@ -527,6 +579,11 @@
                     closeCategoryCodeModal();
                 }
             });
+            document.getElementById('editPredefinedNameModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeEditPredefinedNameModal();
+                }
+            });
 
             // 类别编号表单提交
             document.getElementById('categoryCodeForm').addEventListener('submit', function(e) {
@@ -540,6 +597,14 @@
                 const nameInput = document.getElementById('newPredefinedName');
                 const name = nameInput.value.trim();
                 addPredefinedName(name);
+            });
+
+            // 编辑预定义名称表单提交
+            document.getElementById('editPredefinedNameForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const newNameInput = document.getElementById('editedPredefinedName');
+                const newName = newNameInput.value.trim();
+                saveEditedPredefinedName(newName);
             });
 
             // 使用事件委托处理类别编号编辑按钮点击
@@ -578,6 +643,14 @@
                     const name = btn.dataset.name;
                     const names = JSON.parse(btn.dataset.names || '[]');
                     managePredefinedNames(id, name, names);
+                }
+                
+                // 处理编辑预定义器具名称按钮点击
+                if (e.target.closest('.edit-predefined-name-btn')) {
+                    const btn = e.target.closest('.edit-predefined-name-btn');
+                    const name = btn.dataset.name;
+                    const index = parseInt(btn.dataset.index);
+                    editPredefinedName(name, index);
                 }
             });
 
@@ -1331,6 +1404,123 @@
             currentPredefinedNamesCategoryName = null;
         }
 
+        // 编辑预定义器具名称
+        async function editPredefinedName(name, index) {
+            // 检查该名称下是否有设备在使用
+            try {
+                if (!currentPredefinedNamesCategoryId) {
+                    showNotification('类别信息丢失，请重新操作', 'error');
+                    return;
+                }
+
+                // 获取设备使用情况
+                const usageData = await CategoryAPI.getEquipmentUsage(currentPredefinedNamesCategoryId);
+                const usageStats = usageData.usage_stats || {};
+                const equipmentCount = usageStats[name] || 0;
+
+                if (equipmentCount > 0) {
+                    showNotification(`无法编辑名称"${name}"，该名称下还有${equipmentCount}台设备在使用`, 'warning');
+                    return;
+                }
+
+                // 设置编辑模态框
+                currentEditPredefinedName = name;
+                currentEditPredefinedNameIndex = index;
+                
+                document.getElementById('editPredefinedNameCategoryName').textContent = currentPredefinedNamesCategoryName;
+                document.getElementById('currentPredefinedName').value = name;
+                document.getElementById('editedPredefinedName').value = name;
+                document.getElementById('editPredefinedNameModal').classList.add('show');
+
+            } catch (error) {
+                console.error('检查设备使用情况失败:', error);
+                showNotification('检查设备使用情况失败，无法编辑名称', 'error');
+            }
+        }
+
+        // 关闭编辑预定义器具名称模态框
+        function closeEditPredefinedNameModal() {
+            document.getElementById('editPredefinedNameModal').classList.remove('show');
+            document.getElementById('editPredefinedNameForm').reset();
+            currentEditPredefinedName = null;
+            currentEditPredefinedNameIndex = null;
+        }
+
+        // 保存编辑后的预定义器具名称
+        async function saveEditedPredefinedName(newName) {
+            if (!newName || !newName.trim()) {
+                showNotification('请输入新的预定义器具名称', 'warning');
+                return;
+            }
+
+            if (!currentPredefinedNamesCategoryId) {
+                showNotification('类别信息丢失，请重新操作', 'error');
+                return;
+            }
+
+            if (!currentEditPredefinedName) {
+                showNotification('要编辑的名称信息丢失，请重新操作', 'error');
+                return;
+            }
+            
+            // 添加调试信息
+            console.log('准备编辑预定义名称:');
+            console.log('currentEditPredefinedName:', currentEditPredefinedName);
+            console.log('newName:', newName.trim());
+            console.log('currentPredefinedNamesCategoryId:', currentPredefinedNamesCategoryId);
+
+            // 检查新名称是否与现有名称重复
+            try {
+                const currentNames = await CategoryAPI.getPredefinedNames(currentPredefinedNamesCategoryId);
+                const existingNames = currentNames.predefined_names || [];
+                
+                // 排除当前正在编辑的名称
+                const otherNames = existingNames.filter(name => name !== currentEditPredefinedName);
+                
+                if (otherNames.includes(newName.trim())) {
+                    showNotification(`名称"${newName}"已存在，请使用其他名称`, 'warning');
+                    return;
+                }
+            } catch (error) {
+                console.error('检查名称重复性失败:', error);
+                // 如果检查失败，继续执行
+            }
+
+            try {
+                // 使用新的编辑API，保持编号不变
+                const response = await fetch(`/api/categories/${currentPredefinedNamesCategoryId}/predefined-names`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                    },
+                    body: JSON.stringify({
+                        old_name: currentEditPredefinedName,
+                        new_name: newName.trim()
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || '编辑失败');
+                }
+
+                const result = await response.json();
+                showNotification('预定义器具名称修改成功', 'success');
+                closeEditPredefinedNameModal();
+
+                // 使用API返回的最新数据更新列表
+                updatePredefinedNamesList(result.predefined_names || []);
+
+                // 刷新类别列表以更新显示
+                loadCategories();
+
+            } catch (error) {
+                console.error('保存预定义器具名称失败:', error);
+                showNotification('保存预定义器具名称失败: ' + error.message, 'error');
+            }
+        }
+
         // 更新预定义器具名称列表
         async function updatePredefinedNamesList(names) {
             const listContainer = document.getElementById('predefinedNamesList');
@@ -1393,7 +1583,14 @@
                 });
             }
 
-            listContainer.innerHTML = names.map((name, index) => {
+            // 按照编号映射排序预定义名称
+            const sortedNames = [...names].sort((a, b) => {
+                const numA = parseInt(nameMapping[a] || '999');
+                const numB = parseInt(nameMapping[b] || '999');
+                return numA - numB;
+            });
+
+            listContainer.innerHTML = sortedNames.map((name, index) => {
                 const equipmentCount = usageStats[name] || 0;
                 const isUsed = equipmentCount > 0;
                 const nameNumber = nameMapping[name] || (index + 1).toString();
@@ -1421,10 +1618,21 @@
                             ${isUsed ? `
                                 <button class="text-gray-400 cursor-not-allowed transition-colors p-1" 
                                         disabled
+                                        title="该名称有 ${equipmentCount} 台设备在使用，不能编辑">
+                                    <i class="fas fa-edit text-sm"></i>
+                                </button>
+                                <button class="text-gray-400 cursor-not-allowed transition-colors p-1" 
+                                        disabled
                                         title="该名称有 ${equipmentCount} 台设备在使用，不能删除">
                                     <i class="fas fa-trash text-sm"></i>
                                 </button>
                             ` : `
+                                <button class="text-blue-600 hover:text-blue-800 transition-colors edit-predefined-name-btn p-1" 
+                                        data-name="${name}" 
+                                        data-index="${index}"
+                                        title="编辑此名称">
+                                    <i class="fas fa-edit text-sm"></i>
+                                </button>
                                 <button class="text-red-600 hover:text-red-800 transition-colors remove-predefined-name-btn p-1" 
                                         data-name="${name}" 
                                         title="删除此名称">

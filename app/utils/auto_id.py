@@ -78,12 +78,15 @@ def generate_category_code(category_name: str) -> str:
     # 如果无法生成，返回默认代码
     return "OT"  # Other
 
-def generate_internal_id(db: Session, category_id: int, equipment_name: str = None) -> str:
+def generate_internal_id(db: Session, category_id: int, equipment_name: str = None, equipment_id: int = None) -> str:
     """
     生成内部编号 (CC-TT-NNN格式)
     CC: 类别代码 (3位)
     TT: 设备类型编号 (格式: 类别代码-序列号)
     NNN: 该类型设备的序列号 (001-999)
+    
+    参数:
+        equipment_id: 设备ID，用于编辑时保持原有编号
     """
     # 获取类别信息
     category = db.query(EquipmentCategory).filter(EquipmentCategory.id == category_id).first()
@@ -94,23 +97,53 @@ def generate_internal_id(db: Session, category_id: int, equipment_name: str = No
     # 生成类别代码
     cat_code = category.code if category.code else generate_category_code(category.name)
     
-    # 获取设备类型编号
-    if equipment_name:
-        type_code = get_equipment_type_code(cat_code, equipment_name)
-        # 如果返回的是格式如"TEM-99"，则提取数字部分
-        if '-' in type_code:
-            simplified_type_code = type_code.split('-')[1]
+    # 如果是编辑现有设备，尝试保持原有编号
+    if equipment_id:
+        existing_equipment = db.query(Equipment).filter(Equipment.id == equipment_id).first()
+        if existing_equipment and existing_equipment.internal_id:
+            # 解析原有编号
+            try:
+                parsed = parse_internal_id(existing_equipment.internal_id)
+                # 如果类别代码相同，保持原有的类型编号
+                if parsed['category_code'] == cat_code:
+                    simplified_type_code = parsed['equipment_type_code']
+                else:
+                    # 类别改变，重新生成类型编号
+                    type_code = get_equipment_type_code(cat_code, equipment_name) if equipment_name else f"{cat_code}-99"
+                    simplified_type_code = type_code.split('-')[1] if '-' in type_code else type_code
+            except:
+                # 解析失败，重新生成
+                type_code = get_equipment_type_code(cat_code, equipment_name) if equipment_name else f"{cat_code}-99"
+                simplified_type_code = type_code.split('-')[1] if '-' in type_code else type_code
         else:
-            simplified_type_code = type_code
+            # 没有原有编号，重新生成
+            type_code = get_equipment_type_code(cat_code, equipment_name) if equipment_name else f"{cat_code}-99"
+            simplified_type_code = type_code.split('-')[1] if '-' in type_code else type_code
     else:
-        # 如果没有提供设备名称，使用默认类型编号
-        simplified_type_code = "99"
+        # 新建设备，生成新的类型编号
+        if equipment_name:
+            type_code = get_equipment_type_code(cat_code, equipment_name)
+            # 如果返回的是格式如"TEM-99"，则提取数字部分
+            if '-' in type_code:
+                simplified_type_code = type_code.split('-')[1]
+            else:
+                simplified_type_code = type_code
+        else:
+            # 如果没有提供设备名称，使用默认类型编号
+            simplified_type_code = "99"
     
     # 查询该类别-设备类型组合下的最大序列号
     pattern = f"{cat_code}-{simplified_type_code}-(\\d{{3}})"
-    result = db.query(Equipment).filter(
+    
+    # 构建查询条件，排除当前编辑的设备（如果是编辑模式）
+    query = db.query(Equipment).filter(
         Equipment.internal_id.like(f"{cat_code}-{simplified_type_code}-%")
-    ).all()
+    )
+    
+    if equipment_id:
+        query = query.filter(Equipment.id != equipment_id)
+    
+    result = query.all()
     
     # 提取现有的序列号
     existing_numbers = []

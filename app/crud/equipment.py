@@ -192,9 +192,28 @@ def create_equipment(db: Session, equipment: EquipmentCreate):
     return db_equipment
 
 def update_equipment(db: Session, equipment_id: int, equipment_update: EquipmentUpdate):
+    from app.utils.auto_id import generate_internal_id
+    
     db_equipment = db.query(Equipment).filter(Equipment.id == equipment_id).first()
     if db_equipment:
         update_data = equipment_update.dict(exclude_unset=True)
+        
+        # 如果更新了设备名称或类别，需要重新生成内部编号
+        if "name" in update_data or "category_id" in update_data:
+            new_name = update_data.get("name", db_equipment.name)
+            new_category_id = update_data.get("category_id", db_equipment.category_id)
+            
+            # 重新生成内部编号
+            try:
+                new_internal_id = generate_internal_id(
+                    db, 
+                    new_category_id, 
+                    new_name, 
+                    equipment_id=equipment_id
+                )
+                update_data["internal_id"] = new_internal_id
+            except ValueError as e:
+                raise ValueError(f"生成内部编号失败: {str(e)}")
         
         # 如果更新了检定日期或检定周期，重新计算有效期至
         if "calibration_date" in update_data or "calibration_cycle" in update_data:

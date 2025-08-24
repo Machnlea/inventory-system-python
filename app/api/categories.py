@@ -72,7 +72,9 @@ def add_predefined_name(category_id: int,
                         db: Session = Depends(get_db),
                         current_user = Depends(get_current_admin_user)):
     """为指定类别添加预定义器具名称"""
-    # 检查名称是否已存在
+    from app.utils.predefined_name_manager import add_predefined_name_smart
+    
+    # 检查类别是否存在
     existing_category = categories.get_category(db, category_id)
     if not existing_category:
         raise HTTPException(status_code=404, detail="Category not found")
@@ -81,13 +83,30 @@ def add_predefined_name(category_id: int,
     if existing_category.predefined_names and request.name in existing_category.predefined_names:
         raise HTTPException(status_code=400, detail="Predefined name already exists")
     
-    category = categories.add_predefined_name(db, category_id, request.name)
-    if not category:
-        raise HTTPException(status_code=404, detail="Category not found")
+    # 使用智能添加逻辑
+    current_names = existing_category.predefined_names or []
+    category_code = existing_category.code
     
+    new_names_list, new_mapping = add_predefined_name_smart(
+        category_code, current_names, request.name
+    )
+    
+    # 更新数据库
+    import json
+    from sqlalchemy import text
+    updated_json = json.dumps(new_names_list, ensure_ascii=False)
+    
+    db.execute(
+        text("UPDATE equipment_categories SET predefined_names = :names WHERE id = :id"),
+        {"names": updated_json, "id": category_id}
+    )
+    db.commit()
+    
+    # 返回更新后的信息
     return {
         "message": "Predefined name added successfully", 
-        "predefined_names": category.predefined_names or []
+        "predefined_names": new_names_list,
+        "name_mapping": new_mapping
     }
 
 @router.delete("/{category_id}/predefined-names/{name}")
@@ -103,6 +122,65 @@ def remove_predefined_name(category_id: int,
         return {"message": "Predefined name removed successfully", "category": category}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@router.patch("/{category_id}/predefined-names")
+def edit_predefined_name(category_id: int,
+                        request: dict = None,
+                        db: Session = Depends(get_db),
+                        current_user = Depends(get_current_admin_user)):
+    """编辑指定类别的预定义器具名称"""
+    from app.utils.predefined_name_manager import update_predefined_name_smart
+    
+    if not request:
+        raise HTTPException(status_code=400, detail="Request body is required")
+    
+    old_name = request.get('old_name')
+    new_name = request.get('new_name')
+    
+    if not old_name or not new_name:
+        raise HTTPException(status_code=400, detail="Old name and new name are required")
+    
+    if old_name == new_name:
+        raise HTTPException(status_code=400, detail="New name must be different from old name")
+    
+    # 检查类别是否存在
+    existing_category = categories.get_category(db, category_id)
+    if not existing_category:
+        raise HTTPException(status_code=404, detail="Category not found")
+    
+    # 检查旧名称是否存在
+    current_names = existing_category.predefined_names or []
+    if old_name not in current_names:
+        raise HTTPException(status_code=404, detail="Old name not found in predefined names")
+    
+    # 检查新名称是否已存在（排除旧名称）
+    if new_name in current_names and new_name != old_name:
+        raise HTTPException(status_code=400, detail="New name already exists")
+    
+    # 使用智能更新逻辑
+    category_code = existing_category.code
+    
+    new_names_list, new_mapping = update_predefined_name_smart(
+        category_code, current_names, old_name, new_name
+    )
+    
+    # 更新数据库
+    import json
+    from sqlalchemy import text
+    updated_json = json.dumps(new_names_list, ensure_ascii=False)
+    
+    db.execute(
+        text("UPDATE equipment_categories SET predefined_names = :names WHERE id = :id"),
+        {"names": updated_json, "id": category_id}
+    )
+    db.commit()
+    
+    # 返回更新后的信息
+    return {
+        "message": "Predefined name updated successfully", 
+        "predefined_names": new_names_list,
+        "name_mapping": new_mapping
+    }
 
 @router.put("/{category_id}/predefined-names")
 def update_predefined_names(category_id: int,
@@ -135,7 +213,7 @@ def get_category_equipment_usage(category_id: int,
     """获取指定类别下预定义名称的设备使用情况和编号映射"""
     from app.models.models import Equipment, EquipmentCategory
     from sqlalchemy import func
-    from app.utils.equipment_mapping import get_equipment_type_code
+    from app.utils.predefined_name_manager import get_smart_name_mapping
     
     # 获取类别信息
     category = db.query(EquipmentCategory).filter(EquipmentCategory.id == category_id).first()
@@ -150,22 +228,10 @@ def get_category_equipment_usage(category_id: int,
         Equipment.category_id == category_id
     ).group_by(Equipment.name).all()
     
-    # 获取预定义名称的编号映射
+    # 获取预定义名称的编号映射 - 使用智能编号管理
     category_code = category.code
     predefined_names = category.predefined_names or []
-    name_mapping = {}
-    
-    for name in predefined_names:
-        try:
-            type_code = get_equipment_type_code(category_code, name)
-            # 如果返回的是格式如"TEM-99"，则提取数字部分
-            if '-' in type_code:
-                number = type_code.split('-')[1]
-            else:
-                number = type_code
-            name_mapping[name] = number
-        except:
-            name_mapping[name] = "?"
+    name_mapping = get_smart_name_mapping(category_code, predefined_names)
     
     # 转换为字典格式，并清理名称（去除可能的引号）
     usage_stats = {}

@@ -2,7 +2,8 @@
 class ApiClient {
     constructor() {
         this.baseURL = '';
-        this.token = localStorage.getItem('access_token');
+        // 优先从sessionStorage获取token（支持多标签页独立登录）
+        this.token = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
         this.retryCount = 3;
         this.retryDelay = 1000;
     }
@@ -110,9 +111,21 @@ class ApiClient {
 
     // 处理未授权访问
     handleUnauthorized() {
+        // 清除当前标签页的会话数据
+        sessionStorage.removeItem('access_token');
+        sessionStorage.removeItem('refresh_token');
+        sessionStorage.removeItem('user_info');
+        
+        // 兼容旧系统：同时清除localStorage
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('user_info');
+        
+        // 通知标签页会话管理器
+        if (window.tabSessionManager) {
+            tabSessionManager.clearSession();
+        }
+        
         window.location.href = '/login';
     }
 
@@ -656,14 +669,18 @@ window.addEventListener('error', function(event) {
 document.addEventListener('visibilitychange', function() {
     if (!document.hidden) {
         // 页面重新变为可见时, 检查token是否仍然有效
-        const token = localStorage.getItem('access_token');
-        const userInfo = localStorage.getItem('user_info');
+        // 优先检查sessionStorage（支持多标签页独立登录）
+        const token = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
+        const userInfo = sessionStorage.getItem('user_info') || localStorage.getItem('user_info');
         
         if (!token || !userInfo) {
             // 如果没有token或用户信息, 跳转到登录页
             if (window.location.pathname !== '/login') {
                 window.location.href = '/login';
             }
+        } else if (window.tabSessionManager) {
+            // 如果有会话管理器，检查会话有效性
+            tabSessionManager.checkSessionValidity();
         }
     }
 });

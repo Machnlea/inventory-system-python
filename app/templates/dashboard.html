@@ -8,6 +8,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="/static/js/api-client.js"></script>
+    <script src="/static/js/tab-session-manager.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body {
@@ -361,10 +362,18 @@
             if (logoutBtn) {
                 logoutBtn.addEventListener('click', function() {
                     if (confirm('确定要退出登录吗？')) {
-                        // 清除本地存储
-                        localStorage.removeItem('access_token');
-                        localStorage.removeItem('refresh_token');
-                        localStorage.removeItem('user_info');
+                        // 使用会话管理器清除登录状态
+                        if (window.tabSessionManager) {
+                            tabSessionManager.clearSession();
+                        } else {
+                            // 兼容旧方式：清除本地存储
+                            sessionStorage.removeItem('access_token');
+                            sessionStorage.removeItem('refresh_token');
+                            sessionStorage.removeItem('user_info');
+                            localStorage.removeItem('access_token');
+                            localStorage.removeItem('refresh_token');
+                            localStorage.removeItem('user_info');
+                        }
                         
                         // 跳转到登录页面
                         window.location.href = '/login';
@@ -372,8 +381,8 @@
                 });
             }
 
-            // 检查登录状态
-            const userInfo = localStorage.getItem('user_info');
+            // 检查登录状态 - 支持多标签页独立登录
+            let userInfo = sessionStorage.getItem('user_info') || localStorage.getItem('user_info');
             if (userInfo) {
                 const user = JSON.parse(userInfo);
                 const currentUserElement = document.getElementById('current-user');

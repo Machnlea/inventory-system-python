@@ -8,6 +8,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="/static/js/api-client.js"></script>
+    <script src="/static/js/tab-session-manager.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body {
@@ -480,7 +481,7 @@
             }
 
             // 检查登录状态
-            const userInfo = localStorage.getItem('user_info');
+            const userInfo = sessionStorage.getItem('user_info') || localStorage.getItem('user_info');
             if (userInfo) {
                 const user = JSON.parse(userInfo);
                 const currentUserElement = document.getElementById('current-user');

@@ -1520,7 +1520,7 @@
             }
             
             // 检查登录状态
-            const userInfo = localStorage.getItem('user_info');
+            const userInfo = sessionStorage.getItem('user_info') || localStorage.getItem('user_info');
             if (userInfo) {
                 const user = JSON.parse(userInfo);
                 const currentUserElement = document.getElementById('current-user');

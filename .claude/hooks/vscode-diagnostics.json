@@ -1,0 +1,199 @@
+[
+  {
+    "file": "/home/ming/my_project/inventory-system-python/app/api/import_export.py",
+    "diagnostics": [
+      {
+        "message": "无法将“Hashable”类型的参数分配给函数“__new__”中类型为“ConvertibleToInt”的参数“x”\n  类型“Hashable”不可分配给类型“ConvertibleToInt”\n    “Hashable”不可分配给“str”\n    “Hashable”与协议“Buffer”不兼容\n      “__buffer__”不存在\n    “Hashable”与协议“SupportsInt”不兼容\n      “__int__”不存在\n    “Hashable”与协议“SupportsIndex”不兼容\n      “__index__”不存在\n  ...",
+        "severity": 0,
+        "level": "Error",
+        "source": "Pylance",
+        "code": "reportArgumentType",
+        "start": {
+          "line": 259,
+          "character": 29
+        },
+        "end": {
+          "line": 259,
+          "character": 34
+        }
+      },
+      {
+        "message": "无法将“Hashable”类型的参数分配给函数“__new__”中类型为“ConvertibleToInt”的参数“x”\n  类型“Hashable”不可分配给类型“ConvertibleToInt”\n    “Hashable”不可分配给“str”\n    “Hashable”与协议“Buffer”不兼容\n      “__buffer__”不存在\n    “Hashable”与协议“SupportsInt”不兼容\n      “__int__”不存在\n    “Hashable”与协议“SupportsIndex”不兼容\n      “__index__”不存在",
+        "severity": 0,
+        "level": "Error",
+        "source": "Pylance",
+        "code": "reportArgumentType",
+        "start": {
+          "line": 259,
+          "character": 29
+        },
+        "end": {
+          "line": 259,
+          "character": 34
+        }
+      },
+      {
+        "message": "无法将“Column[int]”类型的参数分配给函数“__new__”中类型为“ConvertibleToInt”的参数“x”\n  类型“Column[int]”不可分配给类型“ConvertibleToInt”\n    “Column[int]”不可分配给“str”\n    “Column[int]”与协议“Buffer”不兼容\n      “__buffer__”不存在\n    “Column[int]”与协议“SupportsInt”不兼容\n      “__int__”不存在\n    “Column[int]”与协议“SupportsIndex”不兼容\n      “__index__”不存在\n  ...",
+        "severity": 0,
+        "level": "Error",
+        "source": "Pylance",
+        "code": "reportArgumentType",
+        "start": {
+          "line": 408,
+          "character": 69
+        },
+        "end": {
+          "line": 408,
+          "character": 80
+        }
+      },
+      {
+        "message": "无法将“Column[int]”类型的参数分配给函数“__new__”中类型为“ConvertibleToInt”的参数“x”\n  类型“Column[int]”不可分配给类型“ConvertibleToInt”\n    “Column[int]”不可分配给“str”\n    “Column[int]”与协议“Buffer”不兼容\n      “__buffer__”不存在\n    “Column[int]”与协议“SupportsInt”不兼容\n      “__int__”不存在\n    “Column[int]”与协议“SupportsIndex”不兼容\n      “__index__”不存在",
+        "severity": 0,
+        "level": "Error",
+        "source": "Pylance",
+        "code": "reportArgumentType",
+        "start": {
+          "line": 408,
+          "character": 69
+        },
+        "end": {
+          "line": 408,
+          "character": 80
+        }
+      },
+      {
+        "message": "无法将“Column[int]”类型的参数分配给函数“__new__”中类型为“ConvertibleToInt”的参数“x”\n  类型“Column[int]”不可分配给类型“ConvertibleToInt”\n    “Column[int]”不可分配给“str”\n    “Column[int]”与协议“Buffer”不兼容\n      “__buffer__”不存在\n    “Column[int]”与协议“SupportsInt”不兼容\n      “__int__”不存在\n    “Column[int]”与协议“SupportsIndex”不兼容\n      “__index__”不存在\n  ...",
+        "severity": 0,
+        "level": "Error",
+        "source": "Pylance",
+        "code": "reportArgumentType",
+        "start": {
+          "line": 416,
+          "character": 38
+        },
+        "end": {
+          "line": 416,
+          "character": 51
+        }
+      },
+      {
+        "message": "无法将“Column[int]”类型的参数分配给函数“__new__”中类型为“ConvertibleToInt”的参数“x”\n  类型“Column[int]”不可分配给类型“ConvertibleToInt”\n    “Column[int]”不可分配给“str”\n    “Column[int]”与协议“Buffer”不兼容\n      “__buffer__”不存在\n    “Column[int]”与协议“SupportsInt”不兼容\n      “__int__”不存在\n    “Column[int]”与协议“SupportsIndex”不兼容\n      “__index__”不存在",
+        "severity": 0,
+        "level": "Error",
+        "source": "Pylance",
+        "code": "reportArgumentType",
+        "start": {
+          "line": 416,
+          "character": 38
+        },
+        "end": {
+          "line": 416,
+          "character": 51
+        }
+      },
+      {
+        "message": "无法将“Column[int]”类型的参数分配给函数“__new__”中类型为“ConvertibleToInt”的参数“x”\n  类型“Column[int]”不可分配给类型“ConvertibleToInt”\n    “Column[int]”不可分配给“str”\n    “Column[int]”与协议“Buffer”不兼容\n      “__buffer__”不存在\n    “Column[int]”与协议“SupportsInt”不兼容\n      “__int__”不存在\n    “Column[int]”与协议“SupportsIndex”不兼容\n      “__index__”不存在\n  ...",
+        "severity": 0,
+        "level": "Error",
+        "source": "Pylance",
+        "code": "reportArgumentType",
+        "start": {
+          "line": 417,
+          "character": 36
+        },
+        "end": {
+          "line": 417,
+          "character": 47
+        }
+      },
+      {
+        "message": "无法将“Column[int]”类型的参数分配给函数“__new__”中类型为“ConvertibleToInt”的参数“x”\n  类型“Column[int]”不可分配给类型“ConvertibleToInt”\n    “Column[int]”不可分配给“str”\n    “Column[int]”与协议“Buffer”不兼容\n      “__buffer__”不存在\n    “Column[int]”与协议“SupportsInt”不兼容\n      “__int__”不存在\n    “Column[int]”与协议“SupportsIndex”不兼容\n      “__index__”不存在",
+        "severity": 0,
+        "level": "Error",
+        "source": "Pylance",
+        "code": "reportArgumentType",
+        "start": {
+          "line": 417,
+          "character": 36
+        },
+        "end": {
+          "line": 417,
+          "character": 47
+        }
+      },
+      {
+        "message": "无法将“Column[int]”类型的参数分配给函数“__new__”中类型为“ConvertibleToInt”的参数“x”\n  类型“Column[int]”不可分配给类型“ConvertibleToInt”\n    “Column[int]”不可分配给“str”\n    “Column[int]”与协议“Buffer”不兼容\n      “__buffer__”不存在\n    “Column[int]”与协议“SupportsInt”不兼容\n      “__int__”不存在\n    “Column[int]”与协议“SupportsIndex”不兼容\n      “__index__”不存在\n  ...",
+        "severity": 0,
+        "level": "Error",
+        "source": "Pylance",
+        "code": "reportArgumentType",
+        "start": {
+          "line": 482,
+          "character": 53
+        },
+        "end": {
+          "line": 482,
+          "character": 74
+        }
+      },
+      {
+        "message": "无法将“Column[int]”类型的参数分配给函数“__new__”中类型为“ConvertibleToInt”的参数“x”\n  类型“Column[int]”不可分配给类型“ConvertibleToInt”\n    “Column[int]”不可分配给“str”\n    “Column[int]”与协议“Buffer”不兼容\n      “__buffer__”不存在\n    “Column[int]”与协议“SupportsInt”不兼容\n      “__int__”不存在\n    “Column[int]”与协议“SupportsIndex”不兼容\n      “__index__”不存在",
+        "severity": 0,
+        "level": "Error",
+        "source": "Pylance",
+        "code": "reportArgumentType",
+        "start": {
+          "line": 482,
+          "character": 53
+        },
+        "end": {
+          "line": 482,
+          "character": 74
+        }
+      },
+      {
+        "message": "未存取“Equipment”",
+        "severity": 3,
+        "level": "Hint",
+        "source": "Pylance",
+        "start": {
+          "line": 8,
+          "character": 32
+        },
+        "end": {
+          "line": 8,
+          "character": 41
+        }
+      },
+      {
+        "message": "未存取“valid_until”",
+        "severity": 3,
+        "level": "Hint",
+        "source": "Pylance",
+        "start": {
+          "line": 376,
+          "character": 20
+        },
+        "end": {
+          "line": 376,
+          "character": 31
+        }
+      },
+      {
+        "message": "未存取“valid_until”",
+        "severity": 3,
+        "level": "Hint",
+        "source": "Pylance",
+        "start": {
+          "line": 384,
+          "character": 20
+        },
+        "end": {
+          "line": 384,
+          "character": 31
+        }
+      }
+    ]
+  }
+]

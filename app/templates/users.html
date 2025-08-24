@@ -8,6 +8,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="/static/js/session-manager.js"></script>
     <script src="/static/js/api-client.js"></script>
+    <script src="/static/js/tab-session-manager.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body {
@@ -602,7 +603,7 @@
             }
             
             // 检查登录状态
-            const userInfo = localStorage.getItem('user_info');
+            const userInfo = sessionStorage.getItem('user_info') || localStorage.getItem('user_info');
             if (userInfo) {
                 const user = JSON.parse(userInfo);
                 const currentUserElement = document.getElementById('current-user');
@@ -980,7 +981,7 @@
 
         // 检查用户是否可以删除
         function canDeleteUser(user) {
-            const currentUser = JSON.parse(localStorage.getItem('user_info') || '{}');
+            const currentUser = JSON.parse(sessionStorage.getItem('user_info') || localStorage.getItem('user_info') || '{}');
             
             // 检查是否为当前登录用户
             if (currentUser.id === user.id) {
@@ -1006,7 +1007,7 @@
 
         // 获取用户权限管理按钮
         function getUserPermissionManagementButtons(user) {
-            const currentUser = JSON.parse(localStorage.getItem('user_info') || '{}');
+            const currentUser = JSON.parse(sessionStorage.getItem('user_info') || localStorage.getItem('user_info') || '{}');
             
             // 如果是管理员账号，显示灰色不可点击的按钮
             if (user.is_admin) {
@@ -1036,7 +1037,7 @@
         
         // 获取用户编辑按钮
         function getUserEditButton(user) {
-            const currentUser = JSON.parse(localStorage.getItem('user_info') || '{}');
+            const currentUser = JSON.parse(sessionStorage.getItem('user_info') || localStorage.getItem('user_info') || '{}');
             
             // 如果是管理员账号，显示灰色不可点击的按钮
             if (user.is_admin) {

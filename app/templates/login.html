@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="/static/js/api-client.js"></script>
+    <script src="/static/js/tab-session-manager.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body {
@@ -215,26 +216,19 @@
                     
                     try {
                         console.log('开始发送登录请求...');
-                        const response = await api.post('/api/auth/login/json', {
+                        
+                        // 使用标签页会话管理器进行登录
+                        const response = await tabSessionManager.login({
                             username: username,
                             password: password
                         });
                         
                         console.log('登录响应:', response);
                         
-                                                
                         // 如果showNotification函数存在，使用它
                         if (typeof showNotification === 'function') {
                             showNotification('登录成功！正在跳转...', 'success');
                         }
-                        
-                        // 存储token和用户信息
-                        localStorage.setItem('access_token', response.access_token);
-                        localStorage.setItem('refresh_token', response.refresh_token);
-                        localStorage.setItem('user_info', JSON.stringify(response.user));
-                        
-                        // 更新API客户端的token
-                        api.token = response.access_token;
                         
                         console.log('准备跳转到仪表盘...');
                         
@@ -246,10 +240,18 @@
                         
                     } catch (error) {
                         console.error('登录失败:', error);
-                        alert('登录失败: ' + error.message);
                         
-                        if (typeof showNotification === 'function') {
-                            showNotification(error.message || '登录失败，请检查用户名和密码', 'error');
+                        // 检查是否是用户取消登录
+                        if (error.message === '登录已取消') {
+                            if (typeof showNotification === 'function') {
+                                showNotification('登录已取消', 'info');
+                            }
+                        } else {
+                            if (typeof showNotification === 'function') {
+                                showNotification(error.message || '登录失败，请检查用户名和密码', 'error');
+                            } else {
+                                alert('登录失败: ' + error.message);
+                            }
                         }
                     } finally {
                             // 恢复按钮状态

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Union, Any
 from pydantic import BaseModel
 from app.db.database import get_db
 from app.crud import categories
@@ -8,6 +8,15 @@ from app.schemas.schemas import EquipmentCategory, EquipmentCategoryCreate
 from app.api.auth import get_current_admin_user, get_current_user
 
 router = APIRouter()
+
+def safe_get_list(column_value) -> List[str]:
+    """安全地从SQLAlchemy Column对象获取列表"""
+    if column_value is None:
+        return []
+    try:
+        return list(column_value)
+    except:
+        return []
 
 # 预定义器具名称请求模型
 class PredefinedNameRequest(BaseModel):
@@ -80,15 +89,17 @@ def add_predefined_name(category_id: int,
         raise HTTPException(status_code=404, detail="Category not found")
     
     # 检查重复
-    if existing_category.predefined_names and request.name in existing_category.predefined_names:
+    predefined_names = safe_get_list(existing_category.predefined_names)
+    
+    if predefined_names and request.name in predefined_names:
         raise HTTPException(status_code=400, detail="Predefined name already exists")
     
     # 使用智能添加逻辑
-    current_names = existing_category.predefined_names or []
-    category_code = existing_category.code
+    current_names = predefined_names or []
+    category_code = str(existing_category.code or "")
     
     new_names_list, new_mapping = add_predefined_name_smart(
-        category_code, current_names, request.name
+        category_code, list(current_names), request.name
     )
     
     # 更新数据库
@@ -125,7 +136,7 @@ def remove_predefined_name(category_id: int,
 
 @router.patch("/{category_id}/predefined-names")
 def edit_predefined_name(category_id: int,
-                        request: dict = None,
+                        request: dict = {},
                         db: Session = Depends(get_db),
                         current_user = Depends(get_current_admin_user)):
     """编辑指定类别的预定义器具名称"""
@@ -149,7 +160,7 @@ def edit_predefined_name(category_id: int,
         raise HTTPException(status_code=404, detail="Category not found")
     
     # 检查旧名称是否存在
-    current_names = existing_category.predefined_names or []
+    current_names = safe_get_list(existing_category.predefined_names)
     if old_name not in current_names:
         raise HTTPException(status_code=404, detail="Old name not found in predefined names")
     
@@ -158,10 +169,11 @@ def edit_predefined_name(category_id: int,
         raise HTTPException(status_code=400, detail="New name already exists")
     
     # 使用智能更新逻辑
-    category_code = existing_category.code
+    category_code = str(existing_category.code or "")
+    current_names_list = current_names or []
     
     new_names_list, new_mapping = update_predefined_name_smart(
-        category_code, current_names, old_name, new_name
+        category_code, list(current_names_list), old_name, new_name
     )
     
     # 更新数据库
@@ -229,8 +241,8 @@ def get_category_equipment_usage(category_id: int,
     ).group_by(Equipment.name).all()
     
     # 获取预定义名称的编号映射 - 使用智能编号管理
-    category_code = category.code
-    predefined_names = category.predefined_names or []
+    category_code = str(category.code or "")
+    predefined_names = safe_get_list(category.predefined_names)
     name_mapping = get_smart_name_mapping(category_code, predefined_names)
     
     # 转换为字典格式，并清理名称（去除可能的引号）
@@ -279,31 +291,9 @@ def get_category_equipment_usage(category_id: int,
                         enhanced_usage_stats[predefined_name] = usage_stats.get(matched_device_name, 0)
                         break
     
-    # 添加调试信息
-    debug_info = {
-        "category_id": category_id,
-        "category_code": category_code,
-        "category_name": category.name,
-        "predefined_names": predefined_names,
-        "raw_equipment_stats": [(stat.name, stat.count) for stat in equipment_stats],
-        "basic_usage_stats": usage_stats,
-        "enhanced_usage_stats": enhanced_usage_stats,
-        "fuzzy_mapping": fuzzy_mapping,
-        "name_mapping": name_mapping
-    }
-    
-    print(f"=== 调试信息 - 类别 {category.name} ===")
-    print(f"预定义名称: {predefined_names}")
-    print(f"设备统计: {[(stat.name, stat.count) for stat in equipment_stats]}")
-    print(f"基本使用情况: {usage_stats}")
-    print(f"增强使用情况: {enhanced_usage_stats}")
-    print(f"模糊映射: {fuzzy_mapping}")
-    print(f"名称映射: {name_mapping}")
-    
     return {
         "category_id": category_id,
         "category_code": category_code,
-        "usage_stats": enhanced_usage_stats,  # 使用增强的使用统计
-        "name_mapping": name_mapping,
-        "_debug": debug_info  # 包含调试信息
+        "usage_stats": enhanced_usage_stats,
+        "name_mapping": name_mapping
     }

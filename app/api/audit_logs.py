@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List, Optional, Union, Any
 from datetime import date, datetime, timedelta
 from app.db.database import get_db
 from app.schemas.schemas import AuditLog, PaginatedAuditLog
@@ -108,18 +108,22 @@ def cleanup_old_audit_logs(db: Session):
         db.commit()
         print(f"已清理 {count} 条超过一年的操作日志")
 
-def create_audit_log(db: Session, user_id: int, equipment_id: int = None,
+def create_audit_log(db: Session, user_id: Any, equipment_id: Optional[Any] = None,
                     action: str = "", description: str = "",
-                    old_value: str = None, new_value: str = None):
+                    old_value: Optional[str] = None, new_value: Optional[str] = None):
     """创建操作日志的辅助函数"""
     # 先清理超过一年的日志
     cleanup_old_audit_logs(db)
     
+    # 确保user_id和equipment_id是int类型
+    user_id_int = int(user_id) if user_id is not None else None
+    equipment_id_int = int(equipment_id) if equipment_id is not None else None
+    
     audit_log = AuditLogModel(
-        user_id=user_id,
-        equipment_id=equipment_id,
-        action=action,
-        description=description,
+        user_id=user_id_int,
+        equipment_id=equipment_id_int,
+        action=action or "未知操作",
+        description=description or "无描述",
         old_value=old_value,
         new_value=new_value
     )

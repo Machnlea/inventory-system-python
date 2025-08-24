@@ -78,7 +78,7 @@ def generate_category_code(category_name: str) -> str:
     # 如果无法生成，返回默认代码
     return "OT"  # Other
 
-def generate_internal_id(db: Session, category_id: int, equipment_name: str = None, equipment_id: int = None) -> str:
+def generate_internal_id(db: Session, category_id: int, equipment_name: Optional[str] = None, equipment_id: Optional[int] = None) -> str:
     """
     生成内部编号 (CC-TT-NNN格式)
     CC: 类别代码 (3位)

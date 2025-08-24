@@ -1,12 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Response, Form
 from sqlalchemy.orm import Session
-from typing import List
 import pandas as pd
 import io
 from urllib.parse import quote
 from datetime import datetime
 from app.db.database import get_db
-from app.crud import equipment, departments, categories, users
+from app.crud import equipment, departments, categories
 from app.schemas.schemas import Equipment, ImportTemplate
 from app.api.auth import get_current_admin_user, get_current_user
 from app.api.audit_logs import create_audit_log
@@ -228,7 +227,7 @@ async def import_equipment_data(
     # 调试信息：记录覆盖参数
     print(f"导入参数 - overwrite: {overwrite}, type: {type(overwrite)}, 转换后: {overwrite_bool}")
     
-    if not file.filename.endswith(('.xlsx', '.xls')):
+    if not file.filename or not file.filename.endswith(('.xlsx', '.xls')):
         raise HTTPException(status_code=400, detail="只支持Excel文件格式")
     
     try:
@@ -258,7 +257,7 @@ async def import_equipment_data(
         detailed_results = []
         
         for index, row in df.iterrows():
-            row_number = index + 2  # Excel行号从2开始（第1行是标题）
+            row_number = int(index) + 2  # Excel行号从2开始（第1行是标题）
             result = {
                 "row": row_number,
                 "internal_id": "",  # 将在生成后填充
@@ -383,7 +382,7 @@ async def import_equipment_data(
                         '24个月': 730,
                         '36个月': 1095
                     }
-                    valid_until = calibration_date + timedelta(days=cycle_days[calibration_cycle] - 1)
+                    valid_until = calibration_date + timedelta(days=cycle_days[calibration_cycle] - 1) if calibration_date else None
                 
                 # 自动设置管理级别（外检时设为"-"）
                 management_level = str(row.get('管理级别', '')) if calibration_method == '内检' else '-'
@@ -407,7 +406,7 @@ async def import_equipment_data(
                 
                 # 自动生成内部编号
                 from app.utils.auto_id import generate_internal_id
-                generated_internal_id = generate_internal_id(db, category.id, str(row['计量器具名称']))
+                generated_internal_id = generate_internal_id(db, int(category.id), str(row['计量器具名称']))
                 
                 # 更新result对象中的internal_id
                 result["internal_id"] = generated_internal_id
@@ -415,8 +414,8 @@ async def import_equipment_data(
                 # 创建设备数据
                 from app.schemas.schemas import EquipmentCreate, EquipmentUpdate
                 equipment_data = EquipmentCreate(
-                    department_id=department.id,
-                    category_id=category.id,
+                    department_id=int(department.id),
+                    category_id=int(category.id),
                     name=str(row['计量器具名称']),
                     model=str(row['型号/规格']),
                     accuracy_level=str(row['准确度等级']),
@@ -481,7 +480,7 @@ async def import_equipment_data(
                             )
                             
                             updated_equipment = equipment.update_equipment(
-                                db, equipment_id=existing_equipment.id, equipment_update=update_data
+                                db, equipment_id=int(existing_equipment.id), equipment_update=update_data
                             )
                             
                             # 记录操作日志
@@ -490,7 +489,7 @@ async def import_equipment_data(
                                 user_id=current_user.id,
                                 equipment_id=existing_equipment.id,
                                 action="导入更新",
-                                description=f"通过Excel导入更新设备: {updated_equipment.name}"
+                                description=f"通过Excel导入更新设备: {updated_equipment.name if updated_equipment else '未知设备'}"
                             )
                             
                             result["status"] = "更新"

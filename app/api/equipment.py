@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.orm import Session
-from typing import List
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from calendar import monthrange
 import io
 import pandas as pd
@@ -10,7 +9,7 @@ from app.db.database import get_db
 from app.crud import equipment
 from app.schemas.schemas import Equipment, EquipmentCreate, EquipmentUpdate, EquipmentFilter, EquipmentSearch, PaginatedEquipment
 from app.api.audit_logs import create_audit_log
-from app.api.auth import get_current_user, get_current_admin_user
+from app.api.auth import get_current_user
 from app.utils.auto_id import generate_internal_id
 
 router = APIRouter()
@@ -115,7 +114,7 @@ def update_equipment(equipment_id: int, equipment_update: EquipmentUpdate,
     if equipment_update.status and equipment_update.status != old_status:
         changes.append(f"状态从'{old_status}'改为'{equipment_update.status}'")
     
-    description = f"更新设备: {updated_equipment.name} ({updated_equipment.internal_id})"
+    description = f"更新设备: {updated_equipment.name if updated_equipment else '未知设备'} ({updated_equipment.internal_id if updated_equipment else '未知编号'})"
     if changes:
         description += f" - {', '.join(changes)}"
     
@@ -200,12 +199,12 @@ def export_monthly_plan(db: Session = Depends(get_db),
             '内部编号': eq.internal_id,
             '出厂编号': eq.manufacturer_id or '',
             '检定周期': eq.calibration_cycle,
-            '检定（校准）日期': eq.calibration_date.strftime('%Y-%m-%d') if eq.calibration_date else '',
-            '有效期至': eq.valid_until.strftime('%Y-%m-%d') if eq.valid_until else '',
+            '检定（校准）日期': eq.calibration_date.strftime('%Y-%m-%d') if eq.calibration_date is not None else '',
+            '有效期至': eq.valid_until.strftime('%Y-%m-%d') if eq.valid_until is not None else '',
             '安装地点': eq.installation_location,
             '分度值': eq.scale_value or '',
             '制造厂家': eq.manufacturer,
-            '出厂日期': eq.manufacture_date.strftime('%Y-%m-%d') if eq.manufacture_date else '',
+            '出厂日期': eq.manufacture_date.strftime('%Y-%m-%d') if eq.manufacture_date is not None else '',
             '检定方式': eq.calibration_method,
             '证书编号': eq.certificate_number or '',
             '检定结果': eq.verification_result or '',
@@ -214,7 +213,7 @@ def export_monthly_plan(db: Session = Depends(get_db),
             '管理级别': eq.management_level or '',
             '原值/元': eq.original_value or '',
             '设备状态': eq.status,
-            '状态变更时间': eq.status_change_date.strftime('%Y-%m-%d') if eq.status_change_date else '',
+            '状态变更时间': eq.status_change_date.strftime('%Y-%m-%d') if eq.status_change_date is not None else '',
             '备注': eq.notes
         })
     
@@ -276,12 +275,12 @@ def export_filtered_equipments(filters: EquipmentFilter,
             '内部编号': eq.internal_id,
             '出厂编号': eq.manufacturer_id or '',
             '检定周期': eq.calibration_cycle,
-            '检定（校准）日期': eq.calibration_date.strftime('%Y-%m-%d') if eq.calibration_date else '',
-            '有效期至': eq.valid_until.strftime('%Y-%m-%d') if eq.valid_until else '',
+            '检定（校准）日期': eq.calibration_date.strftime('%Y-%m-%d') if eq.calibration_date is not None else '',
+            '有效期至': eq.valid_until.strftime('%Y-%m-%d') if eq.valid_until is not None else '',
             '安装地点': eq.installation_location,
             '分度值': eq.scale_value or '',
             '制造厂家': eq.manufacturer,
-            '出厂日期': eq.manufacture_date.strftime('%Y-%m-%d') if eq.manufacture_date else '',
+            '出厂日期': eq.manufacture_date.strftime('%Y-%m-%d') if eq.manufacture_date is not None else '',
             '检定方式': eq.calibration_method,
             '证书编号': eq.certificate_number or '',
             '检定结果': eq.verification_result or '',
@@ -290,7 +289,7 @@ def export_filtered_equipments(filters: EquipmentFilter,
             '管理级别': eq.management_level or '',
             '原值/元': eq.original_value or '',
             '设备状态': eq.status,
-            '状态变更时间': eq.status_change_date.strftime('%Y-%m-%d') if eq.status_change_date else '',
+            '状态变更时间': eq.status_change_date.strftime('%Y-%m-%d') if eq.status_change_date is not None else '',
             '备注': eq.notes
         })
     
@@ -360,14 +359,14 @@ def batch_update_calibration(
             create_audit_log(
                 db=db,
                 user_id=current_user.id,
-                equipment_id=equipment_id,
+                equipment_id=int(equipment_id),
                 action="批量更新检定日期",
                 description=f"批量更新设备 {db_equipment.name} 的检定日期为 {calibration_date}"
             )
             
             success_count += 1
             
-        except Exception as e:
+        except Exception:
             error_count += 1
             continue
     
@@ -447,14 +446,14 @@ def batch_change_status(
             create_audit_log(
                 db=db,
                 user_id=current_user.id,
-                equipment_id=equipment_id,
+                equipment_id=int(equipment_id),
                 action="批量变更状态",
                 description=f"批量变更设备 {db_equipment.name} 状态为 {new_status}"
             )
             
             success_count += 1
             
-        except Exception as e:
+        except Exception:
             error_count += 1
             continue
     
@@ -509,7 +508,7 @@ def batch_delete_equipments(
                 create_audit_log(
                     db=db,
                     user_id=current_user.id,
-                    equipment_id=equipment_id,
+                    equipment_id=int(equipment_id),
                     action="批量删除",
                     description=f"批量删除设备: {equipment_name} ({equipment_serial})"
                 )
@@ -518,7 +517,7 @@ def batch_delete_equipments(
             else:
                 error_count += 1
             
-        except Exception as e:
+        except Exception:
             error_count += 1
             continue
     
@@ -579,12 +578,12 @@ def batch_export_selected_equipments(
             '内部编号': eq.internal_id,
             '出厂编号': eq.manufacturer_id or '',
             '检定周期': eq.calibration_cycle,
-            '检定（校准）日期': eq.calibration_date.strftime('%Y-%m-%d') if eq.calibration_date else '',
-            '有效期至': eq.valid_until.strftime('%Y-%m-%d') if eq.valid_until else '',
+            '检定（校准）日期': eq.calibration_date.strftime('%Y-%m-%d') if eq.calibration_date is not None else '',
+            '有效期至': eq.valid_until.strftime('%Y-%m-%d') if eq.valid_until is not None else '',
             '安装地点': eq.installation_location,
             '分度值': eq.scale_value or '',
             '制造厂家': eq.manufacturer,
-            '出厂日期': eq.manufacture_date.strftime('%Y-%m-%d') if eq.manufacture_date else '',
+            '出厂日期': eq.manufacture_date.strftime('%Y-%m-%d') if eq.manufacture_date is not None else '',
             '检定方式': eq.calibration_method,
             '证书编号': eq.certificate_number or '',
             '检定结果': eq.verification_result or '',
@@ -593,7 +592,7 @@ def batch_export_selected_equipments(
             '管理级别': eq.management_level or '',
             '原值/元': eq.original_value or '',
             '设备状态': eq.status,
-            '状态变更时间': eq.status_change_date.strftime('%Y-%m-%d') if eq.status_change_date else '',
+            '状态变更时间': eq.status_change_date.strftime('%Y-%m-%d') if eq.status_change_date is not None else '',
             '备注': eq.notes
         })
     
@@ -663,12 +662,12 @@ def export_search_equipments(search_params: EquipmentSearch,
             '内部编号': eq.internal_id,
             '出厂编号': eq.manufacturer_id or '',
             '检定周期': eq.calibration_cycle,
-            '检定（校准）日期': eq.calibration_date.strftime('%Y-%m-%d') if eq.calibration_date else '',
-            '有效期至': eq.valid_until.strftime('%Y-%m-%d') if eq.valid_until else '',
+            '检定（校准）日期': eq.calibration_date.strftime('%Y-%m-%d') if eq.calibration_date is not None else '',
+            '有效期至': eq.valid_until.strftime('%Y-%m-%d') if eq.valid_until is not None else '',
             '安装地点': eq.installation_location,
             '分度值': eq.scale_value or '',
             '制造厂家': eq.manufacturer,
-            '出厂日期': eq.manufacture_date.strftime('%Y-%m-%d') if eq.manufacture_date else '',
+            '出厂日期': eq.manufacture_date.strftime('%Y-%m-%d') if eq.manufacture_date is not None else '',
             '检定方式': eq.calibration_method,
             '证书编号': eq.certificate_number or '',
             '检定结果': eq.verification_result or '',
@@ -677,7 +676,7 @@ def export_search_equipments(search_params: EquipmentSearch,
             '管理级别': eq.management_level or '',
             '原值/元': eq.original_value or '',
             '设备状态': eq.status,
-            '状态变更时间': eq.status_change_date.strftime('%Y-%m-%d') if eq.status_change_date else '',
+            '状态变更时间': eq.status_change_date.strftime('%Y-%m-%d') if eq.status_change_date is not None else '',
             '备注': eq.notes
         })
     
@@ -706,9 +705,8 @@ def export_search_equipments(search_params: EquipmentSearch,
 
 @router.get("/utils/generate-internal-id")
 def generate_internal_id_endpoint(category_id: int,
-                                equipment_name: str = None,
-                                db: Session = Depends(get_db),
-                                current_user = Depends(get_current_user)):
+                                equipment_name: str | None = None,
+                                db: Session = Depends(get_db)):
     """生成内部编号"""
     try:
         internal_id = generate_internal_id(db, category_id, equipment_name)

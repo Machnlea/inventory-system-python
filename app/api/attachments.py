@@ -34,7 +34,7 @@ async def upload_equipment_attachment(
     """上传设备附件"""
     
     # 验证文件类型
-    if not crud_attachments.is_allowed_file_type(file.filename):
+    if file.filename and not crud_attachments.is_allowed_file_type(file.filename):
         raise HTTPException(
             status_code=400,
             detail="不支持的文件类型。支持的格式：PDF, JPG, PNG, DOC, DOCX, XLS, XLSX, TXT"
@@ -48,7 +48,7 @@ async def upload_equipment_attachment(
         )
     
     # 生成唯一文件名
-    unique_filename = crud_attachments.generate_unique_filename(file.filename)
+    unique_filename = crud_attachments.generate_unique_filename(file.filename or "upload")
     
     # 确定保存路径
     if is_certificate:
@@ -67,20 +67,20 @@ async def upload_equipment_attachment(
     
     # 获取文件信息
     file_size = crud_attachments.get_file_size(str(file_path))
-    file_type = crud_attachments.get_file_type(file.filename)
-    mime_type = crud_attachments.get_mime_type(file.filename)
+    file_type = crud_attachments.get_file_type(file.filename or "unknown")
+    mime_type = crud_attachments.get_mime_type(file.filename or "unknown")
     
     # 创建附件记录
     attachment_data = EquipmentAttachmentCreate(
         equipment_id=equipment_id,
         filename=unique_filename,
-        original_filename=file.filename,
+        original_filename=file.filename or "unknown",
         file_path=str(file_path),
         file_size=file_size,
         file_type=file_type,
         mime_type=mime_type,
         description=description,
-        is_certificate=is_certificate,
+        is_certificate=is_certificate or False,
         certificate_type=certificate_type
     )
     
@@ -157,9 +157,9 @@ def update_attachment(
     create_audit_log(
         db=db,
         user_id=current_user.id,
-        equipment_id=attachment.equipment_id,
+        equipment_id=int(attachment.equipment_id),
         action="更新附件",
-        description=f"更新附件信息: {attachment.original_filename}"
+        description=f"更新附件信息: {attachment.original_filename or 'unknown'}"
     )
     
     return attachment
@@ -177,8 +177,8 @@ def delete_attachment(
     if not attachment:
         raise HTTPException(status_code=404, detail="附件不存在")
     
-    equipment_id = attachment.equipment_id
-    filename = attachment.original_filename
+    equipment_id = int(attachment.equipment_id)
+    filename = attachment.original_filename or 'unknown'
     
     success = crud_attachments.delete_equipment_attachment(db=db, attachment_id=attachment_id)
     if not success:
@@ -208,7 +208,7 @@ def download_attachment(
         raise HTTPException(status_code=404, detail="附件不存在")
     
     # 检查文件是否存在
-    if not os.path.exists(attachment.file_path):
+    if not os.path.exists(str(attachment.file_path)):
         raise HTTPException(status_code=404, detail="文件不存在")
     
     from fastapi.responses import FileResponse
@@ -218,17 +218,18 @@ def download_attachment(
     create_audit_log(
         db=db,
         user_id=current_user.id,
-        equipment_id=attachment.equipment_id,
+        equipment_id=int(attachment.equipment_id),
         action="下载附件",
-        description=f"下载附件: {attachment.original_filename}"
+        description=f"下载附件: {attachment.original_filename or 'unknown'}"
     )
     
     # 返回文件
-    encoded_filename = quote(attachment.original_filename, safe='')
+    original_filename = attachment.original_filename or "attachment"
+    encoded_filename = quote(str(original_filename), safe='')
     return FileResponse(
-        path=attachment.file_path,
-        filename=attachment.original_filename,
-        media_type=attachment.mime_type
+        path=str(attachment.file_path),
+        filename=original_filename,
+        media_type=str(attachment.mime_type or "application/octet-stream")
     )
 
 
@@ -244,7 +245,7 @@ def preview_attachment(
         raise HTTPException(status_code=404, detail="附件不存在")
     
     # 检查文件是否存在
-    if not os.path.exists(attachment.file_path):
+    if not os.path.exists(str(attachment.file_path)):
         raise HTTPException(status_code=404, detail="文件不存在")
     
     # 检查文件类型是否支持预览
@@ -257,13 +258,13 @@ def preview_attachment(
     create_audit_log(
         db=db,
         user_id=current_user.id,
-        equipment_id=attachment.equipment_id,
+        equipment_id=int(attachment.equipment_id),
         action="预览附件",
-        description=f"预览附件: {attachment.original_filename}"
+        description=f"预览附件: {attachment.original_filename or 'unknown'}"
     )
     
     # 返回文件用于预览
     return FileResponse(
-        path=attachment.file_path,
-        media_type=attachment.mime_type
+        path=str(attachment.file_path),
+        media_type=str(attachment.mime_type or "application/octet-stream")
     )

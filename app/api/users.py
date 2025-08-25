@@ -23,6 +23,45 @@ def create_user(user: UserCreate,
         raise HTTPException(status_code=400, detail="Username already registered")
     return users.create_user(db=db, user=user)
 
+@router.get("/equipment-counts-all")
+def get_all_equipment_counts(db: Session = Depends(get_db),
+                           current_user: User = Depends(get_current_admin_user)):
+    """获取所有类别中包含设备的器具信息"""
+    from app.models.models import Equipment, EquipmentCategory
+    from sqlalchemy import func
+    
+    # 获取所有类别
+    categories = db.query(EquipmentCategory).all()
+    
+    result = []
+    
+    for category in categories:
+        # 获取该类别下每个器具名称的设备数量（只统计在用设备）
+        equipment_counts = db.query(
+            Equipment.name,
+            func.count(Equipment.id).label('count')
+        ).filter(
+            Equipment.category_id == category.id,
+            Equipment.status == "在用"
+        ).group_by(Equipment.name).all()
+        
+        # 创建器具名称到设备数量的映射
+        count_map = {name: count for name, count in equipment_counts}
+        
+        # 只包含有设备的器具
+        predefined_names = category.predefined_names or []
+        for equipment_name in predefined_names:
+            device_count = count_map.get(equipment_name, 0)
+            if device_count > 0:  # 只包含有设备的器具
+                result.append({
+                    "category_id": category.id,
+                    "category_name": category.name,
+                    "equipment_name": equipment_name,
+                    "device_count": device_count
+                })
+    
+    return result
+
 @router.get("/{user_id}", response_model=User)
 def read_user(user_id: int, 
               db: Session = Depends(get_db),
@@ -335,3 +374,40 @@ def delete_equipment_permission(user_id: int, permission_id: int,
     db.commit()
     
     return {"message": "Equipment permission deleted successfully"}
+
+@router.get("/equipment-counts/{category_id}")
+def get_equipment_counts_by_category(category_id: int,
+                                   db: Session = Depends(get_db),
+                                   current_user: User = Depends(get_current_admin_user)):
+    """获取指定类别下每个器具名称对应的实际设备数量"""
+    from app.models.models import Equipment, EquipmentCategory
+    from sqlalchemy import func
+    
+    # 获取类别信息及预定义器具名称
+    category = db.query(EquipmentCategory).filter(EquipmentCategory.id == category_id).first()
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+    
+    # 获取该类别下每个器具名称的设备数量（只统计在用设备）
+    equipment_counts = db.query(
+        Equipment.name,
+        func.count(Equipment.id).label('count')
+    ).filter(
+        Equipment.category_id == category_id,
+        Equipment.status == "在用"
+    ).group_by(Equipment.name).all()
+    
+    # 创建器具名称到设备数量的映射
+    count_map = {name: count for name, count in equipment_counts}
+    
+    # 为所有预定义器具名称提供数量信息，没有设备的器具数量为0
+    predefined_names = category.predefined_names or []
+    result = {}
+    for equipment_name in predefined_names:
+        result[equipment_name] = count_map.get(equipment_name, 0)
+    
+    return {
+        "category_id": category_id,
+        "category_name": category.name,
+        "equipment_counts": result
+    }

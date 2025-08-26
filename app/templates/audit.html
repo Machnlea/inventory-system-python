@@ -6,7 +6,7 @@
     <title>操作日志 - 设备台账管理系统</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <script src="/static/js/session-manager.js"></script>
+    <script src="/static/js/session-manager.js?v=2"></script>
     <script>
         // 简化的API客户端，直接内嵌到页面中
         const AuditLogAPI = {
@@ -31,7 +31,8 @@
 
         // 简化的API请求函数
         async function apiRequest(endpoint) {
-            const token = localStorage.getItem('access_token');
+            // 优先从sessionStorage获取token，然后回退到localStorage（兼容多标签页登录）
+            const token = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
             const url = endpoint;
             
             const headers = {
@@ -45,8 +46,16 @@
             const response = await fetch(url, { headers });
             
             if (response.status === 401) {
+                // 清除sessionStorage（优先）
+                sessionStorage.removeItem('access_token');
+                sessionStorage.removeItem('refresh_token');
+                sessionStorage.removeItem('user_info');
+                
+                // 兼容旧系统：也清除localStorage
                 localStorage.removeItem('access_token');
+                localStorage.removeItem('refresh_token');
                 localStorage.removeItem('user_info');
+                
                 window.location.href = '/login';
                 throw new Error('登录已过期, 请重新登录');
             }
@@ -398,7 +407,7 @@
             }
 
             // 获取当前用户信息
-            const userInfo = localStorage.getItem('user_info');
+            const userInfo = sessionStorage.getItem('user_info') || localStorage.getItem('user_info');
             if (userInfo) {
                 currentUser = JSON.parse(userInfo);
                 document.getElementById('current-user').textContent = currentUser.username;
@@ -428,8 +437,17 @@
 
             // 登出按钮
             document.getElementById('logout-btn').addEventListener('click', function() {
+                // 清除sessionStorage（优先）
+                sessionStorage.removeItem('access_token');
+                sessionStorage.removeItem('refresh_token');
+                sessionStorage.removeItem('user_info');
+                
+                // 兼容旧系统：也清除localStorage
                 localStorage.removeItem('access_token');
+                localStorage.removeItem('refresh_token');
+                localStorage.removeItem('user_info');
                 localStorage.removeItem('current_user');
+                
                 window.location.href = '/login';
             });
 

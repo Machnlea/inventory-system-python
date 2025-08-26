@@ -21,11 +21,11 @@ async def get_reports_overview(
     # 基础查询条件
     base_query = db.query(Equipment)
     if not current_user.is_admin:
-        from app.models.models import UserCategory
-        authorized_categories = select(UserCategory.category_id).filter(
-            UserCategory.user_id == current_user.id
+        from app.models.models import UserEquipmentPermission
+        authorized_equipment_names = select(UserEquipmentPermission.equipment_name).filter(
+            UserEquipmentPermission.user_id == current_user.id
         )
-        base_query = base_query.filter(Equipment.category_id.in_(authorized_categories))
+        base_query = base_query.filter(Equipment.name.in_(authorized_equipment_names))
     
     # 设备状态统计
     total_count = base_query.count()
@@ -61,7 +61,7 @@ async def get_reports_overview(
     ).join(Equipment).group_by(EquipmentCategory.id, EquipmentCategory.name)
     
     if not current_user.is_admin:
-        category_stats = category_stats.filter(Equipment.category_id.in_(authorized_categories))
+        category_stats = category_stats.filter(Equipment.name.in_(authorized_equipment_names))
     
     category_distribution = [
         {
@@ -80,7 +80,7 @@ async def get_reports_overview(
     ).join(Equipment).group_by(Department.id, Department.name)
     
     if not current_user.is_admin:
-        department_stats = department_stats.filter(Equipment.category_id.in_(authorized_categories))
+        department_stats = department_stats.filter(Equipment.name.in_(authorized_equipment_names))
     
     department_distribution = [
         {
@@ -122,11 +122,11 @@ async def get_calibration_stats(
     # 基础查询
     base_query = db.query(Equipment).filter(Equipment.status == "在用")
     if not current_user.is_admin:
-        from app.models.models import UserCategory
-        authorized_categories = select(UserCategory.category_id).filter(
-            UserCategory.user_id == current_user.id
+        from app.models.models import UserEquipmentPermission
+        authorized_equipment_names = select(UserEquipmentPermission.equipment_name).filter(
+            UserEquipmentPermission.user_id == current_user.id
         )
-        base_query = base_query.filter(Equipment.category_id.in_(authorized_categories))
+        base_query = base_query.filter(Equipment.name.in_(authorized_equipment_names))
     
     # 检定方式统计
     calibration_method_stats = db.query(
@@ -226,11 +226,11 @@ async def get_equipment_trends(
         # 基础查询
         base_query = db.query(Equipment)
         if not current_user.is_admin:
-            from app.models.models import UserCategory
-            authorized_categories = select(UserCategory.category_id).filter(
-                UserCategory.user_id == current_user.id
+            from app.models.models import UserEquipmentPermission
+            authorized_equipment_names = select(UserEquipmentPermission.equipment_name).filter(
+                UserEquipmentPermission.user_id == current_user.id
             )
-            base_query = base_query.filter(Equipment.category_id.in_(authorized_categories))
+            base_query = base_query.filter(Equipment.name.in_(authorized_equipment_names))
         
         # 统计各状态设备数量
         total_count = base_query.filter(
@@ -281,11 +281,11 @@ async def get_department_comparison(
     # 基础查询
     base_query = db.query(Equipment)
     if not current_user.is_admin:
-        from app.models.models import UserCategory
-        authorized_categories = select(UserCategory.category_id).filter(
-            UserCategory.user_id == current_user.id
+        from app.models.models import UserEquipmentPermission
+        authorized_equipment_names = select(UserEquipmentPermission.equipment_name).filter(
+            UserEquipmentPermission.user_id == current_user.id
         )
-        base_query = base_query.filter(Equipment.category_id.in_(authorized_categories))
+        base_query = base_query.filter(Equipment.name.in_(authorized_equipment_names))
     
     # 部门详细统计
     department_stats = db.query(
@@ -381,11 +381,11 @@ async def get_equipment_stats(
     
     # 权限控制
     if not current_user.is_admin:
-        from app.models.models import UserCategory
-        authorized_categories = select(UserCategory.category_id).filter(
-            UserCategory.user_id == current_user.id
+        from app.models.models import UserEquipmentPermission
+        authorized_equipment_names = select(UserEquipmentPermission.equipment_name).filter(
+            UserEquipmentPermission.user_id == current_user.id
         )
-        query = query.filter(Equipment.category_id.in_(authorized_categories))
+        query = query.filter(Equipment.name.in_(authorized_equipment_names))
     
     # 获取总数
     total = query.count()
@@ -632,11 +632,11 @@ async def get_calibration_records(
     
     # 权限控制
     if not current_user.is_admin:
-        from app.models.models import UserCategory
-        authorized_categories = select(UserCategory.category_id).filter(
-            UserCategory.user_id == current_user.id
+        from app.models.models import UserEquipmentPermission
+        authorized_equipment_names = select(UserEquipmentPermission.equipment_name).filter(
+            UserEquipmentPermission.user_id == current_user.id
         )
-        query = query.filter(Equipment.category_id.in_(authorized_categories))
+        query = query.filter(Equipment.name.in_(authorized_equipment_names))
     
     # 日期范围过滤
     if start_date:

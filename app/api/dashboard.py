@@ -25,11 +25,11 @@ def get_dashboard_stats(db: Session = Depends(get_db),
     active_query = db.query(Equipment).filter(Equipment.status == "在用")
     if not current_user.is_admin:
         from app.crud import users
-        from app.models.models import UserCategory
-        authorized_categories = select(UserCategory.category_id).filter(
-            UserCategory.user_id == current_user.id
+        from app.models.models import UserEquipmentPermission
+        authorized_equipment_names = select(UserEquipmentPermission.equipment_name).filter(
+            UserEquipmentPermission.user_id == current_user.id
         )
-        active_query = active_query.filter(Equipment.category_id.in_(authorized_categories))
+        active_query = active_query.filter(Equipment.name.in_(authorized_equipment_names))
     
     active_equipment_count = active_query.count()
     
@@ -55,30 +55,30 @@ def get_dashboard_stats(db: Session = Depends(get_db),
     # 停用状态设备总数
     inactive_query = db.query(Equipment).filter(Equipment.status.in_(["停用", "报废"]))
     if not current_user.is_admin:
-        from app.models.models import UserCategory
-        authorized_categories = select(UserCategory.category_id).filter(
-            UserCategory.user_id == current_user.id
+        from app.models.models import UserEquipmentPermission
+        authorized_equipment_names = select(UserEquipmentPermission.equipment_name).filter(
+            UserEquipmentPermission.user_id == current_user.id
         )
-        inactive_query = inactive_query.filter(Equipment.category_id.in_(authorized_categories))
+        inactive_query = inactive_query.filter(Equipment.name.in_(authorized_equipment_names))
     
     inactive_count = inactive_query.count()
     
-    # 设备类别分布（只统计在用设备）
-    category_query = db.query(
-        EquipmentCategory.name,
+    # 设备具体器具分布（只统计在用设备）
+    equipment_query = db.query(
+        Equipment.name,
         func.count(Equipment.id).label('count')
-    ).join(Equipment).filter(Equipment.status == "在用").group_by(EquipmentCategory.id, EquipmentCategory.name)
+    ).filter(Equipment.status == "在用").group_by(Equipment.name)
     
     if not current_user.is_admin:
-        from app.models.models import UserCategory
-        authorized_categories = select(UserCategory.category_id).filter(
-            UserCategory.user_id == current_user.id
+        from app.models.models import UserEquipmentPermission
+        authorized_equipment_names = select(UserEquipmentPermission.equipment_name).filter(
+            UserEquipmentPermission.user_id == current_user.id
         )
-        category_query = category_query.filter(Equipment.category_id.in_(authorized_categories))
+        equipment_query = equipment_query.filter(Equipment.name.in_(authorized_equipment_names))
     
     category_distribution = [
         {"name": name, "count": count} 
-        for name, count in category_query.all()
+        for name, count in equipment_query.all()
     ]
     
     # 部门分布（只统计在用设备）
@@ -88,11 +88,11 @@ def get_dashboard_stats(db: Session = Depends(get_db),
     ).join(Equipment).filter(Equipment.status == "在用").group_by(Department.id, Department.name)
     
     if not current_user.is_admin:
-        from app.models.models import UserCategory
-        authorized_categories = select(UserCategory.category_id).filter(
-            UserCategory.user_id == current_user.id
+        from app.models.models import UserEquipmentPermission
+        authorized_equipment_names = select(UserEquipmentPermission.equipment_name).filter(
+            UserEquipmentPermission.user_id == current_user.id
         )
-        department_query = department_query.filter(Equipment.category_id.in_(authorized_categories))
+        department_query = department_query.filter(Equipment.name.in_(authorized_equipment_names))
     
     department_distribution = [
         {"name": name, "count": count} 

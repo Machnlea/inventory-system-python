@@ -29,7 +29,32 @@ class PredefinedNamesRequest(BaseModel):
 def read_categories(skip: int = 0, limit: int = 100,
                    db: Session = Depends(get_db),
                    current_user = Depends(get_current_user)):
-    return categories.get_categories(db, skip=skip, limit=limit)
+    
+    # 管理员可以看到所有类别
+    if current_user.is_admin:
+        return categories.get_categories(db, skip=skip, limit=limit)
+    
+    # 普通用户只能看到有权限的设备所属的类别
+    from app.models.models import UserEquipmentPermission, Equipment, EquipmentCategory
+    from sqlalchemy import select, distinct
+    
+    # 获取用户有权限的设备名称
+    authorized_equipment_names = db.query(UserEquipmentPermission.equipment_name).filter(
+        UserEquipmentPermission.user_id == current_user.id
+    ).all()
+    
+    if not authorized_equipment_names:
+        return []  # 用户没有任何设备权限
+    
+    # 提取设备名称列表
+    equipment_names = [item[0] for item in authorized_equipment_names]
+    
+    # 通过设备名称找到对应的类别
+    authorized_categories = db.query(EquipmentCategory).join(
+        Equipment, Equipment.category_id == EquipmentCategory.id
+    ).filter(Equipment.name.in_(equipment_names)).distinct().offset(skip).limit(limit).all()
+    
+    return authorized_categories
 
 @router.post("/", response_model=EquipmentCategory)
 def create_category(category: EquipmentCategoryCreate,
@@ -44,7 +69,59 @@ def create_category(category: EquipmentCategoryCreate,
 def get_categories_with_counts(skip: int = 0, limit: int = 100,
                               db: Session = Depends(get_db),
                               current_user = Depends(get_current_user)):
-    return categories.get_category_with_equipment_count(db, skip=skip, limit=limit)
+    
+    # 管理员可以看到所有类别
+    if current_user.is_admin:
+        return categories.get_category_with_equipment_count(db, skip=skip, limit=limit)
+    
+    # 普通用户只能看到有权限设备所属的类别及其设备数量
+    from app.models.models import UserEquipmentPermission, EquipmentCategory, Equipment
+    from sqlalchemy import func, distinct
+    
+    # 获取用户有权限的设备名称
+    authorized_equipment_names = db.query(UserEquipmentPermission.equipment_name).filter(
+        UserEquipmentPermission.user_id == current_user.id
+    ).all()
+    
+    if not authorized_equipment_names:
+        return []  # 用户没有任何设备权限
+    
+    # 提取设备名称列表
+    equipment_names = [item[0] for item in authorized_equipment_names]
+    
+    # 查询用户有权限的设备所属的类别及其设备数量
+    result = db.query(
+        EquipmentCategory.id,
+        EquipmentCategory.name,
+        EquipmentCategory.code,
+        EquipmentCategory.description,
+        EquipmentCategory.predefined_names,
+        func.count(Equipment.id).label('equipment_count')
+    ).join(
+        Equipment, EquipmentCategory.id == Equipment.category_id
+    ).filter(
+        Equipment.name.in_(equipment_names)
+    ).group_by(
+        EquipmentCategory.id,
+        EquipmentCategory.name,
+        EquipmentCategory.code,
+        EquipmentCategory.description,
+        EquipmentCategory.predefined_names
+    ).offset(skip).limit(limit).all()
+    
+    # 转换为字典格式
+    categories_with_counts = []
+    for row in result:
+        categories_with_counts.append({
+            "id": row.id,
+            "name": row.name,
+            "code": row.code,
+            "description": row.description,
+            "predefined_names": row.predefined_names,
+            "equipment_count": row.equipment_count
+        })
+    
+    return categories_with_counts
 
 @router.get("/{category_id}", response_model=EquipmentCategory)
 def read_category(category_id: int,
@@ -53,6 +130,19 @@ def read_category(category_id: int,
     db_category = categories.get_category(db, category_id=category_id)
     if db_category is None:
         raise HTTPException(status_code=404, detail="Category not found")
+    
+    # 普通用户权限检查：只能查看授权的类别
+    if not current_user.is_admin:
+        from app.models.models import UserCategory
+        
+        user_category = db.query(UserCategory).filter(
+            UserCategory.user_id == current_user.id,
+            UserCategory.category_id == category_id
+        ).first()
+        
+        if not user_category:
+            raise HTTPException(status_code=403, detail="No permission to access this category")
+    
     return db_category
 
 @router.put("/{category_id}", response_model=EquipmentCategory)
@@ -216,6 +306,19 @@ def get_predefined_names(category_id: int,
     category = categories.get_category(db, category_id)
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
+    
+    # 普通用户权限检查：只能查看授权的类别
+    if not current_user.is_admin:
+        from app.models.models import UserCategory
+        
+        user_category = db.query(UserCategory).filter(
+            UserCategory.user_id == current_user.id,
+            UserCategory.category_id == category_id
+        ).first()
+        
+        if not user_category:
+            raise HTTPException(status_code=403, detail="No permission to access this category")
+    
     return {"predefined_names": category.predefined_names or []}
 
 @router.get("/{category_id}/equipment-usage")
@@ -223,7 +326,7 @@ def get_category_equipment_usage(category_id: int,
                                 db: Session = Depends(get_db),
                                 current_user = Depends(get_current_user)):
     """获取指定类别下预定义名称的设备使用情况和编号映射"""
-    from app.models.models import Equipment, EquipmentCategory
+    from app.models.models import Equipment, EquipmentCategory, UserCategory
     from sqlalchemy import func
     from app.utils.predefined_name_manager import get_smart_name_mapping
     
@@ -231,6 +334,16 @@ def get_category_equipment_usage(category_id: int,
     category = db.query(EquipmentCategory).filter(EquipmentCategory.id == category_id).first()
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
+    
+    # 普通用户权限检查：只能查看授权的类别
+    if not current_user.is_admin:
+        user_category = db.query(UserCategory).filter(
+            UserCategory.user_id == current_user.id,
+            UserCategory.category_id == category_id
+        ).first()
+        
+        if not user_category:
+            raise HTTPException(status_code=403, detail="No permission to access this category")
     
     # 获取该类别下所有设备，按名称分组统计
     equipment_stats = db.query(

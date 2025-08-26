@@ -37,8 +37,10 @@ def init_db():
             {"name": "安环部", "code": "AH", "description": "安全环保部门"},
             {"name": "物管部", "code": "WG", "description": "物资管理部门"},
             {"name": "机修车间", "code": "JX", "description": "机修车间"},
-            {"name": "电控部", "code": "DK", "description": "电控部门"}
-        ]
+            {"name": "电控部", "code": "DK", "description": "电控部门"},
+            {"name": "中试车间", "code": "ZX", "description": "中试车间、防腐中试车间"},
+            {"name": "项目办", "code": "XM", "description": "项目办"}
+        ]   
         
         for dept_data in default_departments:
             existing_dept = departments.get_department_by_name(db, dept_data["name"])
@@ -56,7 +58,7 @@ def init_db():
                 "predefined_names": [
                     "温湿度计", "玻璃液体温度计", "温湿度表", "标准水银温度计", 
                     "工作用玻璃温度计", "迷你温湿度计", "数显温度计", "标准水槽", 
-                    "标准油槽", "标准铂电阻温度计"
+                    "标准油槽", "双金属温度计"
                 ]
             },
             {
@@ -73,9 +75,9 @@ def init_db():
             {
                 "name": "质量称量类", 
                 "category_code": "MAS", 
-                "description": "电子台秤、M1级砝码、工业天平、电子天平",
+                "description": "电子台秤、工业天平、电子天平",
                 "predefined_names": [
-                    "电子台秤", "M1级砝码", "工业天平", "电子天平", "电子计数秤", 
+                    "电子台秤", "工业天平", "电子天平", "电子计数秤", 
                     "防爆电子秤", "数字式电子汽车衡", "砝码"
                 ]
             },
@@ -180,6 +182,22 @@ def init_db():
                 "description": "湿膜制备器、涂膜器、漆膜制备器、腻子涂刮器",
                 "predefined_names": [
                     "湿膜制备器", "涂膜器", "漆膜制备器", "腻子涂刮器", "可调式制备器（数显式）"
+                ]
+            },
+            {
+                "name":"计量标准类",
+                "category_code": "STD",
+                "description": "计量标准器具、量具、检定设备",
+                "predefined_names": [
+                    "标准铂电阻温度计", "M1级砝码", 
+                ]
+            },
+            {
+                "name": "信号处理与显示类",
+                "category_code": "SIG",
+                "description": "这些设备都属于工业过程控制中的 “二次仪表” （或称“显示控制仪表”），其特点是接收来自“一次仪表”（如热电偶、热电阻、压力传感器）的信号，进行处理后输出标准信号或进行显示记录。",
+                "predefined_names": [
+                    "温度变送器","压力变送器", "压力液位变送器", "智能变送器", "数显表","无纸记录仪"
                 ]
             }
         ]

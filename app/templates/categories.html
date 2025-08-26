@@ -138,17 +138,42 @@
 
                 <!-- 操作按钮区域 -->
                 <div class="bg-white rounded-xl shadow-md p-6 mb-6">
-                    <div class="flex justify-between items-center">
-                        <div class="flex items-center space-x-4">
-                            <button id="addCategoryBtn" class="btn-primary text-white font-medium py-2 px-4 rounded-lg hover:shadow-lg transition-all duration-200">
-                                <i class="fas fa-plus mr-2"></i>新增类别
-                            </button>
-                            <button id="refreshBtn" class="bg-gray-100 text-gray-700 font-medium py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors">
-                                <i class="fas fa-sync-alt mr-2"></i>刷新
-                            </button>
+                    <div class="flex flex-col lg:flex-row gap-4">
+                        <!-- 第一行：搜索框 -->
+                        <div class="flex-1">
+                            <div class="relative max-w-md">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fas fa-search text-gray-400"></i>
+                                </div>
+                                <input 
+                                    type="text" 
+                                    id="searchInput" 
+                                    placeholder="搜索类别名称或器具名称..." 
+                                    class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                                >
+                                <div id="searchClearBtn" class="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer hidden">
+                                    <i class="fas fa-times text-gray-400 hover:text-gray-600"></i>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <span id="searchResultsInfo" class="text-sm text-gray-500"></span>
+                            </div>
                         </div>
-                        <div class="text-sm text-gray-600">
-                            共 <span id="totalCount" class="font-medium text-blue-600">0</span> 个类别
+                        
+                        <!-- 第二行：按钮和统计 -->
+                        <div class="flex justify-between items-center lg:justify-end lg:gap-4">
+                            <div class="flex items-center space-x-4">
+                                <button id="addCategoryBtn" class="btn-primary text-white font-medium py-2 px-4 rounded-lg hover:shadow-lg transition-all duration-200">
+                                    <i class="fas fa-plus mr-2"></i>新增类别
+                                </button>
+                                <button id="refreshBtn" class="bg-gray-100 text-gray-700 font-medium py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors">
+                                    <i class="fas fa-sync-alt mr-2"></i>刷新
+                                </button>
+                            </div>
+                            <div class="text-sm text-gray-600 lg:ml-4">
+                                共 <span id="totalCount" class="font-medium text-blue-600">0</span> 个类别
+                                <span id="filteredCount" class="ml-2 text-orange-600 font-medium hidden"></span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -488,6 +513,11 @@
         let currentPage = 1;
         let itemsPerPage = parseInt(localStorage.getItem('categories_page_size') || '20');
         let totalItems = 0;
+        
+        // 搜索相关变量
+        let allCategories = [];
+        let filteredCategories = [];
+        let searchTimeout = null;
 
         // 侧边栏功能
         document.addEventListener('DOMContentLoaded', function() {
@@ -657,6 +687,53 @@
 
             // 分页事件监听器
             setupPaginationEventListeners();
+            
+            // 搜索功能事件监听器
+            setupSearchEventListeners();
+        }
+        
+        // 设置搜索事件监听器
+        function setupSearchEventListeners() {
+            const searchInput = document.getElementById('searchInput');
+            const searchClearBtn = document.getElementById('searchClearBtn');
+            
+            // 搜索输入框实时搜索
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.trim();
+                
+                // 显示/隐藏清除按钮
+                if (searchTerm) {
+                    searchClearBtn.classList.remove('hidden');
+                } else {
+                    searchClearBtn.classList.add('hidden');
+                }
+                
+                // 清除之前的搜索定时器
+                if (searchTimeout) {
+                    clearTimeout(searchTimeout);
+                }
+                
+                // 设置新的搜索定时器（防抖动）
+                searchTimeout = setTimeout(() => {
+                    performSearch(searchTerm);
+                }, 300);
+            });
+            
+            // 清除搜索
+            searchClearBtn.addEventListener('click', function() {
+                searchInput.value = '';
+                searchClearBtn.classList.add('hidden');
+                performSearch('');
+            });
+            
+            // 搜索框回车键处理
+            searchInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const searchTerm = this.value.trim();
+                    performSearch(searchTerm);
+                }
+            });
         }
 
         // 加载类别列表
@@ -665,17 +742,89 @@
                 showNotification('正在加载类别数据...', 'info');
                 
                 const categories = await CategoryAPI.getCategoriesWithCounts();
+                allCategories = categories; // 保存所有类别数据
                 totalItems = categories.length;
                 
-                updateCategoriesTable(categories);
-                updateCategoryChart(categories);
-                updatePagination();
+                // 检查是否有搜索条件
+                const searchInput = document.getElementById('searchInput');
+                const searchTerm = searchInput ? searchInput.value.trim() : '';
+                
+                if (searchTerm) {
+                    // 如果有搜索条件，应用搜索过滤
+                    performSearch(searchTerm);
+                } else {
+                    // 没有搜索条件，显示所有数据
+                    filteredCategories = categories;
+                    updateCategoriesTable(categories);
+                    updateCategoryChart(categories);
+                    updatePagination();
+                    updateSearchResultsInfo('');
+                }
                 
                 showNotification('类别数据加载成功', 'success');
             } catch (error) {
                 console.error('加载类别数据失败:', error);
                 showNotification('加载类别数据失败: ' + error.message, 'error');
                 updateCategoriesTable([]);
+                allCategories = [];
+                filteredCategories = [];
+            }
+        }
+        
+        // 执行搜索
+        function performSearch(searchTerm) {
+            if (!searchTerm) {
+                // 没有搜索词，显示所有数据
+                filteredCategories = allCategories;
+                totalItems = allCategories.length;
+                updateCategoriesTable(filteredCategories);
+                updateCategoryChart(filteredCategories);
+                updatePagination();
+                updateSearchResultsInfo('');
+                return;
+            }
+            
+            const searchLower = searchTerm.toLowerCase();
+            
+            // 搜索类别名称和预定义器具名称
+            filteredCategories = allCategories.filter(category => {
+                // 搜索类别名称
+                if (category.name.toLowerCase().includes(searchLower)) {
+                    return true;
+                }
+                
+                // 搜索预定义器具名称
+                if (category.predefined_names && Array.isArray(category.predefined_names)) {
+                    return category.predefined_names.some(name => 
+                        name.toLowerCase().includes(searchLower)
+                    );
+                }
+                
+                return false;
+            });
+            
+            totalItems = filteredCategories.length;
+            currentPage = 1; // 搜索后重置到第一页
+            
+            updateCategoriesTable(filteredCategories);
+            updateCategoryChart(filteredCategories);
+            updatePagination();
+            updateSearchResultsInfo(searchTerm);
+        }
+        
+        // 更新搜索结果信息
+        function updateSearchResultsInfo(searchTerm) {
+            const searchResultsInfo = document.getElementById('searchResultsInfo');
+            const filteredCount = document.getElementById('filteredCount');
+            
+            if (searchTerm) {
+                const resultText = `搜索"${searchTerm}"找到 ${filteredCategories.length} 个匹配结果`;
+                searchResultsInfo.textContent = resultText;
+                filteredCount.textContent = `(筛选后: ${filteredCategories.length})`;
+                filteredCount.classList.remove('hidden');
+            } else {
+                searchResultsInfo.textContent = '';
+                filteredCount.classList.add('hidden');
             }
         }
 
@@ -1522,7 +1671,7 @@
                     method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                        'Authorization': `Bearer ${sessionStorage.getItem('access_token') || localStorage.getItem('access_token')}`
                     },
                     body: JSON.stringify({
                         old_name: currentEditPredefinedName,
@@ -1587,7 +1736,7 @@
                             const response = await fetch(`/api/categories/${categoryId}/equipment-usage`, {
                                 method: 'GET',
                                 headers: {
-                                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                                    'Authorization': `Bearer ${sessionStorage.getItem('access_token') || localStorage.getItem('access_token')}`,
                                     'Content-Type': 'application/json'
                                 }
                             });
@@ -1794,19 +1943,22 @@
             if (!contentElement) return;
             
             try {
+                // 优先从sessionStorage获取token，然后回退到localStorage（兼容多标签页登录）
+                const token = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
+                
                 // 获取类别和使用情况信息
                 const [categoryInfo, predefinedInfo] = await Promise.all([
                     fetch(`/api/categories/${categoryId}`, {
                         method: 'GET',
                         headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                            'Authorization': `Bearer ${token}`,
                             'Content-Type': 'application/json'
                         }
                     }),
                     fetch(`/api/categories/${categoryId}/predefined-names`, {
                         method: 'GET',
                         headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                            'Authorization': `Bearer ${token}`,
                             'Content-Type': 'application/json'
                         }
                     })
@@ -1825,7 +1977,7 @@
                     const usageResponse = await fetch(`/api/categories/${categoryId}/equipment-usage`, {
                         method: 'GET',
                         headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                            'Authorization': `Bearer ${token}`,
                             'Content-Type': 'application/json'
                         }
                     });

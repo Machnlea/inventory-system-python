@@ -41,8 +41,9 @@ class TabSessionManager {
      * 获取当前标签页的用户信息
      */
     getCurrentUser() {
-        const userInfo = sessionStorage.getItem('user_info');
-        const accessToken = sessionStorage.getItem('access_token');
+        // 优先从sessionStorage获取，然后回退到localStorage（兼容多标签页登录和旧系统）
+        const userInfo = sessionStorage.getItem('user_info') || localStorage.getItem('user_info');
+        const accessToken = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
         
         if (userInfo && accessToken) {
             try {
@@ -463,10 +464,17 @@ class TabSessionManager {
     clearSession() {
         const username = this.currentUser ? this.currentUser.username : null;
         
+        // 清除sessionStorage（当前标签页）
         sessionStorage.removeItem('access_token');
         sessionStorage.removeItem('refresh_token');
         sessionStorage.removeItem('user_info');
         sessionStorage.removeItem('tab_id');
+        
+        // 兼容清除localStorage（旧系统）
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user_info');
+        localStorage.removeItem('current_user');
         
         this.currentUser = null;
         
@@ -491,7 +499,8 @@ class TabSessionManager {
      */
     checkSessionValidity() {
         const user = this.getCurrentUser();
-        const accessToken = sessionStorage.getItem('access_token');
+        // 优先从sessionStorage获取，然后回退到localStorage（兼容多标签页登录和旧系统）
+        const accessToken = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
         
         if (!user || !accessToken) {
             // 如果没有有效会话且不在登录页面，跳转到登录页面
@@ -505,14 +514,16 @@ class TabSessionManager {
      * 获取访问令牌
      */
     getAccessToken() {
-        return sessionStorage.getItem('access_token');
+        // 优先从sessionStorage获取，然后回退到localStorage（兼容多标签页登录和旧系统）
+        return sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
     }
     
     /**
      * 获取刷新令牌
      */
     getRefreshToken() {
-        return sessionStorage.getItem('refresh_token');
+        // 优先从sessionStorage获取，然后回退到localStorage（兼容多标签页登录和旧系统）
+        return sessionStorage.getItem('refresh_token') || localStorage.getItem('refresh_token');
     }
     
     /**

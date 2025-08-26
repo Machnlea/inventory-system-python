@@ -1,0 +1,8 @@
+{
+  "timestamp": "20250826_004650",
+  "backup_type": "daily",
+  "source_file": "/home/ming/my_project/inventory-system-python/scripts/../data/inventory.db",
+  "backup_file": "/home/ming/my_project/inventory-system-python/scripts/../dbbak/inventory_daily_20250826_004650.db",
+  "file_size": 409600,
+  "created_at": "2025-08-26T00:46:50.827064"
+}

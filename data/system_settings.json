@@ -18,5 +18,5 @@
   "enableAutoCleanup": false,
   "backupFrequency": "weekly",
   "backupRetention": 30,
-  "backupPath": "./backups"
+  "backupPath": "./dbbak"
 }

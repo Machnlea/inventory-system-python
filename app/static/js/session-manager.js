@@ -7,9 +7,9 @@ class SessionManager {
     }
 
     init() {
-        // 从localStorage获取用户信息和token
-        const userInfo = localStorage.getItem('user_info');
-        const token = localStorage.getItem('access_token');
+        // 优先从sessionStorage获取用户信息和token，然后回退到localStorage（兼容多标签页登录）
+        const userInfo = sessionStorage.getItem('user_info') || localStorage.getItem('user_info');
+        const token = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
         
         if (userInfo && token) {
             try {
@@ -92,9 +92,16 @@ class SessionManager {
 
     // 清除会话
     clearSession() {
+        // 清除sessionStorage（优先）
+        sessionStorage.removeItem('access_token');
+        sessionStorage.removeItem('refresh_token');
+        sessionStorage.removeItem('user_info');
+        
+        // 兼容旧系统：也清除localStorage
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('user_info');
+        
         this.currentUser = null;
         this.token = null;
     }

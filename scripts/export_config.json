@@ -1,0 +1,39 @@
+{
+  "api_base_url": "http://127.0.0.1:8000",
+  "export_dir": "./auto_exports",
+  "default_export_type": "all",
+  "notification_enabled": true,
+  "retention_days": 30,
+  "auth_credentials": {
+    "username": "admin",
+    "password": "admin123"
+  },
+  "export_schedules": {
+    "daily": "0 8 * * *",    # 每天早上8点
+    "weekly": "0 9 * * 1",  # 每周一早上9点
+    "monthly": "0 10 1 * *" # 每月1号早上10点
+  },
+  "export_filters": {
+    "daily": {
+      "date_range": {
+        "start_date": "{{today}}",
+        "end_date": "{{today}}"
+      },
+      "status": ["在用"]
+    },
+    "weekly": {
+      "date_range": {
+        "start_date": "{{monday}}",
+        "end_date": "{{today}}"
+      },
+      "status": ["在用"]
+    },
+    "monthly": {
+      "date_range": {
+        "start_date": "{{first_day}}",
+        "end_date": "{{today}}"
+      },
+      "status": ["在用"]
+    }
+  }
+}

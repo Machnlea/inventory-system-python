@@ -285,6 +285,21 @@ async def import_equipment_data(
                     error_count += 1
                     continue
                 
+                # 验证计量器具名称
+                equipment_name = str(row['计量器具名称'])
+                if category.predefined_names:
+                    # 如果类别有预定义器具名称列表，验证器具名称是否在列表中
+                    if equipment_name not in category.predefined_names:
+                        result["status"] = "失败"
+                        # 提供更友好的错误信息，包含可用的器具名称
+                        available_names = ', '.join(category.predefined_names[:5])  # 只显示前5个，避免信息过长
+                        if len(category.predefined_names) > 5:
+                            available_names += f" 等(共{len(category.predefined_names)}种)"
+                        result["message"] = f"计量器具名称'{equipment_name}'不在设备类别'{category.name}'的预定义器具名称列表中。可用名称包括：{available_names}"
+                        detailed_results.append(result)
+                        error_count += 1
+                        continue
+                
                 # 验证检定周期
                 calibration_cycle = str(row['检定周期'])
                 if calibration_cycle not in ['6个月', '12个月', '24个月', '36个月', '随坏随换']:

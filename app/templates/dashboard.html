@@ -223,9 +223,9 @@
 
                 <!-- 图表区域 -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                    <!-- 设备类别分布图 -->
+                    <!-- 设备分布图 -->
                     <div class="bg-white rounded-xl shadow-md p-6">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-4">在用设备类别分布</h3>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">在用设备分布</h3>
                         <div class="flex justify-center">
                             <canvas id="categoryChart" width="300" height="300"></canvas>
                         </div>
@@ -589,7 +589,7 @@
                 departmentChart.destroy();
             }
             
-            // 设备类别分布图
+            // 设备分布图
             const categoryCtx = document.getElementById('categoryChart').getContext('2d');
             const categoryLabels = categoryData.map(item => item.name);
             const categoryCounts = categoryData.map(item => item.count);

@@ -37,23 +37,10 @@ def get_equipments_count(db: Session, user_id: Optional[int] = None, is_admin: b
     
     # 如果不是管理员，只能看到被授权的设备
     if not is_admin and user_id:
-        # 检查是否有类别权限
-        authorized_categories = select(UserCategory.category_id).filter(
-            UserCategory.user_id == user_id
-        )
-        
-        # 检查是否有器具权限
         authorized_equipment_names = select(UserEquipmentPermission.equipment_name).filter(
             UserEquipmentPermission.user_id == user_id
         )
-        
-        # 组合权限：用户可以看到有类别权限的设备，或者有器具权限的具体设备
-        query = query.filter(
-            or_(
-                Equipment.category_id.in_(authorized_categories),
-                Equipment.name.in_(authorized_equipment_names)
-            )
-        )
+        query = query.filter(Equipment.name.in_(authorized_equipment_names))
     
     return query.count()
 
@@ -68,23 +55,10 @@ def get_equipments(db: Session, skip: int = 0, limit: int = 100,
     
     # 如果不是管理员，只能看到被授权的设备
     if not is_admin and user_id:
-        # 检查是否有类别权限
-        authorized_categories = select(UserCategory.category_id).filter(
-            UserCategory.user_id == user_id
-        )
-        
-        # 检查是否有器具权限
         authorized_equipment_names = select(UserEquipmentPermission.equipment_name).filter(
             UserEquipmentPermission.user_id == user_id
         )
-        
-        # 组合权限：用户可以看到有类别权限的设备，或者有器具权限的具体设备
-        query = query.filter(
-            or_(
-                Equipment.category_id.in_(authorized_categories),
-                Equipment.name.in_(authorized_equipment_names)
-            )
-        )
+        query = query.filter(Equipment.name.in_(authorized_equipment_names))
     
     # 添加排序
     if sort_field == "name":
@@ -140,23 +114,11 @@ def get_equipment(db: Session, equipment_id: int, user_id: Optional[int] = None,
     ).filter(Equipment.id == equipment_id)
     
     if not is_admin and user_id:
-        # 检查是否有类别权限
-        authorized_categories = select(UserCategory.category_id).filter(
-            UserCategory.user_id == user_id
-        )
-        
-        # 检查是否有器具权限
+        # 只使用设备权限检查
         authorized_equipment_names = select(UserEquipmentPermission.equipment_name).filter(
             UserEquipmentPermission.user_id == user_id
         )
-        
-        # 组合权限：用户可以看到有类别权限的设备，或者有器具权限的具体设备
-        query = query.filter(
-            or_(
-                Equipment.category_id.in_(authorized_categories),
-                Equipment.name.in_(authorized_equipment_names)
-            )
-        )
+        query = query.filter(Equipment.name.in_(authorized_equipment_names))
     
     return query.first()
 
@@ -286,23 +248,11 @@ def filter_equipments_count(db: Session, filters: EquipmentFilter, user_id: Opti
     
     # 权限控制
     if not is_admin and user_id:
-        # 检查是否有类别权限
-        authorized_categories = select(UserCategory.category_id).filter(
-            UserCategory.user_id == user_id
-        )
-        
-        # 检查是否有器具权限
+        # 只使用设备权限
         authorized_equipment_names = select(UserEquipmentPermission.equipment_name).filter(
             UserEquipmentPermission.user_id == user_id
         )
-        
-        # 组合权限：用户可以看到有类别权限的设备，或者有器具权限的具体设备
-        query = query.filter(
-            or_(
-                Equipment.category_id.in_(authorized_categories),
-                Equipment.name.in_(authorized_equipment_names)
-            )
-        )
+        query = query.filter(Equipment.name.in_(authorized_equipment_names))
     
     # 应用筛选条件
     if filters.department_id:
@@ -333,23 +283,11 @@ def filter_equipments(db: Session, filters: EquipmentFilter, user_id: Optional[i
     
     # 权限控制
     if not is_admin and user_id:
-        # 检查是否有类别权限
-        authorized_categories = select(UserCategory.category_id).filter(
-            UserCategory.user_id == user_id
-        )
-        
-        # 检查是否有器具权限
+        # 只使用设备权限
         authorized_equipment_names = select(UserEquipmentPermission.equipment_name).filter(
             UserEquipmentPermission.user_id == user_id
         )
-        
-        # 组合权限：用户可以看到有类别权限的设备，或者有器具权限的具体设备
-        query = query.filter(
-            or_(
-                Equipment.category_id.in_(authorized_categories),
-                Equipment.name.in_(authorized_equipment_names)
-            )
-        )
+        query = query.filter(Equipment.name.in_(authorized_equipment_names))
     
     # 应用筛选条件
     if filters.department_id:
@@ -427,23 +365,11 @@ def get_equipments_due_for_calibration(db: Session, start_date: date, end_date: 
     )
     
     if not is_admin and user_id:
-        # 检查是否有类别权限
-        authorized_categories = select(UserCategory.category_id).filter(
-            UserCategory.user_id == user_id
-        )
-        
-        # 检查是否有器具权限
+        # 只使用设备权限检查
         authorized_equipment_names = select(UserEquipmentPermission.equipment_name).filter(
             UserEquipmentPermission.user_id == user_id
         )
-        
-        # 组合权限：用户可以看到有类别权限的设备，或者有器具权限的具体设备
-        query = query.filter(
-            or_(
-                Equipment.category_id.in_(authorized_categories),
-                Equipment.name.in_(authorized_equipment_names)
-            )
-        )
+        query = query.filter(Equipment.name.in_(authorized_equipment_names))
     
     # 按有效期至升序排序
     query = query.order_by(Equipment.valid_until.asc().nulls_last())
@@ -461,23 +387,11 @@ def get_overdue_equipments(db: Session, user_id: Optional[int] = None, is_admin:
     )
     
     if not is_admin and user_id:
-        # 检查是否有类别权限
-        authorized_categories = select(UserCategory.category_id).filter(
-            UserCategory.user_id == user_id
-        )
-        
-        # 检查是否有器具权限
+        # 只使用设备权限检查
         authorized_equipment_names = select(UserEquipmentPermission.equipment_name).filter(
             UserEquipmentPermission.user_id == user_id
         )
-        
-        # 组合权限：用户可以看到有类别权限的设备，或者有器具权限的具体设备
-        query = query.filter(
-            or_(
-                Equipment.category_id.in_(authorized_categories),
-                Equipment.name.in_(authorized_equipment_names)
-            )
-        )
+        query = query.filter(Equipment.name.in_(authorized_equipment_names))
     
     # 按有效期至升序排序（最早超期的排在前面）
     query = query.order_by(Equipment.valid_until.asc().nulls_last())
@@ -494,10 +408,10 @@ def search_equipments_count(db: Session, search: EquipmentSearch, user_id: Optio
     
     # 权限控制
     if not is_admin and user_id:
-        authorized_categories = select(UserCategory.category_id).filter(
-            UserCategory.user_id == user_id
+        authorized_equipment_names = select(UserEquipmentPermission.equipment_name).filter(
+            UserEquipmentPermission.user_id == user_id
         )
-        query = query.filter(Equipment.category_id.in_(authorized_categories))
+        query = query.filter(Equipment.name.in_(authorized_equipment_names))
     
     # 构建搜索条件
     search_conditions = []
@@ -583,10 +497,10 @@ def search_equipments(db: Session, search: EquipmentSearch, user_id: Optional[in
     
     # 权限控制
     if not is_admin and user_id:
-        authorized_categories = select(UserCategory.category_id).filter(
-            UserCategory.user_id == user_id
+        authorized_equipment_names = select(UserEquipmentPermission.equipment_name).filter(
+            UserEquipmentPermission.user_id == user_id
         )
-        query = query.filter(Equipment.category_id.in_(authorized_categories))
+        query = query.filter(Equipment.name.in_(authorized_equipment_names))
     
     # 构建搜索条件
     search_conditions = []

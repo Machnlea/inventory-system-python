@@ -6,7 +6,7 @@
     <title>用户管理 - 设备台账管理系统</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <script src="/static/js/session-manager.js"></script>
+    <script src="/static/js/session-manager.js?v=2"></script>
     <script src="/static/js/api-client.js"></script>
     <script src="/static/js/tab-session-manager.js"></script>
     <style>
@@ -420,19 +420,25 @@
                 <div class="mb-6">
                     <div class="flex justify-between items-center mb-3">
                         <label class="block text-sm font-medium text-gray-700">器具列表</label>
-                        <div class="flex space-x-2">
-                            <button type="button" class="text-xs text-blue-600 hover:text-blue-800" onclick="selectAllEquipment()">
-                                全选
-                            </button>
-                            <button type="button" class="text-xs text-gray-600 hover:text-gray-800" onclick="clearAllEquipment()">
-                                清空
-                            </button>
+                        <div class="flex items-center space-x-3">
+                            <div class="flex items-center space-x-2">
+                                <input type="checkbox" id="show-only-with-devices" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" onchange="toggleEquipmentFilter()" checked>
+                                <label for="show-only-with-devices" class="text-sm text-gray-700 cursor-pointer">只显示有设备的器具</label>
+                            </div>
+                            <div class="border-l border-gray-300 pl-3 flex space-x-2">
+                                <button type="button" class="text-xs text-blue-600 hover:text-blue-800" onclick="selectAllEquipment()">
+                                    全选
+                                </button>
+                                <button type="button" class="text-xs text-gray-600 hover:text-gray-800" onclick="clearAllEquipment()">
+                                    清空
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <div class="border border-gray-200 rounded-lg p-3 max-h-64 overflow-y-auto bg-gray-50" id="equipment-checkboxes">
-                        <div class="text-center text-gray-500 py-8">
-                            <i class="fas fa-info-circle mr-2"></i>
-                            请先选择一个设备类别
+                        <div class="text-center text-gray-500 py-4">
+                            <i class="fas fa-spinner fa-spin mr-2"></i>
+                            正在加载有设备的器具...
                         </div>
                     </div>
                 </div>
@@ -458,6 +464,7 @@
         let managingEquipmentPermissionsUserId = null;
         let allCategories = [];
         let equipmentManagedStatus = [];
+        let currentEquipmentCounts = {}; // 存储当前类别的设备数量信息
         let currentPage = 1;
         let itemsPerPage = parseInt(localStorage.getItem('users_page_size') || '20');
         let totalItems = 0;
@@ -1595,6 +1602,9 @@
                 // 保存用户权限到全局变量
                 window.currentUserEquipmentPermissions = userPermissions;
                 
+                // 初始加载所有有设备的器具（因为默认勾选了筛选）
+                await loadAllEquipmentWithDevices();
+                
                 const modal = document.getElementById('userEquipmentPermissionsModal');
                 
                 // 使用测试模态框的成功方法 - 移动模态框到body并设置样式
@@ -1640,8 +1650,181 @@
             });
         }
 
+        // 加载所有类别中包含设备的器具
+        async function loadAllEquipmentWithDevices() {
+            try {
+                const response = await fetch('/api/users/equipment-counts-all', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${getCurrentToken()}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const allEquipmentWithDevices = await response.json();
+                    renderAllEquipmentWithDevices(allEquipmentWithDevices);
+                } else {
+                    console.warn('Failed to load all equipment with devices:', response.statusText);
+                    document.getElementById('equipment-checkboxes').innerHTML = `
+                        <div class="text-center text-gray-500 py-8">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>
+                            加载器具信息失败
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading all equipment with devices:', error);
+                document.getElementById('equipment-checkboxes').innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        加载器具信息失败
+                    </div>
+                `;
+            }
+        }
+
+        // 渲染所有包含设备的器具
+        function renderAllEquipmentWithDevices(equipmentList) {
+            const container = document.getElementById('equipment-checkboxes');
+            
+            if (!equipmentList || equipmentList.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        暂无包含设备的器具
+                    </div>
+                `;
+                updateEquipmentPermissionStats(0, 0);
+                return;
+            }
+
+            // 获取用户当前的器具权限
+            const userPermissions = window.currentUserEquipmentPermissions || [];
+            
+            // 按类别分组显示
+            const groupedByCategory = {};
+            equipmentList.forEach(item => {
+                if (!groupedByCategory[item.category_name]) {
+                    groupedByCategory[item.category_name] = [];
+                }
+                groupedByCategory[item.category_name].push(item);
+            });
+
+            let totalChecked = 0;
+            const htmlContent = Object.entries(groupedByCategory).map(([categoryName, items]) => {
+                const categoryItems = items.map(item => {
+                    const isChecked = userPermissions.some(p => 
+                        p.category_id === item.category_id && p.equipment_name === item.equipment_name
+                    );
+                    const isManagedByOthers = isEquipmentManagedByOtherUser(item.category_id, item.equipment_name);
+                    
+                    if (isChecked) totalChecked++;
+                    
+                    // 生成唯一的ID
+                    const uniqueId = `equipment-${item.category_id}-${btoa(encodeURIComponent(item.equipment_name)).replace(/[^a-zA-Z0-9]/g, '')}`;
+                    
+                    const backgroundClass = isChecked ? 
+                        'bg-gradient-to-r from-purple-50 to-blue-50 border-l-4 border-purple-500' :
+                        'bg-gradient-to-r from-green-50 to-blue-50 border-l-2 border-green-300';
+                    
+                    const textColorClass = isChecked ? 'text-purple-900' : 'text-gray-700';
+                    
+                    return `
+                        <div class="flex items-center space-x-2 p-2 rounded ${backgroundClass} ${isManagedByOthers ? 'opacity-50 cursor-not-allowed' : ''} ml-4">
+                            <input type="checkbox" 
+                                   ${isChecked ? 'checked' : ''}
+                                   ${isManagedByOthers ? 'disabled' : ''}
+                                   value="${item.equipment_name}"
+                                   data-category-id="${item.category_id}"
+                                   class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                                   id="${uniqueId}"
+                                   onchange="updateEquipmentStyleInAll('${item.equipment_name}', ${item.category_id}, this.checked)">
+                            <label for="${uniqueId}" class="flex-1 cursor-pointer">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center">
+                                        <i class="fas fa-cog text-green-600 mr-2 text-sm"></i>
+                                        <span class="text-sm font-medium ${textColorClass}">${item.equipment_name}</span>
+                                        ${isManagedByOthers ? '<span class="text-xs text-red-500 ml-2">(已被管理)</span>' : ''}
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            <i class="fas fa-cube mr-1"></i>${item.device_count}台
+                                        </span>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    <div class="mb-4">
+                        <div class="bg-gray-100 px-3 py-2 rounded-t-lg">
+                            <span class="text-sm font-semibold text-gray-700">
+                                <i class="fas fa-folder mr-2"></i>${categoryName}
+                            </span>
+                        </div>
+                        <div class="bg-white rounded-b-lg border-l-2 border-gray-200 py-2">
+                            ${categoryItems}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = htmlContent;
+            updateEquipmentPermissionStats(totalChecked, equipmentList.length);
+        }
+
+        // 更新所有器具列表中的器具样式
+        function updateEquipmentStyleInAll(equipmentName, categoryId, isChecked) {
+            // 使用与渲染时相同的逻辑生成ID
+            const uniqueId = `equipment-${categoryId}-${btoa(encodeURIComponent(equipmentName)).replace(/[^a-zA-Z0-9]/g, '')}`;
+            const checkbox = document.getElementById(uniqueId);
+            if (!checkbox) return;
+            
+            const container = checkbox.closest('div');
+            if (!container) return;
+            
+            const label = container.querySelector('label');
+            const nameSpan = label?.querySelector('span');
+            
+            if (isChecked) {
+                // 选中状态：使用紫色样式
+                container.className = container.className
+                    .replace(/bg-gradient-to-r from-green-50 to-blue-50 border-l-2 border-green-300/, '')
+                    .replace(/hover:bg-gray-100/, '');
+                
+                if (!container.className.includes('from-purple-50 to-blue-50')) {
+                    container.className += ' bg-gradient-to-r from-purple-50 to-blue-50 border-l-4 border-purple-500';
+                }
+                
+                if (nameSpan) {
+                    nameSpan.className = nameSpan.className.replace(/text-gray-700/, 'text-purple-900');
+                }
+            } else {
+                // 未选中状态：恢复绿色样式
+                container.className = container.className
+                    .replace(/bg-gradient-to-r from-purple-50 to-blue-50/, '')
+                    .replace(/border-l-4 border-purple-500/, '');
+                
+                if (!container.className.includes('from-green-50 to-blue-50')) {
+                    container.className += ' bg-gradient-to-r from-green-50 to-blue-50 border-l-2 border-green-300';
+                }
+                
+                if (nameSpan) {
+                    nameSpan.className = nameSpan.className.replace(/text-purple-900/, 'text-gray-700');
+                }
+            }
+            
+            // 更新权限统计
+            const checkedCount = document.querySelectorAll('#equipment-checkboxes input[type="checkbox"]:checked').length;
+            const totalCount = document.querySelectorAll('#equipment-checkboxes input[type="checkbox"]').length;
+            updateEquipmentPermissionStats(checkedCount, totalCount);
+        }
+
         // 加载类别下的器具
-        function loadCategoryEquipment() {
+        async function loadCategoryEquipment() {
             const categoryId = document.getElementById('category-select').value;
             
             if (!categoryId) {
@@ -1664,13 +1847,99 @@
                 `;
                 return;
             }
+
+            try {
+                // 获取该类别下器具的设备数量信息
+                const response = await fetch(`/api/users/equipment-counts/${categoryId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${getCurrentToken()}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                let equipmentCounts = {};
+                if (response.ok) {
+                    const data = await response.json();
+                    equipmentCounts = data.equipment_counts || {};
+                } else {
+                    console.warn('Failed to load equipment counts:', response.statusText);
+                }
+
+                // 保存设备数量信息到全局变量
+                currentEquipmentCounts = equipmentCounts;
+
+                renderEquipmentCheckboxes(categoryId, category.predefined_names, equipmentCounts);
+            } catch (error) {
+                console.error('Error loading equipment counts:', error);
+                // 如果获取设备数量失败，仍然渲染器具列表，但不显示数量
+                currentEquipmentCounts = {};
+                renderEquipmentCheckboxes(categoryId, category.predefined_names, {});
+            }
+        }
+
+        // 切换器具筛选
+        async function toggleEquipmentFilter() {
+            const categoryId = document.getElementById('category-select').value;
+            const showOnlyWithDevices = document.getElementById('show-only-with-devices').checked;
             
-            renderEquipmentCheckboxes(categoryId, category.predefined_names);
+            if (!categoryId) {
+                // 没有选择类别
+                if (showOnlyWithDevices) {
+                    // 显示所有有设备的器具
+                    await loadAllEquipmentWithDevices();
+                } else {
+                    // 显示提示信息
+                    document.getElementById('equipment-checkboxes').innerHTML = `
+                        <div class="text-center text-gray-500 py-8">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            请先选择一个设备类别
+                        </div>
+                    `;
+                    updateEquipmentPermissionStats(0, 0);
+                }
+                return;
+            }
+            
+            // 已选择类别，使用原有逻辑
+            const category = allCategories.find(c => c.id == categoryId);
+            if (!category || !category.predefined_names) return;
+            
+            renderEquipmentCheckboxes(categoryId, category.predefined_names, currentEquipmentCounts);
         }
 
         // 渲染器具复选框
-        function renderEquipmentCheckboxes(categoryId, equipmentNames) {
+        function renderEquipmentCheckboxes(categoryId, equipmentNames, equipmentCounts = {}) {
             const container = document.getElementById('equipment-checkboxes');
+            
+            // 检查是否只显示有设备的器具
+            const showOnlyWithDevices = document.getElementById('show-only-with-devices')?.checked || false;
+            
+            // 根据筛选条件过滤器具名称
+            let filteredEquipmentNames = equipmentNames;
+            if (showOnlyWithDevices) {
+                filteredEquipmentNames = equipmentNames.filter(name => {
+                    const deviceCount = equipmentCounts[name] || 0;
+                    return deviceCount > 0;
+                });
+                
+                // 如果没有找到有设备的器具，显示提示信息
+                if (filteredEquipmentNames.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center text-gray-500 py-8">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            该类别下没有包含设备的器具
+                            <div class="mt-2">
+                                <button type="button" class="text-blue-600 hover:text-blue-800 text-sm" onclick="document.getElementById('show-only-with-devices').checked = false; toggleEquipmentFilter();">
+                                    显示全部器具
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    updateEquipmentPermissionStats(0, 0);
+                    return;
+                }
+            }
             
             // 获取用户当前在该类别下的权限
             const userPermissions = window.currentUserEquipmentPermissions || [];
@@ -1678,29 +1947,78 @@
                 .filter(p => p.category_id == categoryId)
                 .map(p => p.equipment_name);
             
-            container.innerHTML = equipmentNames.map(equipmentName => {
+            container.innerHTML = filteredEquipmentNames.map(equipmentName => {
                 const isChecked = userEquipmentNames.includes(equipmentName);
                 // 检查该器具是否已被其他用户管理
                 const isManagedByOthers = isEquipmentManagedByOtherUser(categoryId, equipmentName);
+                
+                // 获取设备数量
+                const deviceCount = equipmentCounts[equipmentName] || 0;
+                const hasDevices = deviceCount > 0;
+                
+                // 根据设备数量决定背景色样式
+                let backgroundClass = '';
+                let textColorClass = '';
+                let countDisplayClass = '';
+                
+                if (isChecked) {
+                    if (hasDevices) {
+                        backgroundClass = 'bg-gradient-to-r from-purple-50 to-blue-50 border-l-4 border-purple-500';
+                        textColorClass = 'text-purple-900';
+                    } else {
+                        backgroundClass = 'bg-purple-50 border-l-4 border-purple-500';
+                        textColorClass = 'text-purple-900';
+                    }
+                } else if (hasDevices) {
+                    backgroundClass = 'bg-gradient-to-r from-green-50 to-blue-50 border-l-2 border-green-300';
+                    textColorClass = 'text-gray-700';
+                    countDisplayClass = 'bg-green-100 text-green-800';
+                } else {
+                    backgroundClass = 'hover:bg-gray-100';
+                    textColorClass = 'text-gray-700';
+                    countDisplayClass = 'bg-gray-100 text-gray-600';
+                }
+                
+                // 生成唯一的ID，使用Base64编码确保唯一性
+                const uniqueId = `equipment-${categoryId}-${btoa(encodeURIComponent(equipmentName)).replace(/[^a-zA-Z0-9]/g, '')}`;
+                
                 return `
-                    <label class="flex items-center space-x-3 p-2 hover:bg-gray-100 rounded cursor-pointer ${isChecked ? 'bg-purple-50 border-l-4 border-purple-500' : ''} ${isManagedByOthers ? 'opacity-50 cursor-not-allowed' : ''}">
+                    <div class="flex items-center space-x-2 p-2 rounded ${backgroundClass} ${isManagedByOthers ? 'opacity-50 cursor-not-allowed' : ''}">
                         <input type="checkbox" 
-                               class="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500 focus:ring-2" 
-                               value="${equipmentName}"
                                ${isChecked ? 'checked' : ''}
                                ${isManagedByOthers ? 'disabled' : ''}
-                               id="equipment-${equipmentName.replace(/[^a-zA-Z0-9]/g, '-')}"
+                               value="${equipmentName}"
+                               class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                               id="${uniqueId}"
                                onchange="updateEquipmentStyle('${equipmentName}', this.checked)">
-                        <div class="flex-1">
-                            <span class="text-sm font-medium ${isChecked ? 'text-purple-900' : 'text-gray-700'}">${equipmentName}</span>
-                            ${isManagedByOthers ? '<span class="text-xs text-red-500 ml-2">(已被管理)</span>' : ''}
-                        </div>
-                    </label>
+                        <label for="${uniqueId}" class="flex-1 cursor-pointer">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    ${hasDevices ? '<i class="fas fa-cog text-green-600 mr-2 text-sm"></i>' : '<i class="fas fa-circle-o text-gray-400 mr-2 text-sm"></i>'}
+                                    <span class="text-sm font-medium ${textColorClass}">${equipmentName}</span>
+                                    ${isManagedByOthers ? '<span class="text-xs text-red-500 ml-2">(已被管理)</span>' : ''}
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    ${hasDevices ? 
+                                        `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${countDisplayClass}">
+                                            <i class="fas fa-cube mr-1"></i>${deviceCount}台
+                                        </span>` : 
+                                        `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${countDisplayClass}">
+                                            无设备
+                                        </span>`
+                                    }
+                                </div>
+                            </div>
+                        </label>
+                    </div>
                 `;
             }).join('');
             
-            // 更新权限统计
-            updateEquipmentPermissionStats(userEquipmentNames.length, equipmentNames.length);
+            // 更新权限统计 - 使用过滤后的器具数量
+            const filteredUserEquipmentNames = userEquipmentNames.filter(name => 
+                filteredEquipmentNames.includes(name)
+            );
+            updateEquipmentPermissionStats(filteredUserEquipmentNames.length, filteredEquipmentNames.length);
         }
 
         // 检查器具是否被其他用户管理
@@ -1714,33 +2032,64 @@
 
         // 更新器具样式
         function updateEquipmentStyle(equipmentName, isChecked) {
-            const checkboxId = `equipment-${equipmentName.replace(/[^a-zA-Z0-9]/g, '-')}`;
-            const checkbox = document.getElementById(checkboxId);
+            // 获取当前选中的类别ID
+            const categoryId = document.getElementById('category-select').value;
+            if (!categoryId) return;
+            
+            // 使用与渲染时相同的逻辑生成ID
+            const uniqueId = `equipment-${categoryId}-${btoa(encodeURIComponent(equipmentName)).replace(/[^a-zA-Z0-9]/g, '')}`;
+            const checkbox = document.getElementById(uniqueId);
             if (!checkbox) return;
             
-            const label = checkbox.closest('label');
-            if (!label) return;
+            const container = checkbox.closest('div');
+            if (!container) return;
+            
+            const label = container.querySelector('label');
+            const nameSpan = label?.querySelector('span');
             
             if (isChecked) {
-                label.classList.add('bg-purple-50', 'border-l-4', 'border-purple-500');
-                label.classList.remove('hover:bg-gray-100');
-                const nameSpan = label.querySelector('span');
+                // 选中状态：使用紫色样式
+                container.className = container.className
+                    .replace(/bg-gradient-to-r from-green-50 to-blue-50 border-l-2 border-green-300/, '')
+                    .replace(/hover:bg-gray-100/, '');
+                
+                if (container.className.includes('from-purple-50 to-blue-50')) {
+                    // 已经有渐变背景，不需要修改
+                } else {
+                    // 添加选中的紫色背景
+                    container.className += ' bg-purple-50 border-l-4 border-purple-500';
+                }
+                
                 if (nameSpan) {
-                    nameSpan.classList.add('text-purple-900');
-                    nameSpan.classList.remove('text-gray-700');
+                    nameSpan.className = nameSpan.className.replace(/text-gray-700/, 'text-purple-900');
                 }
             } else {
-                label.classList.remove('bg-purple-50', 'border-l-4', 'border-purple-500');
-                label.classList.add('hover:bg-gray-100');
-                const nameSpan = label.querySelector('span');
+                // 未选中状态：恢复原有样式
+                container.className = container.className
+                    .replace(/bg-purple-50/, '')
+                    .replace(/bg-gradient-to-r from-purple-50 to-blue-50/, '')
+                    .replace(/border-l-4 border-purple-500/, '');
+                
+                // 检查是否有设备来决定背景色
+                const deviceCountElement = container.querySelector('[class*="fas fa-cube"], [class*="无设备"]');
+                const hasDevices = deviceCountElement && deviceCountElement.className.includes('fa-cube');
+                
+                if (hasDevices) {
+                    if (!container.className.includes('from-green-50 to-blue-50')) {
+                        container.className += ' bg-gradient-to-r from-green-50 to-blue-50 border-l-2 border-green-300';
+                    }
+                } else {
+                    if (!container.className.includes('hover:bg-gray-100')) {
+                        container.className += ' hover:bg-gray-100';
+                    }
+                }
+                
                 if (nameSpan) {
-                    nameSpan.classList.remove('text-purple-900');
-                    nameSpan.classList.add('text-gray-700');
+                    nameSpan.className = nameSpan.className.replace(/text-purple-900/, 'text-gray-700');
                 }
             }
             
             // 更新权限统计
-            const categoryId = document.getElementById('category-select').value;
             if (categoryId) {
                 const category = allCategories.find(c => c.id == categoryId);
                 if (category && category.predefined_names) {
@@ -1844,12 +2193,13 @@
             modal.style.display = 'none';
             managingEquipmentPermissionsUserId = null;
             
-            // 清理表单
+            // 清理表单和筛选状态
             document.getElementById('category-select').value = '';
+            document.getElementById('show-only-with-devices').checked = true; // 重置为默认勾选状态
             document.getElementById('equipment-checkboxes').innerHTML = `
                 <div class="text-center text-gray-500 py-8">
-                    <i class="fas fa-info-circle mr-2"></i>
-                    请先选择一个设备类别
+                    <i class="fas fa-spinner fa-spin mr-2"></i>
+                    正在加载有设备的器具...
                 </div>
             `;
             
@@ -1858,6 +2208,9 @@
             if (statsElement) {
                 statsElement.innerHTML = '';
             }
+            
+            // 清理全局变量
+            currentEquipmentCounts = {};
         }
 
         // 保存用户设备类别

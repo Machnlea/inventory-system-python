@@ -257,7 +257,7 @@ async def import_equipment_data(
         detailed_results = []
         
         for index, row in df.iterrows():
-            row_number = int(index) + 2  # Excel行号从2开始（第1行是标题）
+            row_number = int(float(index)) + 2  # Excel行号从2开始（第1行是标题）
             result = {
                 "row": row_number,
                 "internal_id": "",  # 将在生成后填充
@@ -352,7 +352,10 @@ async def import_equipment_data(
                     # 随坏随换设备：如果有检定日期且格式正确才导入
                     if calibration_date_str and calibration_date_str != '':
                         try:
-                            calibration_date = pd.to_datetime(calibration_date_str).date()
+                            calibration_date_parsed = pd.to_datetime(calibration_date_str).date()
+                            # 确保不是NaT
+                            if pd.notna(calibration_date_parsed):
+                                calibration_date = calibration_date_parsed
                         except:
                             # 随坏随换设备的检定日期格式错误时跳过，不设为必填项
                             calibration_date = None
@@ -367,7 +370,16 @@ async def import_equipment_data(
                         continue
                     
                     try:
-                        calibration_date = pd.to_datetime(calibration_date_str).date()
+                        calibration_date_parsed = pd.to_datetime(calibration_date_str).date()
+                        # 确保不是NaT
+                        if pd.notna(calibration_date_parsed):
+                            calibration_date = calibration_date_parsed
+                        else:
+                            result["status"] = "失败"
+                            result["message"] = "检定日期格式错误，请使用YYYY-MM-DD格式"
+                            detailed_results.append(result)
+                            error_count += 1
+                            continue
                     except:
                         result["status"] = "失败"
                         result["message"] = "检定日期格式错误，请使用YYYY-MM-DD格式"
@@ -378,7 +390,10 @@ async def import_equipment_data(
                 manufacture_date = None
                 if pd.notna(row.get('出厂日期')):
                     try:
-                        manufacture_date = pd.to_datetime(row['出厂日期']).date()
+                        manufacture_date_parsed = pd.to_datetime(row['出厂日期']).date()
+                        # 确保不是NaT
+                        if pd.notna(manufacture_date_parsed):
+                            manufacture_date = manufacture_date_parsed
                     except:
                         result["status"] = "失败"
                         result["message"] = "出厂日期格式错误，请使用YYYY-MM-DD格式"
@@ -410,7 +425,10 @@ async def import_equipment_data(
                     # 状态变更时间为非必填项，如果提供了就验证格式
                     if pd.notna(status_change_date_input) and str(status_change_date_input).strip() != '':
                         try:
-                            status_change_date = pd.to_datetime(status_change_date_input).date()
+                            status_change_date_parsed = pd.to_datetime(status_change_date_input).date()
+                            # 确保不是NaT
+                            if pd.notna(status_change_date_parsed):
+                                status_change_date = status_change_date_parsed
                         except:
                             result["status"] = "失败"
                             result["message"] = "状态变更时间格式错误，请使用YYYY-MM-DD格式"
@@ -421,16 +439,25 @@ async def import_equipment_data(
                 
                 # 自动生成内部编号
                 from app.utils.auto_id import generate_internal_id
-                generated_internal_id = generate_internal_id(db, int(category.id), str(row['计量器具名称']))
+                generated_internal_id = generate_internal_id(db, int(float(category.id)), str(row['计量器具名称']))
                 
                 # 更新result对象中的internal_id
                 result["internal_id"] = generated_internal_id
                 
+                # 安全地转换原值字段
+                original_value = None
+                if pd.notna(row.get('原值/元')) and str(row['原值/元']).strip() != '':
+                    try:
+                        original_value = float(str(row['原值/元']).strip())
+                    except (ValueError, TypeError):
+                        original_value = None
+                
                 # 创建设备数据
                 from app.schemas.schemas import EquipmentCreate, EquipmentUpdate
+                
                 equipment_data = EquipmentCreate(
-                    department_id=int(department.id),
-                    category_id=int(category.id),
+                    department_id=int(float(department.id)),
+                    category_id=int(float(category.id)),
                     name=str(row['计量器具名称']),
                     model=str(row['型号/规格']),
                     accuracy_level=str(row['准确度等级']),
@@ -445,7 +472,7 @@ async def import_equipment_data(
                     manufacture_date=manufacture_date,
                     scale_value=str(row.get('分度值', '')) if pd.notna(row.get('分度值')) else '',
                     management_level=management_level,
-                    original_value=float(row['原值/元']) if pd.notna(row.get('原值/元')) and str(row['原值/元']).strip() != '' else None,
+                    original_value=original_value,
                     status=equipment_status,
                     status_change_date=status_change_date,
                     certificate_number=str(row.get('证书编号', '')) if calibration_method == '外检' and pd.notna(row.get('证书编号')) else '',
@@ -495,14 +522,14 @@ async def import_equipment_data(
                             )
                             
                             updated_equipment = equipment.update_equipment(
-                                db, equipment_id=int(existing_equipment.id), equipment_update=update_data
+                                db, equipment_id=int(float(existing_equipment.id)), equipment_update=update_data
                             )
                             
                             # 记录操作日志
                             create_audit_log(
                                 db=db,
                                 user_id=current_user.id,
-                                equipment_id=existing_equipment.id,
+                                equipment_id=int(float(existing_equipment.id)),
                                 action="导入更新",
                                 description=f"通过Excel导入更新设备: {updated_equipment.name if updated_equipment else '未知设备'}"
                             )
@@ -525,7 +552,7 @@ async def import_equipment_data(
                 create_audit_log(
                     db=db,
                     user_id=current_user.id,
-                    equipment_id=new_equipment.id,
+                    equipment_id=int(float(new_equipment.id)),
                     action="导入",
                     description=f"通过Excel导入设备: {new_equipment.name}"
                 )

@@ -196,7 +196,7 @@ def get_equipment_type_code(category_code: str, equipment_name: str) -> str:
         from app.utils.predefined_name_manager import get_smart_name_mapping_for_name
         smart_number = get_smart_name_mapping_for_name(category_code, equipment_name)
         return f"{category_code}-{smart_number}"
-    except:
+    except Exception as e:
         # 如果智能编号管理失败，使用默认编号
         return f"{category_code}-99"
 

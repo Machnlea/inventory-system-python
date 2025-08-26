@@ -1474,11 +1474,13 @@
                 showNotification('正在保存备注...', 'info');
                 
                 // 调用API保存备注 - 使用通用的设备更新端点
+                // 优先从sessionStorage获取token（支持多标签页独立登录）
+                const accessToken = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
                 const response = await fetch(`/api/equipment/${currentEquipmentId}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                        'Authorization': `Bearer ${accessToken}`
                     },
                     body: JSON.stringify({
                         notes: newNotes

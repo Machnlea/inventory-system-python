@@ -161,7 +161,7 @@ def get_smart_name_mapping_for_name(category_code: str, equipment_name: str) -> 
         
         conn.close()
     except Exception as e:
-        print(f"获取智能编号时出错: {e}")
+        pass  # 静默处理数据库错误
     
     # 如果无法从数据库获取，尝试生成一个合理的编号
     try:
@@ -170,6 +170,6 @@ def get_smart_name_mapping_for_name(category_code: str, equipment_name: str) -> 
         hash_value = int(hashlib.md5(equipment_name.encode()).hexdigest(), 16)
         number = (hash_value % 98) + 1  # 1-98
         return str(number)
-    except:
+    except Exception as e:
         # 最后的备用方案
         return "99"

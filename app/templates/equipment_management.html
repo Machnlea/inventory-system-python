@@ -545,35 +545,54 @@
             <div class="p-6">
                 <div class="mb-6">
                     <div class="grid grid-cols-4 gap-4">
-                        <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                        <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center cursor-pointer hover:bg-green-100 transition-colors" onclick="filterImportResults('成功')">
                             <div class="text-2xl font-bold text-green-600" id="successCount">0</div>
                             <div class="text-sm text-green-700">导入成功</div>
+                            <div class="text-xs text-green-600 mt-1">点击查看</div>
                         </div>
-                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center cursor-pointer hover:bg-blue-100 transition-colors" onclick="filterImportResults('更新')">
                             <div class="text-2xl font-bold text-blue-600" id="updateCount">0</div>
                             <div class="text-sm text-blue-700">更新成功</div>
+                            <div class="text-xs text-blue-600 mt-1">点击查看</div>
                         </div>
-                        <div class="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+                        <div class="bg-red-50 border border-red-200 rounded-lg p-4 text-center cursor-pointer hover:bg-red-100 transition-colors" onclick="filterImportResults('失败')">
                             <div class="text-2xl font-bold text-red-600" id="errorCount">0</div>
                             <div class="text-sm text-red-700">导入失败</div>
+                            <div class="text-xs text-red-600 mt-1">点击查看</div>
                         </div>
-                        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
+                        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center cursor-pointer hover:bg-gray-100 transition-colors" onclick="filterImportResults('全部')">
                             <div class="text-2xl font-bold text-gray-600" id="totalCount">0</div>
                             <div class="text-sm text-gray-700">总计处理</div>
+                            <div class="text-xs text-gray-600 mt-1">点击查看</div>
                         </div>
                     </div>
                 </div>
                 
                 <div class="mb-4">
-                    <h4 class="text-md font-medium text-gray-900 mb-3">详细结果</h4>
+                    <div class="flex justify-between items-center mb-3">
+                        <h4 class="text-md font-medium text-gray-900">详细结果</h4>
+                        <div class="flex space-x-2">
+                            <span id="currentFilterDisplay" class="text-sm text-gray-600">显示: 全部结果</span>
+                            <button id="toggleErrorGrouping" class="text-sm text-blue-600 hover:text-blue-800" onclick="toggleErrorGrouping()">
+                                <i class="fas fa-layer-group mr-1"></i>合并相同错误
+                            </button>
+                        </div>
+                    </div>
                     <div class="border rounded-lg overflow-hidden">
                         <div class="bg-gray-50 px-4 py-3 border-b border-gray-200">
-                            <div class="grid grid-cols-12 gap-4 text-sm font-medium text-gray-700">
+                            <div class="grid grid-cols-12 gap-4 text-sm font-medium text-gray-700" id="resultTableHeader">
                                 <div class="col-span-1">行号</div>
                                 <div class="col-span-3">内部编号</div>
                                 <div class="col-span-3">设备名称</div>
                                 <div class="col-span-2">状态</div>
                                 <div class="col-span-3">说明</div>
+                            </div>
+                            <div class="grid grid-cols-12 gap-4 text-sm font-medium text-gray-700 hidden" id="groupedResultTableHeader">
+                                <div class="col-span-1">数量</div>
+                                <div class="col-span-2">状态</div>
+                                <div class="col-span-4">错误信息</div>
+                                <div class="col-span-3">涉及行号</div>
+                                <div class="col-span-2">操作</div>
                             </div>
                         </div>
                         <div id="importResultsList" class="divide-y divide-gray-200 max-h-96 overflow-y-auto">
@@ -2453,28 +2472,208 @@
         }
 
         // 显示导入结果
+        // 全局变量存储导入结果
+        let globalImportResult = null;
+        let currentFilter = '全部';
+        let isErrorGrouped = false;
+
         function showImportResult(result) {
+            globalImportResult = result; // 保存结果供过滤使用
+            currentFilter = '全部';
+            isErrorGrouped = false;
+            
             document.getElementById('successCount').textContent = result.success_count;
             document.getElementById('updateCount').textContent = result.update_count;
             document.getElementById('errorCount').textContent = result.error_count;
             document.getElementById('totalCount').textContent = result.summary.total_rows;
             
+            // 更新过滤显示
+            document.getElementById('currentFilterDisplay').textContent = '显示: 全部结果';
+            document.getElementById('toggleErrorGrouping').innerHTML = '<i class="fas fa-layer-group mr-1"></i>合并相同错误';
+            
+            renderImportResults(result.detailed_results);
+            document.getElementById('importResultModal').classList.add('show');
+        }
+
+        // 渲染导入结果
+        function renderImportResults(results) {
             const resultsList = document.getElementById('importResultsList');
-            resultsList.innerHTML = result.detailed_results.map(item => `
+            
+            if (isErrorGrouped && currentFilter === '失败') {
+                // 显示合并后的错误结果
+                resultsList.innerHTML = renderGroupedErrors(results);
+            } else {
+                // 显示普通结果
+                resultsList.innerHTML = results.map(item => `
+                    <div class="grid grid-cols-12 gap-4 px-4 py-3 items-center">
+                        <div class="col-span-1 text-sm text-gray-500">${item.row}</div>
+                        <div class="col-span-3 text-sm font-medium text-gray-900">${item.internal_id}</div>
+                        <div class="col-span-3 text-sm text-gray-900">${item.name}</div>
+                        <div class="col-span-2">
+                            <span class="px-2 py-1 text-xs font-medium rounded-full ${getResultStatusStyle(item.status)}">
+                                ${item.status}
+                            </span>
+                        </div>
+                        <div class="col-span-3 text-sm text-gray-600" title="${item.message}">${truncateMessage(item.message, 50)}</div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // 过滤导入结果
+        function filterImportResults(filterType) {
+            if (!globalImportResult) return;
+            
+            currentFilter = filterType;
+            let filteredResults = [];
+            
+            switch(filterType) {
+                case '成功':
+                    filteredResults = globalImportResult.detailed_results.filter(item => item.status === '成功');
+                    break;
+                case '更新':
+                    filteredResults = globalImportResult.detailed_results.filter(item => item.status === '更新');
+                    break;
+                case '失败':
+                    filteredResults = globalImportResult.detailed_results.filter(item => item.status === '失败');
+                    break;
+                case '全部':
+                default:
+                    filteredResults = globalImportResult.detailed_results;
+                    break;
+            }
+            
+            // 更新过滤显示
+            document.getElementById('currentFilterDisplay').textContent = `显示: ${filterType} (${filteredResults.length}条)`;
+            
+            // 如果切换到非失败状态，取消错误合并
+            if (filterType !== '失败' && isErrorGrouped) {
+                isErrorGrouped = false;
+                document.getElementById('toggleErrorGrouping').innerHTML = '<i class="fas fa-layer-group mr-1"></i>合并相同错误';
+                toggleTableHeaders(false);
+            }
+            
+            renderImportResults(filteredResults);
+        }
+
+        // 切换错误合并
+        function toggleErrorGrouping() {
+            if (!globalImportResult || currentFilter !== '失败') {
+                alert('只能在查看失败结果时合并错误');
+                return;
+            }
+            
+            isErrorGrouped = !isErrorGrouped;
+            const toggleBtn = document.getElementById('toggleErrorGrouping');
+            
+            if (isErrorGrouped) {
+                toggleBtn.innerHTML = '<i class="fas fa-list mr-1"></i>显示明细';
+            } else {
+                toggleBtn.innerHTML = '<i class="fas fa-layer-group mr-1"></i>合并相同错误';
+            }
+            
+            toggleTableHeaders(isErrorGrouped);
+            
+            const failedResults = globalImportResult.detailed_results.filter(item => item.status === '失败');
+            renderImportResults(failedResults);
+        }
+
+        // 切换表头
+        function toggleTableHeaders(showGrouped) {
+            const normalHeader = document.getElementById('resultTableHeader');
+            const groupedHeader = document.getElementById('groupedResultTableHeader');
+            
+            if (showGrouped) {
+                normalHeader.classList.add('hidden');
+                groupedHeader.classList.remove('hidden');
+            } else {
+                normalHeader.classList.remove('hidden');
+                groupedHeader.classList.add('hidden');
+            }
+        }
+
+        // 渲染合并错误结果
+        function renderGroupedErrors(results) {
+            const errorGroups = {};
+            
+            // 按错误信息分组
+            results.forEach(item => {
+                const errorKey = item.message;
+                if (!errorGroups[errorKey]) {
+                    errorGroups[errorKey] = {
+                        message: errorKey,
+                        count: 0,
+                        rows: [],
+                        status: item.status
+                    };
+                }
+                errorGroups[errorKey].count++;
+                errorGroups[errorKey].rows.push(item.row);
+            });
+            
+            // 按出现次数排序
+            const sortedGroups = Object.values(errorGroups).sort((a, b) => b.count - a.count);
+            
+            return sortedGroups.map(group => `
                 <div class="grid grid-cols-12 gap-4 px-4 py-3 items-center">
-                    <div class="col-span-1 text-sm text-gray-500">${item.row}</div>
-                    <div class="col-span-3 text-sm font-medium text-gray-900">${item.internal_id}</div>
-                    <div class="col-span-3 text-sm text-gray-900">${item.name}</div>
+                    <div class="col-span-1 text-sm text-gray-500">
+                        <span class="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium">${group.count}</span>
+                    </div>
                     <div class="col-span-2">
-                        <span class="px-2 py-1 text-xs font-medium rounded-full ${getResultStatusStyle(item.status)}">
-                            ${item.status}
+                        <span class="px-2 py-1 text-xs font-medium rounded-full ${getResultStatusStyle(group.status)}">
+                            ${group.status}
                         </span>
                     </div>
-                    <div class="col-span-3 text-sm text-gray-600">${item.message}</div>
+                    <div class="col-span-4 text-sm text-gray-900" title="${group.message}">${truncateMessage(group.message, 60)}</div>
+                    <div class="col-span-3 text-sm text-gray-600">
+                        <span class="text-xs" title="涉及行号: ${group.rows.join(', ')}">
+                            ${group.rows.length > 5 ? group.rows.slice(0, 5).join(', ') + '...' : group.rows.join(', ')}
+                        </span>
+                    </div>
+                    <div class="col-span-2">
+                        <button class="text-xs text-blue-600 hover:text-blue-800" onclick="showErrorDetails('${group.message.replace(/'/g, "\\'")}', [${group.rows.join(',')}])">
+                            查看详情
+                        </button>
+                    </div>
                 </div>
             `).join('');
+        }
+
+        // 显示错误详情
+        function showErrorDetails(errorMessage, rows) {
+            if (!globalImportResult) return;
             
-            document.getElementById('importResultModal').classList.add('show');
+            // 找到对应的详细记录
+            const detailsItems = globalImportResult.detailed_results.filter(item => 
+                item.message === errorMessage && rows.includes(item.row)
+            );
+            
+            // 临时切换到详细视图
+            isErrorGrouped = false;
+            toggleTableHeaders(false);
+            document.getElementById('toggleErrorGrouping').innerHTML = '<i class="fas fa-layer-group mr-1"></i>合并相同错误';
+            document.getElementById('currentFilterDisplay').textContent = `显示: 错误详情 (${detailsItems.length}条)`;
+            
+            renderImportResults(detailsItems);
+            
+            // 5秒后自动返回合并视图
+            setTimeout(() => {
+                if (currentFilter === '失败') {
+                    isErrorGrouped = true;
+                    toggleTableHeaders(true);
+                    document.getElementById('toggleErrorGrouping').innerHTML = '<i class="fas fa-list mr-1"></i>显示明细';
+                    document.getElementById('currentFilterDisplay').textContent = `显示: 失败 (${globalImportResult.detailed_results.filter(item => item.status === '失败').length}条)`;
+                    
+                    const failedResults = globalImportResult.detailed_results.filter(item => item.status === '失败');
+                    renderImportResults(failedResults);
+                }
+            }, 5000);
+        }
+
+        // 截断消息
+        function truncateMessage(message, maxLength) {
+            if (message.length <= maxLength) return message;
+            return message.substring(0, maxLength) + '...';
         }
 
         // 获取结果状态样式

@@ -126,6 +126,8 @@ def generate_internal_id(db: Session, category_id: int, equipment_name: Optional
     )
     
     if equipment_id:
+        # 确保equipment_id是整数类型
+        equipment_id = int(float(equipment_id)) if equipment_id else None
         query = query.filter(Equipment.id != equipment_id)
     
     result = query.all()

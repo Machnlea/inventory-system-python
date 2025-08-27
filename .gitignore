@@ -42,9 +42,9 @@ Thumbs.db
 # Zone.Identifier files (Windows)
 *:Zone.Identifier
 
-# User uploads
-app/static/uploads/*
-!app/static/uploads/.gitkeep
+# User uploads (moved to data directory)
+data/uploads/*
+!data/uploads/.gitkeep
 
 # Temporary shell scripts (except important ones)
 # Important shell scripts (start.sh, restart_system.sh, etc.) are tracked

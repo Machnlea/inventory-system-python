@@ -30,6 +30,7 @@ app = FastAPI(
 
 # 静态文件和模板
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
+app.mount("/uploads", StaticFiles(directory="data/uploads"), name="uploads")
 templates = Jinja2Templates(directory="app/templates")
 
 # 路由

@@ -13,7 +13,7 @@ from app.api.audit_logs import create_audit_log
 router = APIRouter()
 
 # 创建上传目录
-UPLOAD_DIR = Path("app/static/uploads")
+UPLOAD_DIR = Path("data/uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 CERTIFICATE_DIR = UPLOAD_DIR / "certificates"
 CERTIFICATE_DIR.mkdir(exist_ok=True)

@@ -3,10 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>设备管理 - 设备台账管理系统</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <script src="/static/js/api-client.js?v=20240816-2"></script>
+    <script src="/static/js/api-client.js?v=20250827-1"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body {
@@ -2694,7 +2697,7 @@
             const sortedGroups = Object.values(errorGroups).sort((a, b) => b.count - a.count);
             
             return sortedGroups.map((group, index) => `
-                <div class="border-l-4 border-red-400 ${index % 2 === 0 ? 'bg-red-25' : 'bg-white'} hover:bg-red-50 transition-colors">
+                <div class="border-l-4 border-red-400 ${index % 2 === 0 ? 'bg-red-50' : 'bg-white'} hover:bg-red-100 transition-colors">
                     <div class="grid grid-cols-12 gap-4 px-4 py-4 items-center">
                         <div class="col-span-1 text-center">
                             <div class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-red-100 text-red-800 font-bold text-sm border-2 border-red-300">

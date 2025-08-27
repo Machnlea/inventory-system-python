@@ -224,8 +224,6 @@ async def import_equipment_data(
     # 手动转换overwrite参数为布尔值
     overwrite_bool = overwrite.lower() in ['true', '1', 'yes', 'on']
     
-    # 调试信息：记录覆盖参数
-    print(f"导入参数 - overwrite: {overwrite}, type: {type(overwrite)}, 转换后: {overwrite_bool}")
     
     if not file.filename or not file.filename.endswith(('.xlsx', '.xls')):
         raise HTTPException(status_code=400, detail="只支持Excel文件格式")

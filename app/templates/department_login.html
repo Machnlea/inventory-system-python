@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>部门用户登录 - 设备台账管理系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .glass-effect {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        .fade-in {
+            animation: fadeIn 0.8s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            max-width: 400px;
+            padding: 16px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+        .notification.show {
+            transform: translateX(0);
+        }
+        .notification.success {
+            background-color: #10B981;
+        }
+        .notification.error {
+            background-color: #EF4444;
+        }
+        .notification.warning {
+            background-color: #F59E0B;
+        }
+        .notification.info {
+            background-color: #3B82F6;
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen flex items-center justify-center">
+    <!-- 通知容器 -->
+    <div id="notification-container"></div>
+
+    <div class="glass-effect rounded-2xl p-8 max-w-md w-full mx-4 fade-in">
+        <!-- Logo和标题 -->
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-white rounded-full mb-4">
+                <i class="fas fa-building text-2xl text-blue-600"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-white mb-2">部门用户登录</h1>
+            <p class="text-white/70">使用部门名称登录设备管理系统</p>
+        </div>
+
+        <!-- 登录表单 -->
+        <form id="loginForm" class="space-y-6">
+            <div>
+                <label class="block text-white/90 text-sm font-medium mb-2">
+                    <i class="fas fa-building mr-2"></i>
+                    部门名称
+                </label>
+                <input
+                    type="text"
+                    id="username"
+                    name="username"
+                    required
+                    class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                    placeholder="请输入部门名称"
+                    autocomplete="username"
+                >
+            </div>
+            
+            <div>
+                <label class="block text-white/90 text-sm font-medium mb-2">
+                    <i class="fas fa-lock mr-2"></i>
+                    密码
+                </label>
+                <div class="relative">
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        required
+                        class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                        placeholder="请输入密码"
+                        autocomplete="current-password"
+                    >
+                    <button
+                        type="button"
+                        id="togglePassword"
+                        class="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white"
+                    >
+                        <i class="fas fa-eye" id="eyeIcon"></i>
+                    </button>
+                </div>
+            </div>
+
+            <button
+                type="submit"
+                id="loginBtn"
+                class="w-full btn-primary text-white font-semibold py-3 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+                <i class="fas fa-sign-in-alt mr-2"></i>
+                登录
+            </button>
+        </form>
+
+        <!-- 帮助信息 -->
+        <div class="mt-8 text-center">
+            <div class="bg-blue-50/10 border border-blue-200/20 rounded-lg p-4 mb-4">
+                <h3 class="text-white font-medium mb-2">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    使用说明
+                </h3>
+                <div class="text-white/70 text-sm space-y-1">
+                    <p>• 请使用您所属部门的完整名称登录</p>
+                    <p>• 首次登录需要修改默认密码</p>
+                    <p>• 如遇问题请联系系统管理员</p>
+                </div>
+            </div>
+            
+            <div class="flex justify-center items-center space-x-4 text-sm">
+                <a href="/login" class="text-white/70 hover:text-white transition-colors">
+                    <i class="fas fa-user-shield mr-1"></i>
+                    管理员登录
+                </a>
+                <span class="text-white/50">|</span>
+                <a href="/" class="text-white/70 hover:text-white transition-colors">
+                    <i class="fas fa-home mr-1"></i>
+                    返回首页
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 首次登录密码修改模态框 -->
+    <div id="changePasswordModal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4 fade-in">
+            <div class="text-center mb-6">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-orange-100 rounded-full mb-4">
+                    <i class="fas fa-key text-2xl text-orange-600"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-900 mb-2">首次登录密码修改</h2>
+                <p class="text-gray-600">为了账户安全，请修改您的初始密码</p>
+            </div>
+
+            <form id="changePasswordForm" class="space-y-4">
+                <div>
+                    <label class="block text-gray-700 text-sm font-medium mb-2">当前密码</label>
+                    <input
+                        type="password"
+                        id="currentPassword"
+                        required
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        placeholder="请输入当前密码"
+                    >
+                </div>
+                
+                <div>
+                    <label class="block text-gray-700 text-sm font-medium mb-2">新密码</label>
+                    <input
+                        type="password"
+                        id="newPassword"
+                        required
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        placeholder="请输入新密码（6位以上，包含字母和数字）"
+                    >
+                </div>
+                
+                <div>
+                    <label class="block text-gray-700 text-sm font-medium mb-2">确认密码</label>
+                    <input
+                        type="password"
+                        id="confirmPassword"
+                        required
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        placeholder="请再次输入新密码"
+                    >
+                </div>
+
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <h4 class="text-blue-800 font-medium text-sm mb-2">密码要求：</h4>
+                    <ul class="text-blue-700 text-xs space-y-1">
+                        <li>• 至少6个字符长度</li>
+                        <li>• 必须包含字母和数字</li>
+                        <li>• 不能与当前密码相同</li>
+                    </ul>
+                </div>
+
+                <div class="flex space-x-3">
+                    <button
+                        type="submit"
+                        class="flex-1 bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-700"
+                    >
+                        <i class="fas fa-save mr-2"></i>
+                        确认修改
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // 通知函数
+        function showNotification(message, type = 'info', duration = 3000) {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <span>${message}</span>
+                    <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white/80 hover:text-white">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            
+            document.getElementById('notification-container').appendChild(notification);
+            
+            setTimeout(() => notification.classList.add('show'), 100);
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300);
+            }, duration);
+        }
+
+        // 密码显示/隐藏切换
+        document.getElementById('togglePassword').addEventListener('click', function() {
+            const passwordInput = document.getElementById('password');
+            const eyeIcon = document.getElementById('eyeIcon');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                eyeIcon.className = 'fas fa-eye-slash';
+            } else {
+                passwordInput.type = 'password';
+                eyeIcon.className = 'fas fa-eye';
+            }
+        });
+
+        // 登录表单处理
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const loginBtn = document.getElementById('loginBtn');
+            
+            // 禁用登录按钮
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>登录中...';
+            
+            try {
+                const response = await fetch('/api/department/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // 保存token
+                    sessionStorage.setItem('department_access_token', data.access_token);
+                    sessionStorage.setItem('department_user_info', JSON.stringify({ username, user_type: 'department_user' }));
+                    
+                    showNotification('登录成功！', 'success');
+                    
+                    // 获取用户信息检查是否首次登录
+                    const userResponse = await fetch('/api/department/profile', {
+                        headers: {
+                            'Authorization': `Bearer ${data.access_token}`
+                        }
+                    });
+                    
+                    if (userResponse.ok) {
+                        const userInfo = await userResponse.json();
+                        
+                        if (userInfo.first_login) {
+                            // 首次登录，显示密码修改模态框
+                            document.getElementById('changePasswordModal').classList.remove('hidden');
+                        } else {
+                            // 直接跳转到部门仪表盘
+                            setTimeout(() => {
+                                window.location.href = '/department/dashboard';
+                            }, 1000);
+                        }
+                    }
+                } else {
+                    showNotification(data.detail || '登录失败，请检查部门名称和密码', 'error');
+                }
+            } catch (error) {
+                console.error('登录错误:', error);
+                showNotification('网络错误，请稍后再试', 'error');
+            } finally {
+                // 恢复登录按钮
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i>登录';
+            }
+        });
+
+        // 密码修改表单处理
+        document.getElementById('changePasswordForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            // 验证密码
+            if (newPassword !== confirmPassword) {
+                showNotification('新密码和确认密码不匹配', 'error');
+                return;
+            }
+            
+            if (newPassword.length < 6) {
+                showNotification('新密码长度至少6位', 'error');
+                return;
+            }
+            
+            if (!/[a-zA-Z]/.test(newPassword) || !/\d/.test(newPassword)) {
+                showNotification('新密码必须包含字母和数字', 'error');
+                return;
+            }
+            
+            const token = sessionStorage.getItem('department_access_token');
+            
+            try {
+                const response = await fetch('/api/department/change-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        current_password: currentPassword,
+                        new_password: newPassword,
+                        confirm_password: confirmPassword
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showNotification('密码修改成功！即将跳转...', 'success');
+                    
+                    // 关闭模态框并跳转
+                    setTimeout(() => {
+                        document.getElementById('changePasswordModal').classList.add('hidden');
+                        window.location.href = '/department/dashboard';
+                    }, 2000);
+                } else {
+                    showNotification(data.detail || '密码修改失败', 'error');
+                }
+            } catch (error) {
+                console.error('密码修改错误:', error);
+                showNotification('网络错误，请稍后再试', 'error');
+            }
+        });
+
+        // 页面加载完成时检查是否已登录
+        document.addEventListener('DOMContentLoaded', function() {
+            const token = sessionStorage.getItem('department_access_token');
+            const userInfo = sessionStorage.getItem('department_user_info');
+            
+            if (token && userInfo) {
+                // 已登录，直接跳转
+                showNotification('检测到已登录，正在跳转...', 'info');
+                setTimeout(() => {
+                    window.location.href = '/department/dashboard';
+                }, 1000);
+            }
+        });
+    </script>
+</body>
+</html>

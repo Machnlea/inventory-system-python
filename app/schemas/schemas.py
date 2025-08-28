@@ -1,11 +1,18 @@
 from pydantic import BaseModel, field_validator, model_validator
 from datetime import datetime, date
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, TYPE_CHECKING
+
+# 前向引用声明
+if TYPE_CHECKING:
+    from typing import TYPE_CHECKING
 
 # 用户相关
 class UserBase(BaseModel):
     username: str
     is_admin: bool = False
+    user_type: str = "manager"  # admin/manager/department_user
+    department_id: Optional[int] = None
+    is_active: bool = True
 
 class UserCreate(UserBase):
     password: str
@@ -41,7 +48,11 @@ class UserUpdate(BaseModel):
 
 class User(UserBase):
     id: int
+    first_login: bool
+    last_login: Optional[datetime] = None
+    password_reset_at: Optional[datetime] = None
     created_at: datetime
+    department: Optional["Department"] = None
     
     class Config:
         from_attributes = True
@@ -97,6 +108,20 @@ class DepartmentBase(BaseModel):
 
 class DepartmentCreate(DepartmentBase):
     pass
+
+class DepartmentUpdate(BaseModel):
+    name: Optional[str] = None
+    code: Optional[str] = None 
+    description: Optional[str] = None
+    
+    @model_validator(mode='after')
+    def validate_department_code(self):
+        if self.code is not None:
+            if not self.code or len(self.code) != 2:
+                raise ValueError("部门代码必须是2个字符")
+            if not self.code.isalnum():
+                raise ValueError("部门代码只能包含字母和数字")
+        return self
 
 class Department(DepartmentBase):
     id: int
@@ -358,6 +383,134 @@ class EquipmentAttachment(EquipmentAttachmentBase):
     uploaded_by: int
     created_at: datetime
     updated_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
+
+# ========== 部门用户功能相关 ==========
+
+# 部门用户创建
+class DepartmentUserCreate(BaseModel):
+    department_id: int
+    password: str = "sxyq123"  # 默认密码
+    
+    @field_validator('password')
+    @classmethod
+    def validate_password(cls, v):
+        if len(v) < 6:
+            raise ValueError('密码长度至少6位')
+        if not any(c.isalpha() for c in v):
+            raise ValueError('密码必须包含至少一个字母')
+        if not any(c.isdigit() for c in v):
+            raise ValueError('密码必须包含至少一个数字')
+        return v
+
+# 部门用户登录
+class DepartmentUserLogin(BaseModel):
+    username: str  # 部门名称
+    password: str
+
+# 部门用户首次登录密码修改
+class DepartmentUserPasswordChange(BaseModel):
+    current_password: str
+    new_password: str
+    confirm_password: str
+    
+    @field_validator('new_password')
+    @classmethod
+    def validate_new_password(cls, v):
+        if len(v) < 6:
+            raise ValueError('新密码长度至少6位')
+        if not any(c.isalpha() for c in v):
+            raise ValueError('新密码必须包含至少一个字母')
+        if not any(c.isdigit() for c in v):
+            raise ValueError('新密码必须包含至少一个数字')
+        return v
+    
+    @model_validator(mode='after')
+    def validate_password_match(self):
+        if self.new_password != self.confirm_password:
+            raise ValueError('新密码和确认密码不匹配')
+        if self.current_password == self.new_password:
+            raise ValueError('新密码不能与当前密码相同')
+        return self
+
+# 管理员重置部门用户密码
+class DepartmentUserPasswordReset(BaseModel):
+    user_id: int
+    new_password: str
+    
+    @field_validator('new_password')
+    @classmethod
+    def validate_new_password(cls, v):
+        if len(v) < 6:
+            raise ValueError('新密码长度至少6位')
+        if not any(c.isalpha() for c in v):
+            raise ValueError('新密码必须包含至少一个字母')
+        if not any(c.isdigit() for c in v):
+            raise ValueError('新密码必须包含至少一个数字')
+        return v
+
+# 部门用户响应模型
+class DepartmentUser(BaseModel):
+    id: int
+    username: str
+    user_type: str
+    department_id: int
+    department: "Department"
+    first_login: bool
+    is_active: bool
+    last_login: Optional[datetime] = None
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+# 部门简化设备信息（只包含基本信息）
+class DepartmentEquipmentSimple(BaseModel):
+    id: int
+    name: str  # 计量器具名称
+    model: str  # 型号/规格
+    internal_id: str  # 内部编号
+    manufacturer_id: Optional[str] = None  # 厂家编号/序列号
+    manufacture_date: Optional[date] = None  # 生产日期
+    valid_until: Optional[date] = None  # 有效期至
+    status: str  # 设备状态
+    category: "EquipmentCategory"  # 设备类别（用于筛选）
+    
+    class Config:
+        from_attributes = True
+
+# 部门设备统计信息
+class DepartmentEquipmentStats(BaseModel):
+    total_count: int  # 总设备数
+    active_count: int  # 在用设备数
+    due_in_30_days: int  # 30天内到期设备数
+    overdue_count: int  # 已到期设备数
+    category_distribution: List[Dict[str, Any]]  # 设备类别分布
+
+# 部门设备筛选
+class DepartmentEquipmentFilter(BaseModel):
+    equipment_name: Optional[str] = None  # 按设备名称筛选
+    status: Optional[str] = None  # 按状态筛选（正常/即将到期/已到期）
+    search: Optional[str] = None  # 按名称搜索
+
+# 部门设备分页响应
+class PaginatedDepartmentEquipment(BaseModel):
+    items: List[DepartmentEquipmentSimple]
+    total: int
+    skip: int
+    limit: int
+
+# 部门用户操作日志
+class DepartmentUserLog(BaseModel):
+    id: int
+    user_id: int
+    action: str  # login, view_equipment, export_data
+    description: str
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
+    created_at: datetime
     
     class Config:
         from_attributes = True

@@ -447,6 +447,9 @@
                     <button type="button" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400" onclick="closeUserEquipmentPermissionsModal()">
                         取消
                     </button>
+                    <button type="button" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700" onclick="directClearAllPermissions()">
+                        <i class="fas fa-trash-alt mr-2"></i>清空权限
+                    </button>
                     <button type="button" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700" onclick="saveUserEquipmentPermissions()">
                         <i class="fas fa-save mr-2"></i>保存
                     </button>
@@ -799,6 +802,15 @@
                 const userCategories = await categoriesResponse.json();
                 const equipmentPermissions = await equipmentResponse.json();
                 
+                // 保存权限数据到全局变量
+                if (!window.userPermissionsData) {
+                    window.userPermissionsData = {};
+                }
+                window.userPermissionsData[userId] = {
+                    category_permissions: userCategories,
+                    equipment_permissions: equipmentPermissions
+                };
+                
                 // 更新权限显示
                 updateUserPermissionsDisplay(userId, userCategories, equipmentPermissions);
                 
@@ -1020,8 +1032,15 @@
                 }
             }
             
-            // 检查用户是否有权限（器具权限）
+            // 检查用户是否有权限（类别权限或器具权限）
             const userPermissions = window.userPermissionsData ? window.userPermissionsData[user.id] : null;
+            
+            // 检查类别权限
+            if (userPermissions && userPermissions.category_permissions && userPermissions.category_permissions.length > 0) {
+                return { canDelete: false, reason: '该用户管理着设备类别，无法删除' };
+            }
+            
+            // 检查器具权限
             if (userPermissions && userPermissions.equipment_permissions && userPermissions.equipment_permissions.length > 0) {
                 return { canDelete: false, reason: '该用户管理着器具，无法删除' };
             }
@@ -2139,52 +2158,248 @@
             if (!managingEquipmentPermissionsUserId) return;
 
             const categoryId = document.getElementById('category-select').value;
-            if (!categoryId) {
-                showNotification('请选择一个设备类别', 'warning');
+            const checkboxes = document.querySelectorAll('#equipment-checkboxes input[type="checkbox"]:checked');
+            
+            // 如果没有选择任何器具，询问用户是否要清空权限
+            if (checkboxes.length === 0) {
+                const confirmed = confirm('您没有选择任何器具，是否要清空该用户在当前操作范围内的所有器具权限？\n\n注意：此操作将移除相关权限，用户将无法管理对应的器具。');
+                if (!confirmed) {
+                    return;
+                }
+                
+                // 处理清空权限的逻辑
+                await clearUserEquipmentPermissions(categoryId);
                 return;
             }
+            
+            // 如果选择了特定类别，使用原有逻辑
+            if (categoryId) {
+                const equipmentNames = Array.from(checkboxes).map(cb => cb.value);
+                
+                try {
+                    const response = await fetch(`/api/users/${managingEquipmentPermissionsUserId}/equipment-permissions`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${getCurrentToken()}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            category_id: parseInt(categoryId),
+                            equipment_names: equipmentNames
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+                    }
 
-            const checkboxes = document.querySelectorAll('#equipment-checkboxes input[type="checkbox"]:checked');
-            const equipmentNames = Array.from(checkboxes).map(cb => cb.value);
-
+                    showNotification('用户器具权限更新成功', 'success');
+                    await refreshUserPermissions();
+                    
+                } catch (error) {
+                    console.error('保存用户器具权限失败:', error);
+                    showNotification('保存失败: ' + error.message, 'error');
+                }
+                return;
+            }
+            
+            // 处理跨类别器具选择
+            const categoryIds = new Set();
+            const equipmentByCategory = {};
+            
+            // 按类别分组新选择的器具
+            checkboxes.forEach(checkbox => {
+                const catId = checkbox.getAttribute('data-category-id');
+                const equipmentName = checkbox.value;
+                
+                if (catId) {
+                    const categoryId = parseInt(catId);
+                    categoryIds.add(categoryId);
+                    
+                    if (!equipmentByCategory[categoryId]) {
+                        equipmentByCategory[categoryId] = new Set();
+                    }
+                    equipmentByCategory[categoryId].add(equipmentName);
+                }
+            });
+            
+            if (categoryIds.size === 0) {
+                showNotification('无法确定器具的类别信息', 'error');
+                return;
+            }
+            
             try {
-                const response = await fetch(`/api/users/${managingEquipmentPermissionsUserId}/equipment-permissions`, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `Bearer ${getCurrentToken()}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        category_id: parseInt(categoryId),
-                        equipment_names: equipmentNames
-                    })
+                // 获取用户当前的所有器具权限
+                const currentPermissions = window.currentUserEquipmentPermissions || [];
+                
+                // 为每个涉及的类别准备完整的权限列表（现有权限 + 新选择的权限）
+                const updatePromises = Array.from(categoryIds).map(async (categoryId) => {
+                    // 获取该类别下用户现有的权限
+                    const existingEquipmentInCategory = currentPermissions
+                        .filter(p => p.category_id === categoryId)
+                        .map(p => p.equipment_name);
+                    
+                    // 获取该类别下新选择的权限
+                    const newEquipmentInCategory = Array.from(equipmentByCategory[categoryId] || []);
+                    
+                    // 合并现有权限和新选择的权限，去重
+                    const allEquipmentInCategory = [...new Set([...existingEquipmentInCategory, ...newEquipmentInCategory])];
+                    
+                    // 调用API更新该类别的权限
+                    const response = await fetch(`/api/users/${managingEquipmentPermissionsUserId}/equipment-permissions`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${getCurrentToken()}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            category_id: categoryId,
+                            equipment_names: allEquipmentInCategory
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        const categoryName = allCategories.find(c => c.id === categoryId)?.name || categoryId;
+                        throw new Error(`${categoryName}: ${errorData.detail || response.statusText}`);
+                    }
+                    
+                    return { categoryId, success: true };
                 });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
-                }
-
-                showNotification('用户器具权限更新成功', 'success');
                 
-                // 重新加载该用户的权限显示
-                await loadUserPermissions(managingEquipmentPermissionsUserId);
+                await Promise.all(updatePromises);
                 
-                // 如果详情面板是展开状态，也更新详情内容
-                const detailsRow = document.getElementById(`permission-details-${managingEquipmentPermissionsUserId}`);
-                if (!detailsRow.classList.contains('hidden')) {
-                    await loadPermissionDetails(managingEquipmentPermissionsUserId);
+                // 显示成功信息
+                if (categoryIds.size === 1) {
+                    showNotification('用户器具权限更新成功', 'success');
+                } else {
+                    const categoryNames = Array.from(categoryIds).map(id => {
+                        const category = allCategories.find(c => c.id === id);
+                        return category ? category.name : id;
+                    }).join('、');
+                    showNotification(`已成功更新用户在 ${categoryNames} 等 ${categoryIds.size} 个类别下的器具权限`, 'success');
                 }
                 
-                // 等待一小段时间确保显示更新后再关闭模态框
-                setTimeout(() => {
-                    closeUserEquipmentPermissionsModal();
-                }, 300);
+                await refreshUserPermissions();
                 
             } catch (error) {
                 console.error('保存用户器具权限失败:', error);
-                showNotification('保存用户器具权限失败: ' + error.message, 'error');
+                showNotification('保存失败: ' + error.message, 'error');
             }
+        }
+        
+        // 清空用户器具权限
+        async function clearUserEquipmentPermissions(categoryId) {
+            try {
+                // 如果选择了特定类别，只清空该类别下的权限
+                if (categoryId) {
+                    const response = await fetch(`/api/users/${managingEquipmentPermissionsUserId}/equipment-permissions`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${getCurrentToken()}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            category_id: parseInt(categoryId),
+                            equipment_names: [] // 空数组表示清空该类别下的所有权限
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const categoryName = allCategories.find(c => c.id == categoryId)?.name || '选定类别';
+                    showNotification(`已清空用户在 ${categoryName} 下的所有器具权限`, 'success');
+                } else {
+                    // 如果没有选择特定类别，清空用户的所有器具权限
+                    const currentPermissions = window.currentUserEquipmentPermissions || [];
+                    
+                    // 获取所有涉及的类别ID
+                    const categoryIds = [...new Set(currentPermissions.map(p => p.category_id))];
+                    
+                    if (categoryIds.length === 0) {
+                        showNotification('该用户当前没有任何器具权限', 'info');
+                        await refreshUserPermissions();
+                        return;
+                    }
+                    
+                    // 为每个类别发送清空请求
+                    const clearPromises = categoryIds.map(async (catId) => {
+                        const response = await fetch(`/api/users/${managingEquipmentPermissionsUserId}/equipment-permissions`, {
+                            method: 'PUT',
+                            headers: {
+                                'Authorization': `Bearer ${getCurrentToken()}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                category_id: catId,
+                                equipment_names: [] // 空数组表示清空该类别下的所有权限
+                            })
+                        });
+                        
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            const categoryName = allCategories.find(c => c.id === catId)?.name || catId;
+                            throw new Error(`${categoryName}: ${errorData.detail || response.statusText}`);
+                        }
+                        
+                        return { categoryId: catId, success: true };
+                    });
+                    
+                    await Promise.all(clearPromises);
+                    
+                    showNotification(`已清空用户在所有 ${categoryIds.length} 个类别下的器具权限`, 'success');
+                }
+                
+                await refreshUserPermissions();
+                
+            } catch (error) {
+                console.error('清空用户器具权限失败:', error);
+                showNotification('清空失败: ' + error.message, 'error');
+            }
+        }
+        
+        // 直接清空所有权限（通过按钮）
+        async function directClearAllPermissions() {
+            if (!managingEquipmentPermissionsUserId) return;
+            
+            const categoryId = document.getElementById('category-select').value;
+            const userName = document.getElementById('equipment-permission-user-name').textContent;
+            
+            let confirmMessage;
+            if (categoryId) {
+                const categoryName = allCategories.find(c => c.id == categoryId)?.name || '选定类别';
+                confirmMessage = `确定要清空用户 "${userName}" 在 "${categoryName}" 下的所有器具权限吗？\n\n此操作将移除该用户在此类别下的所有器具管理权限。`;
+            } else {
+                confirmMessage = `确定要清空用户 "${userName}" 的所有器具权限吗？\n\n此操作将移除该用户在所有类别下的器具管理权限，请谨慎操作。`;
+            }
+            
+            const confirmed = confirm(confirmMessage);
+            if (!confirmed) {
+                return;
+            }
+            
+            await clearUserEquipmentPermissions(categoryId);
+        }
+        
+        // 刷新用户权限显示
+        async function refreshUserPermissions() {
+            // 重新加载该用户的权限显示
+            await loadUserPermissions(managingEquipmentPermissionsUserId);
+            
+            // 如果详情面板是展开状态，也更新详情内容
+            const detailsRow = document.getElementById(`permission-details-${managingEquipmentPermissionsUserId}`);
+            if (!detailsRow.classList.contains('hidden')) {
+                await loadPermissionDetails(managingEquipmentPermissionsUserId);
+            }
+            
+            // 等待一小段时间确保显示更新后再关闭模态框
+            setTimeout(() => {
+                closeUserEquipmentPermissionsModal();
+            }, 300);
         }
 
         // 关闭用户器具权限模态框
@@ -2398,8 +2613,15 @@
             if (!contentElement) return;
             
             try {
-                // 并行加载类别权限和器具权限
-                const [categoriesResponse, equipmentResponse] = await Promise.all([
+                // 并行加载所有类别、用户类别权限和器具权限
+                const [allCategoriesResponse, categoriesResponse, equipmentResponse] = await Promise.all([
+                    fetch('/api/categories/', {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${getCurrentToken()}`,
+                            'Content-Type': 'application/json'
+                        }
+                    }),
                     fetch(`/api/users/${userId}/categories`, {
                         method: 'GET',
                         headers: {
@@ -2416,10 +2638,11 @@
                     })
                 ]);
 
-                if (!categoriesResponse.ok || !equipmentResponse.ok) {
+                if (!allCategoriesResponse.ok || !categoriesResponse.ok || !equipmentResponse.ok) {
                     throw new Error('Failed to load permission details');
                 }
 
+                const allCategoriesData = await allCategoriesResponse.json();
                 const userCategories = await categoriesResponse.json();
                 const equipmentPermissions = await equipmentResponse.json();
                 
@@ -2462,9 +2685,9 @@
                                         <i class="fas fa-tags text-blue-600 mr-2"></i>
                                         <span class="font-medium text-blue-900">设备类别权限 (${userCategories.length})</span>
                                     </div>
-                                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                                         ${userCategories.map(uc => `
-                                            <div class="bg-white rounded px-2 py-1 text-sm text-blue-700 border border-blue-200">
+                                            <div class="bg-white rounded px-2 py-1 text-sm text-blue-700 border border-blue-200 truncate" title="${uc.category.name}">
                                                 ${uc.category.name}
                                             </div>
                                         `).join('')}
@@ -2478,10 +2701,14 @@
                             // 按类别分组显示器具权限
                             const equipmentByCategory = {};
                             equipmentPermissions.forEach(ep => {
-                                if (!equipmentByCategory[ep.category_name]) {
-                                    equipmentByCategory[ep.category_name] = [];
+                                // 根据category_id查找类别名称
+                                const category = allCategoriesData.find(c => c.id === ep.category_id);
+                                const categoryName = category ? category.name : `未知类别(ID: ${ep.category_id})`;
+                                
+                                if (!equipmentByCategory[categoryName]) {
+                                    equipmentByCategory[categoryName] = [];
                                 }
-                                equipmentByCategory[ep.category_name].push(ep.equipment_name);
+                                equipmentByCategory[categoryName].push(ep.equipment_name);
                             });
                             
                             detailsHTML += `
@@ -2490,13 +2717,13 @@
                                         <i class="fas fa-tools text-green-600 mr-2"></i>
                                         <span class="font-medium text-green-900">器具权限 (${equipmentPermissions.length})</span>
                                     </div>
-                                    <div class="space-y-2">
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                                         ${Object.entries(equipmentByCategory).map(([categoryName, equipmentNames]) => `
                                             <div class="bg-white rounded p-2 border border-green-200">
-                                                <div class="text-xs font-medium text-green-700 mb-1">${categoryName}</div>
+                                                <div class="text-xs font-medium text-green-700 mb-1 truncate" title="${categoryName}">${categoryName}</div>
                                                 <div class="flex flex-wrap gap-1">
                                                     ${equipmentNames.map(name => `
-                                                        <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">${name}</span>
+                                                        <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded truncate" title="${name}">${name}</span>
                                                     `).join('')}
                                                 </div>
                                             </div>

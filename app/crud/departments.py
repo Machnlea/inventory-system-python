@@ -33,11 +33,14 @@ def create_department(db: Session, department: DepartmentCreate):
     db.refresh(db_department)
     return db_department
 
-def update_department(db: Session, department_id: int, department: DepartmentCreate):
+def update_department(db: Session, department_id: int, department):
     db_department = db.query(Department).filter(Department.id == department_id).first()
     if db_department:
-        for field, value in department.dict().items():
-            setattr(db_department, field, value)
+        # 只更新非None的字段
+        update_data = department.dict(exclude_unset=True)
+        for field, value in update_data.items():
+            if value is not None:  # 只更新非None值
+                setattr(db_department, field, value)
         db.commit()
         db.refresh(db_department)
     return db_department

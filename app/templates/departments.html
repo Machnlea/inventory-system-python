@@ -322,6 +322,109 @@
         </div>
     </div>
 
+    <!-- 部门用户管理模态框 -->
+    <div id="departmentUserModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-900" id="userModalTitle">部门用户管理</h3>
+                <button class="text-gray-400 hover:text-gray-600" onclick="closeDepartmentUserModal()">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div id="departmentUserContent">
+                    <!-- 加载中状态 -->
+                    <div id="userLoadingState" class="text-center py-8">
+                        <i class="fas fa-spinner fa-spin text-gray-400 text-2xl mb-4"></i>
+                        <p class="text-gray-500">加载中...</p>
+                    </div>
+                    
+                    <!-- 用户信息内容 -->
+                    <div id="userInfoContent" class="hidden">
+                        <!-- 用户状态卡片 -->
+                        <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h4 class="text-sm font-medium text-gray-900">部门用户账户</h4>
+                                    <p class="text-sm text-gray-600 mt-1">用户名：<span id="departmentUserName" class="font-medium"></span></p>
+                                </div>
+                                <div class="flex items-center">
+                                    <span id="userStatusBadge" class="px-2 py-1 text-xs font-medium rounded-full"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 用户信息详情 -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            <div>
+                                <h5 class="text-sm font-medium text-gray-700 mb-3">账户信息</h5>
+                                <dl class="space-y-2">
+                                    <div class="flex justify-between">
+                                        <dt class="text-sm text-gray-500">创建时间：</dt>
+                                        <dd class="text-sm text-gray-900" id="userCreatedAt">-</dd>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <dt class="text-sm text-gray-500">最后登录：</dt>
+                                        <dd class="text-sm text-gray-900" id="userLastLogin">-</dd>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <dt class="text-sm text-gray-500">首次登录：</dt>
+                                        <dd class="text-sm text-gray-900" id="userFirstLogin">-</dd>
+                                    </div>
+                                </dl>
+                            </div>
+                            <div>
+                                <h5 class="text-sm font-medium text-gray-700 mb-3">管理操作</h5>
+                                <div class="space-y-3">
+                                    <!-- 账户状态切换 -->
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-sm text-gray-700">账户状态</span>
+                                        <button id="toggleUserStatus" class="px-3 py-1 text-sm font-medium rounded-lg transition-colors">
+                                            <i class="fas fa-power-off mr-1"></i>
+                                            <span id="toggleStatusText">启用</span>
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- 重置密码 -->
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-sm text-gray-700">重置密码</span>
+                                        <button id="resetUserPassword" class="px-3 py-1 text-sm font-medium rounded-lg bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors">
+                                            <i class="fas fa-key mr-1"></i>
+                                            重置
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 操作日志 -->
+                        <div class="border-t pt-6">
+                            <h5 class="text-sm font-medium text-gray-700 mb-3">最近操作</h5>
+                            <div id="userLogsContainer">
+                                <div id="userLogsLoading" class="bg-gray-50 rounded-lg p-4 text-center text-gray-500 text-sm">
+                                    <i class="fas fa-spinner fa-spin mr-2"></i>加载操作日志...
+                                </div>
+                                <div id="userLogsContent" class="hidden space-y-3"></div>
+                                <div id="userLogsEmpty" class="hidden bg-gray-50 rounded-lg p-4 text-center text-gray-500 text-sm">
+                                    <i class="fas fa-info-circle mr-2"></i>暂无操作记录
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 无用户状态 -->
+                    <div id="noUserContent" class="hidden text-center py-8">
+                        <i class="fas fa-user-plus text-gray-300 text-4xl mb-4"></i>
+                        <p class="text-gray-500 mb-4">该部门尚未创建用户账户</p>
+                        <button id="createDepartmentUser" class="btn-primary text-white font-medium py-2 px-4 rounded-lg">
+                            <i class="fas fa-plus mr-2"></i>创建部门用户
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
       <script>
         // 全局变量
         let currentEditId = null;
@@ -501,8 +604,11 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatDate(department.created_at)}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button class="text-blue-600 hover:text-blue-900 mr-3" onclick="editDepartment(${department.id}, '${department.name}', '${department.code || ''}', '${department.description || ''}')">
+                            <button class="text-blue-600 hover:text-blue-900 mr-3" onclick="editDepartment(${department.id}, '${department.name}', '${department.code || ''}', '${department.description || ''}', ${department.equipment_count || 0})">
                                 <i class="fas fa-edit mr-1"></i>编辑
+                            </button>
+                            <button class="text-green-600 hover:text-green-900 mr-3" onclick="manageDepartmentUser(${department.id}, '${department.name}')">
+                                <i class="fas fa-user-cog mr-1"></i>管理用户
                             </button>
                             ${department.equipment_count > 0 ? 
                                 `<button class="text-gray-400 cursor-not-allowed" title="该部门下有${department.equipment_count}台设备，无法删除" disabled>
@@ -523,13 +629,34 @@
             const modal = document.getElementById('departmentModal');
             const modalTitle = document.getElementById('modalTitle');
             const form = document.getElementById('departmentForm');
+            const nameField = document.getElementById('departmentName');
+            const codeField = document.getElementById('departmentCode');
+            const descField = document.getElementById('departmentDescription');
+            
+            // 重置字段状态
+            nameField.disabled = false;
+            codeField.disabled = false;
+            nameField.classList.remove('bg-gray-100', 'cursor-not-allowed');
+            codeField.classList.remove('bg-gray-100', 'cursor-not-allowed');
             
             if (department) {
                 modalTitle.textContent = '编辑部门';
-                document.getElementById('departmentName').value = department.name;
-                document.getElementById('departmentCode').value = department.code || '';
-                document.getElementById('departmentDescription').value = department.description || '';
+                nameField.value = department.name;
+                codeField.value = department.code || '';
+                descField.value = department.description || '';
                 currentEditId = department.id;
+                
+                // 如果部门下有设备，禁用名称和编号字段
+                const hasEquipment = department.equipment_count && department.equipment_count > 0;
+                if (hasEquipment) {
+                    nameField.disabled = true;
+                    codeField.disabled = true;
+                    nameField.classList.add('bg-gray-100', 'cursor-not-allowed');
+                    codeField.classList.add('bg-gray-100', 'cursor-not-allowed');
+                    
+                    // 显示提示信息
+                    modalTitle.innerHTML = '编辑部门 <small class="text-orange-600 font-normal">（部门下有 ' + department.equipment_count + ' 台设备，不能修改名称和编号）</small>';
+                }
             } else {
                 modalTitle.textContent = '新增部门';
                 form.reset();
@@ -548,29 +675,42 @@
 
         // 保存部门
         async function saveDepartment() {
-            const name = document.getElementById('departmentName').value.trim();
-            const code = document.getElementById('departmentCode').value.trim();
-            const description = document.getElementById('departmentDescription').value.trim();
+            const nameField = document.getElementById('departmentName');
+            const codeField = document.getElementById('departmentCode');
+            const descField = document.getElementById('departmentDescription');
             
-            if (!name) {
+            const name = nameField.value.trim();
+            const code = codeField.value.trim();
+            const description = descField.value.trim();
+            
+            // 检查必填字段（只在字段未被禁用时检查）
+            if (!nameField.disabled && !name) {
                 showNotification('请输入部门名称', 'warning');
                 return;
             }
             
-            if (!code) {
+            if (!codeField.disabled && !code) {
                 showNotification('请输入部门编号', 'warning');
                 return;
             }
 
             try {
-                const departmentData = { name, code, description };
+                let departmentData;
                 
                 if (currentEditId) {
-                    // 编辑模式
+                    // 编辑模式 - 如果字段被禁用，只发送描述
+                    if (nameField.disabled || codeField.disabled) {
+                        // 部门下有设备，只允许修改描述
+                        departmentData = { description };
+                    } else {
+                        // 部门下没有设备，允许修改所有字段
+                        departmentData = { name, code, description };
+                    }
                     await DepartmentAPI.updateDepartment(currentEditId, departmentData);
                     showNotification('部门更新成功', 'success');
                 } else {
-                    // 新增模式
+                    // 新增模式 - 发送所有字段
+                    departmentData = { name, code, description };
                     await DepartmentAPI.createDepartment(departmentData);
                     showNotification('部门创建成功', 'success');
                 }
@@ -585,8 +725,8 @@
         }
 
         // 编辑部门
-        function editDepartment(id, name, code, description) {
-            openDepartmentModal({ id, name, code, description });
+        function editDepartment(id, name, code, description, equipmentCount = 0) {
+            openDepartmentModal({ id, name, code, description, equipment_count: equipmentCount });
         }
 
         // 删除部门
@@ -987,6 +1127,331 @@
             };
 
             departmentChart = new Chart(ctx, chartConfig);
+        }
+
+        // ========== 部门用户管理功能 ==========
+        
+        let currentDepartmentId = null;
+        let currentDepartmentUserData = null;
+
+        // 打开部门用户管理模态框
+        async function manageDepartmentUser(departmentId, departmentName) {
+            currentDepartmentId = departmentId;
+            const modal = document.getElementById('departmentUserModal');
+            const modalTitle = document.getElementById('userModalTitle');
+            
+            modalTitle.textContent = `部门用户管理 - ${departmentName}`;
+            modal.classList.add('show');
+            
+            // 显示加载状态
+            showUserLoadingState();
+            
+            try {
+                // 获取部门用户信息
+                const response = await api.get(`/api/department/admin/list?skip=0&limit=100`);
+                console.log('部门用户API响应:', response);
+                
+                let allUsers;
+                if (response.success) {
+                    allUsers = response.data;
+                } else if (Array.isArray(response)) {
+                    // 如果直接返回数组
+                    allUsers = response;
+                } else {
+                    throw new Error(response.message || '获取用户信息失败');
+                }
+                
+                const departmentUser = allUsers.find(user => user.department_id === departmentId);
+                
+                if (departmentUser) {
+                    currentDepartmentUserData = departmentUser;
+                    showUserInfoContent(departmentUser);
+                } else {
+                    showNoUserContent();
+                }
+            } catch (error) {
+                console.error('获取部门用户信息失败:', error);
+                showNotification('获取部门用户信息失败: ' + error.message, 'error');
+                closeDepartmentUserModal();
+            }
+        }
+
+        // 显示加载状态
+        function showUserLoadingState() {
+            document.getElementById('userLoadingState').classList.remove('hidden');
+            document.getElementById('userInfoContent').classList.add('hidden');
+            document.getElementById('noUserContent').classList.add('hidden');
+        }
+
+        // 显示用户信息内容
+        function showUserInfoContent(user) {
+            document.getElementById('userLoadingState').classList.add('hidden');
+            document.getElementById('userInfoContent').classList.remove('hidden');
+            document.getElementById('noUserContent').classList.add('hidden');
+            
+            // 填充用户信息
+            document.getElementById('departmentUserName').textContent = user.username;
+            document.getElementById('userCreatedAt').textContent = formatDateTime(user.created_at);
+            document.getElementById('userLastLogin').textContent = user.last_login ? formatDateTime(user.last_login) : '从未登录';
+            document.getElementById('userFirstLogin').textContent = user.first_login ? '是' : '否';
+            
+            // 设置状态标识
+            const statusBadge = document.getElementById('userStatusBadge');
+            const toggleBtn = document.getElementById('toggleUserStatus');
+            const toggleText = document.getElementById('toggleStatusText');
+            
+            if (user.is_active) {
+                statusBadge.className = 'px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800';
+                statusBadge.textContent = '已启用';
+                toggleBtn.className = 'px-3 py-1 text-sm font-medium rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors';
+                toggleText.textContent = '禁用';
+            } else {
+                statusBadge.className = 'px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800';
+                statusBadge.textContent = '已禁用';
+                toggleBtn.className = 'px-3 py-1 text-sm font-medium rounded-lg bg-green-100 text-green-700 hover:bg-green-200 transition-colors';
+                toggleText.textContent = '启用';
+            }
+            
+            // 绑定事件
+            setupUserManagementEvents(user);
+            
+            // 加载操作日志
+            loadUserOperationLogs(user.id);
+        }
+
+        // 显示无用户内容
+        function showNoUserContent() {
+            document.getElementById('userLoadingState').classList.add('hidden');
+            document.getElementById('userInfoContent').classList.add('hidden');
+            document.getElementById('noUserContent').classList.remove('hidden');
+            
+            // 绑定创建用户事件
+            document.getElementById('createDepartmentUser').onclick = () => createDepartmentUser();
+        }
+
+        // 设置用户管理事件
+        function setupUserManagementEvents(user) {
+            // 状态切换按钮
+            document.getElementById('toggleUserStatus').onclick = () => toggleUserStatus(user);
+            
+            // 重置密码按钮
+            document.getElementById('resetUserPassword').onclick = () => resetUserPassword(user);
+        }
+
+        // 创建部门用户
+        async function createDepartmentUser() {
+            try {
+                const response = await api.post(`/api/department/admin/create?department_id=${currentDepartmentId}`, {});
+                if (response.success) {
+                    showNotification('部门用户创建成功', 'success');
+                    // 重新加载用户信息
+                    manageDepartmentUser(currentDepartmentId, currentDepartmentUserData?.department?.name || '');
+                } else {
+                    throw new Error(response.message || '创建失败');
+                }
+            } catch (error) {
+                console.error('创建部门用户失败:', error);
+                showNotification('创建部门用户失败: ' + error.message, 'error');
+            }
+        }
+
+        // 切换用户状态
+        async function toggleUserStatus(user) {
+            const newStatus = !user.is_active;
+            const action = newStatus ? '启用' : '禁用';
+            
+            if (!confirm(`确定要${action}用户"${user.username}"吗？`)) {
+                return;
+            }
+            
+            try {
+                const response = await api.put(`/api/department/admin/status/${user.id}?is_active=${newStatus}`, {});
+                if (response.success) {
+                    showNotification(response.message, 'success');
+                    // 更新用户数据
+                    Object.assign(user, response.user);
+                    showUserInfoContent(user);
+                } else {
+                    throw new Error(response.message || `${action}失败`);
+                }
+            } catch (error) {
+                console.error(`${action}用户失败:`, error);
+                showNotification(`${action}用户失败: ` + error.message, 'error');
+            }
+        }
+
+        // 重置用户密码
+        async function resetUserPassword(user) {
+            const newPassword = prompt('请输入新密码（至少6位，包含字母和数字）:', 'sxyq123');
+            
+            if (!newPassword) {
+                return; // 用户取消
+            }
+            
+            if (newPassword.length < 6 || !/[a-zA-Z]/.test(newPassword) || !/\d/.test(newPassword)) {
+                showNotification('密码格式不正确，至少6位且包含字母和数字', 'error');
+                return;
+            }
+            
+            try {
+                const response = await api.post('/api/department/admin/reset-password', {
+                    user_id: user.id,
+                    new_password: newPassword
+                });
+                
+                if (response.success) {
+                    showNotification('密码重置成功，用户下次登录需修改密码', 'success');
+                } else {
+                    throw new Error(response.message || '重置失败');
+                }
+            } catch (error) {
+                console.error('重置密码失败:', error);
+                showNotification('重置密码失败: ' + error.message, 'error');
+            }
+        }
+
+        // 关闭部门用户管理模态框
+        function closeDepartmentUserModal() {
+            const modal = document.getElementById('departmentUserModal');
+            modal.classList.remove('show');
+            currentDepartmentId = null;
+            currentDepartmentUserData = null;
+        }
+
+        // 格式化日期时间
+        function formatDateTime(dateString) {
+            if (!dateString) return '-';
+            // 如果没有时区信息，假设是UTC时间并添加Z
+            const dateStr = dateString.includes('Z') ? dateString : dateString + 'Z';
+            const date = new Date(dateStr);
+            return date.toLocaleString('zh-CN');
+        }
+
+        // 加载用户操作日志
+        async function loadUserOperationLogs(userId) {
+            const loadingEl = document.getElementById('userLogsLoading');
+            const contentEl = document.getElementById('userLogsContent');
+            const emptyEl = document.getElementById('userLogsEmpty');
+            
+            // 显示加载状态
+            loadingEl.classList.remove('hidden');
+            contentEl.classList.add('hidden');
+            emptyEl.classList.add('hidden');
+            
+            try {
+                const response = await api.get(`/api/department/admin/logs/${userId}?limit=5`);
+                let logs;
+                
+                if (response.success) {
+                    logs = response.data;
+                } else if (Array.isArray(response)) {
+                    logs = response;
+                } else {
+                    throw new Error(response.message || '获取日志失败');
+                }
+                
+                // 隐藏加载状态
+                loadingEl.classList.add('hidden');
+                
+                if (logs && logs.length > 0) {
+                    // 显示日志内容
+                    contentEl.innerHTML = logs.map(log => {
+                        const actionText = getActionText(log.action);
+                        const actionIcon = getActionIcon(log.action);
+                        const timeText = formatRelativeTime(log.created_at);
+                        
+                        return `
+                            <div class="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
+                                <div class="flex-shrink-0">
+                                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                        <i class="${actionIcon} text-blue-600 text-sm"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-medium text-gray-900">${actionText}</p>
+                                    <p class="text-sm text-gray-500">${log.description}</p>
+                                    <p class="text-xs text-gray-400 mt-1">${timeText}</p>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                    contentEl.classList.remove('hidden');
+                } else {
+                    // 显示无日志状态
+                    emptyEl.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('加载操作日志失败:', error);
+                // 显示无日志状态
+                loadingEl.classList.add('hidden');
+                emptyEl.classList.remove('hidden');
+                emptyEl.innerHTML = `
+                    <i class="fas fa-exclamation-triangle text-orange-400 mr-2"></i>
+                    加载操作日志失败
+                `;
+            }
+        }
+
+        // 获取操作类型文本
+        function getActionText(action) {
+            const actionMap = {
+                'login': '用户登录',
+                'password_change': '修改密码',
+                'view_equipment_list': '查看设备列表',
+                'export_equipment': '导出设备清单',
+                'user_created': '用户创建',
+                'password_reset': '重置密码',
+                'view_equipment': '查看设备详情',
+                'export_data': '导出数据',
+                'admin_reset_password': '管理员重置密码',
+                'admin_enable': '管理员启用账户',
+                'admin_disable': '管理员禁用账户'
+            };
+            return actionMap[action] || action;
+        }
+
+        // 获取操作类型图标
+        function getActionIcon(action) {
+            const iconMap = {
+                'login': 'fas fa-sign-in-alt',
+                'password_change': 'fas fa-key',
+                'view_equipment_list': 'fas fa-list',
+                'export_equipment': 'fas fa-file-excel',
+                'user_created': 'fas fa-user-plus',
+                'password_reset': 'fas fa-undo',
+                'view_equipment': 'fas fa-eye',
+                'export_data': 'fas fa-download',
+                'admin_reset_password': 'fas fa-undo',
+                'admin_enable': 'fas fa-check-circle',
+                'admin_disable': 'fas fa-times-circle'
+            };
+            return iconMap[action] || 'fas fa-info-circle';
+        }
+
+        // 格式化相对时间
+        function formatRelativeTime(dateString) {
+            if (!dateString) return '';
+            
+            // 如果没有时区信息，假设是UTC时间并添加Z
+            const dateStr = dateString.includes('Z') ? dateString : dateString + 'Z';
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMinutes = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+            
+            if (diffMinutes < 1) {
+                return '刚刚';
+            } else if (diffMinutes < 60) {
+                return `${diffMinutes}分钟前`;
+            } else if (diffHours < 24) {
+                return `${diffHours}小时前`;
+            } else if (diffDays < 7) {
+                return `${diffDays}天前`;
+            } else {
+                return formatDateTime(dateString);
+            }
         }
     </script>
 </body>

@@ -149,10 +149,17 @@
             </div>
 
             <!-- 行动按钮 -->
-            <div class="flex justify-center items-center">
-                <a href="/login" class="glass-effect text-white font-semibold py-4 px-8 rounded-2xl text-lg hover:bg-white hover:bg-opacity-20 transition-all duration-300">
-                    <i class="fas fa-sign-in-alt mr-2"></i>
-                    立即登录
+            <div class="flex justify-center items-center space-x-6">
+                <!-- 管理员登录 -->
+                <a href="/login" class="glass-effect text-white font-semibold py-4 px-8 rounded-2xl text-lg hover:bg-white hover:bg-opacity-20 transition-all duration-300 group">
+                    <i class="fas fa-user-shield mr-2 group-hover:scale-110 transition-transform"></i>
+                    管理员登录
+                </a>
+                
+                <!-- 部门登录 -->
+                <a href="/department/login" class="glass-effect text-white font-semibold py-4 px-8 rounded-2xl text-lg hover:bg-white hover:bg-opacity-20 transition-all duration-300 group border-2 border-white border-opacity-30">
+                    <i class="fas fa-building mr-2 group-hover:scale-110 transition-transform"></i>
+                    部门登录
                 </a>
             </div>
 

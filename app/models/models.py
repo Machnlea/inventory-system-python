@@ -10,11 +10,20 @@ class User(Base):
     username = Column(String(50), unique=True, index=True, nullable=False)
     hashed_password = Column(String(100), nullable=False)
     is_admin = Column(Boolean, default=False)
+    user_type = Column(String(20), default="manager")  # admin/manager/department_user
+    department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)  # 部门关联
+    first_login = Column(Boolean, default=True)  # 首次登录标记
+    is_active = Column(Boolean, default=True)  # 账户状态
+    last_login = Column(DateTime(timezone=True), nullable=True)  # 最后登录时间
+    password_reset_at = Column(DateTime(timezone=True), nullable=True)  # 密码重置时间
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # 用户权限关联
     user_categories = relationship("UserCategory", back_populates="user")
     equipment_permissions = relationship("UserEquipmentPermission", back_populates="user")
+    
+    # 部门关联
+    department = relationship("Department", back_populates="department_users")
 
 class EquipmentCategory(Base):
     __tablename__ = "equipment_categories"
@@ -50,6 +59,7 @@ class Department(Base):
     
     # 关联
     equipments = relationship("Equipment", back_populates="department")
+    department_users = relationship("User", back_populates="department")  # 部门用户关联
 
 class UserCategory(Base):
     __tablename__ = "user_categories"
@@ -169,3 +179,19 @@ class EquipmentAttachment(Base):
     # 关联
     equipment = relationship("Equipment", back_populates="attachments")
     uploader = relationship("User")
+
+
+# 部门用户操作日志
+class DepartmentUserLog(Base):
+    __tablename__ = "department_user_logs"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    action = Column(String(50), nullable=False)  # login, view_equipment, export_data, password_change, etc.
+    description = Column(Text, nullable=False)  # 操作描述
+    ip_address = Column(String(45))  # IP地址（IPv6最长45字符）
+    user_agent = Column(Text)  # 用户代理信息
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # 关联
+    user = relationship("User")

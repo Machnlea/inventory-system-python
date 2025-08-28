@@ -12,7 +12,10 @@ def get_user_by_username(db: Session, username: str):
     return db.query(User).filter(User.username == username).first()
 
 def get_users(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(User).offset(skip).limit(limit).all()
+    # 只返回非部门用户（排除user_type为'department_user'的用户）
+    return db.query(User).filter(
+        User.user_type != 'department_user'
+    ).offset(skip).limit(limit).all()
 
 def create_user(db: Session, user: UserCreate):
     hashed_password = get_password_hash(user.password)

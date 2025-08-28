@@ -13,6 +13,7 @@ from app.api.import_export import router as import_export_router
 from app.api.attachments import router as attachments_router
 from app.api.settings import router as settings_router
 from app.api.reports import router as reports_router
+from app.api.department_users import router as department_users_router
 from app.db.database import engine
 from app.models import models
 
@@ -45,6 +46,7 @@ app.include_router(import_export_router, prefix="/api/import", tags=["数据导�
 app.include_router(attachments_router, prefix="/api/attachments", tags=["附件管理"])
 app.include_router(settings_router, prefix="/api/settings", tags=["系统设置"])
 app.include_router(reports_router, prefix="/api/reports", tags=["统计报表"])
+app.include_router(department_users_router, prefix="/api/department", tags=["部门用户"])
 
 @app.get("/favicon.ico")
 async def favicon():
@@ -118,6 +120,15 @@ async def user_permissions(request: Request):
 @app.get("/test_page_size_feature", response_class=HTMLResponse)
 async def test_page_size_feature(request: Request):
     return templates.TemplateResponse("test_page_size_feature.html", {"request": request})
+
+# 部门用户页面路由
+@app.get("/department/login", response_class=HTMLResponse)
+async def department_login(request: Request):
+    return templates.TemplateResponse("department_login.html", {"request": request})
+
+@app.get("/department/dashboard", response_class=HTMLResponse)
+async def department_dashboard(request: Request):
+    return templates.TemplateResponse("department_dashboard.html", {"request": request})
 
 @app.get("/api", response_class=RedirectResponse)
 async def api_docs():

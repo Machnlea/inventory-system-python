@@ -21,6 +21,7 @@
 - ✅ **JWT Token认证**：安全的无状态认证机制
 - ✅ **细粒度权限控制**：基于设备类别的权限分配
 - ✅ **操作审计日志**：完整的用户操作追踪
+- ✅ **外部API接口**：支持第三方系统API Key认证访问 🆕
 
 ### 📋 设备管理
 - ✅ **完整的设备台账管理**：支持CRUD操作和全字段管理
@@ -131,6 +132,7 @@ uv run python -m uvicorn main:app --workers 4 --host 0.0.0.0 --port 8080
 | **ReDoc** | http://localhost:8000/redoc | 专业API文档 |
 | **API重定向** | http://localhost:8000/api | 重定向到文档 |
 | **OpenAPI JSON** | http://localhost:8000/openapi.json | API规范文件 |
+| **外部API基础URL** | http://localhost:8000/api/external | 第三方系统集成接口 🆕 |
 
 ### 🔑 默认账户
 
@@ -306,10 +308,85 @@ Authorization: Bearer <token>
 - `GET /template` - 下载导入模板
 - `POST /excel` - 导入Excel数据
 
+#### 9. 外部系统API (`/api/external`) 🆕
+- `GET /health` - API健康检查（无需认证）
+- `GET /equipment` - 获取所有设备信息
+- `GET /equipment/{id}` - 获取单个设备详情
+- `GET /departments` - 获取所有部门信息
+- `GET /categories` - 获取所有设备类别
+- `GET /equipment/by-department/{dept_id}` - 获取指定部门的设备
+- `GET /stats` - 获取系统统计信息
+
+#### 🔑 外部API使用指南
+
+外部系统API专为第三方系统集成设计，使用API Key认证，无需用户登录。
+
+**可用API密钥**：
+- `api_key_12345`
+- `external_system_key_2024`
+
+**使用方法**：
+```bash
+# cURL示例
+curl -X GET "http://your-server:8000/api/external/equipment" \
+  -H "X-API-Key: api_key_12345"
+
+# 获取系统统计
+curl -X GET "http://your-server:8000/api/external/stats" \
+  -H "X-API-Key: api_key_12345"
+```
+
+**Python示例**：
+```python
+import requests
+
+BASE_URL = "http://your-server:8000/api/external"
+API_KEY = "api_key_12345"
+headers = {"X-API-Key": API_KEY}
+
+# 获取所有设备
+response = requests.get(f"{BASE_URL}/equipment", headers=headers)
+equipment_list = response.json()
+
+# 获取部门信息
+departments = requests.get(f"{BASE_URL}/departments", headers=headers).json()
+```
+
+**JavaScript示例**：
+```javascript
+const BASE_URL = "http://your-server:8000/api/external";
+const API_KEY = "api_key_12345";
+
+const headers = {
+    "X-API-Key": API_KEY,
+    "Content-Type": "application/json"
+};
+
+// 获取所有设备
+fetch(`${BASE_URL}/equipment`, { headers })
+    .then(response => response.json())
+    .then(data => console.log(data));
+```
+
+**支持的查询参数**：
+- `skip`: 跳过记录数（分页）
+- `limit`: 返回记录数（最大1000）
+- `department_id`: 按部门筛选
+- `category_id`: 按类别筛选
+- `status`: 按状态筛选
+
 ### 认证方式
-所有API请求都需要在Header中携带JWT Token：
+
+#### 内部API认证
+内部API请求需要在Header中携带JWT Token：
 ```
 Authorization: Bearer <your-jwt-token>
+```
+
+#### 外部API认证
+外部API请求需要在Header中携带API Key：
+```
+X-API-Key: api_key_12345
 ```
 
 ### 权限说明

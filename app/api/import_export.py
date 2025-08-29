@@ -660,13 +660,42 @@ def export_filtered_equipments(
     current_user = Depends(get_current_user)
 ):
     """根据筛选条件导出设备数据"""
-    from app.schemas.schemas import EquipmentFilter
     
-    equipment_filter = EquipmentFilter(**filters)
-    equipments = equipment.filter_equipments(
-        db, filters=equipment_filter, skip=0, limit=10000,
-        user_id=current_user.id, is_admin=current_user.is_admin
-    )
+    # 检查是否包含搜索查询
+    if 'query' in filters and filters['query']:
+        # 如果包含搜索查询，使用搜索API
+        from app.schemas.schemas import EquipmentSearch
+        
+        search_params = EquipmentSearch(**filters)
+        equipments = equipment.search_equipments(
+            db, search=search_params, skip=0, limit=10000,
+            user_id=current_user.id, is_admin=current_user.is_admin
+        )
+        
+        # 记录操作日志
+        create_audit_log(
+            db=db,
+            user_id=current_user.id,
+            action="导出搜索结果",
+            description=f"导出搜索结果，查询词: '{filters['query']}'，共{len(equipments)}台"
+        )
+    else:
+        # 否则使用传统筛选API
+        from app.schemas.schemas import EquipmentFilter
+        
+        equipment_filter = EquipmentFilter(**filters)
+        equipments = equipment.filter_equipments(
+            db, filters=equipment_filter, skip=0, limit=10000,
+            user_id=current_user.id, is_admin=current_user.is_admin
+        )
+        
+        # 记录操作日志
+        create_audit_log(
+            db=db,
+            user_id=current_user.id,
+            action="导出筛选",
+            description=f"导出筛选设备数据，共{len(equipments)}台"
+        )
     
     df, dynamic_columns = generate_export_data(equipments, db)
     
@@ -697,14 +726,6 @@ def export_filtered_equipments(
     
     filename = f"设备台账_筛选_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
     encoded_filename = quote(filename, safe='')
-    
-    # 记录操作日志
-    create_audit_log(
-        db=db,
-        user_id=current_user.id,
-        action="导出筛选",
-        description=f"导出筛选设备数据，共{len(equipments)}台"
-    )
     
     return Response(
         content=output.getvalue(),

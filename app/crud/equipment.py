@@ -5,6 +5,38 @@ from app.schemas.schemas import EquipmentCreate, EquipmentUpdate, EquipmentFilte
 from datetime import date, timedelta, datetime
 from typing import List, Optional
 
+def get_equipments_for_external_api(
+    db: Session,
+    skip: int = 0,
+    limit: int = 1000,
+    department_id: Optional[int] = None,
+    category_id: Optional[int] = None,
+    status: Optional[str] = None
+) -> List[Equipment]:
+    """
+    为外部API获取设备列表，无需用户权限验证
+    专门用于外部系统调用
+    """
+    query = db.query(Equipment).options(
+        joinedload(Equipment.category),
+        joinedload(Equipment.department)
+    )
+    
+    # 应用筛选条件
+    if department_id:
+        query = query.filter(Equipment.department_id == department_id)
+    
+    if category_id:
+        query = query.filter(Equipment.category_id == category_id)
+    
+    if status:
+        query = query.filter(Equipment.status == status)
+    
+    # 按创建时间倒序排列
+    query = query.order_by(Equipment.created_at.desc())
+    
+    return query.offset(skip).limit(limit).all()
+
 def get_equipments_by_category(db: Session, category_id: int) -> List[Equipment]:
     """获取指定类别下的所有设备"""
     return db.query(Equipment).filter(Equipment.category_id == category_id).all()

@@ -24,6 +24,9 @@ class User(Base):
     
     # 部门关联
     department = relationship("Department", back_populates="department_users")
+    
+    # 部门用户日志关联
+    department_user_logs = relationship("DepartmentUserLog", back_populates="user")
 
 class EquipmentCategory(Base):
     __tablename__ = "equipment_categories"
@@ -194,4 +197,4 @@ class DepartmentUserLog(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # 关联
-    user = relationship("User")
+    user = relationship("User", back_populates="department_user_logs")

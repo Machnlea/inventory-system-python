@@ -415,9 +415,19 @@ async def import_equipment_data(
                 # 自动设置管理级别（外检时设为"-"）
                 management_level = str(row.get('管理级别', '')) if calibration_method == '内检' else '-'
                 
-                # 验证状态变更时间
+                # 验证设备状态
                 status_change_date = None
-                equipment_status = str(row.get('设备状态', '在用'))
+                equipment_status = str(row.get('设备状态', '在用')).strip()
+                
+                # 验证状态值是否合法
+                if equipment_status not in ['在用', '停用', '报废']:
+                    result["status"] = "失败"
+                    result["message"] = f"设备状态'{equipment_status}'不合法，只能是'在用'、'停用'或'报废'"
+                    detailed_results.append(result)
+                    error_count += 1
+                    continue
+                
+                # 验证状态变更时间
                 if equipment_status in ['停用', '报废']:
                     status_change_date_input = row.get('状态变更时间')
                     # 状态变更时间为非必填项，如果提供了就验证格式

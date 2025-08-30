@@ -222,41 +222,41 @@
                 </div>
 
                 <!-- 图表区域 -->
-                <div class="grid grid-cols-1 gap-6 mb-8">
-                    <!-- 设备分布图 - 扩展为全宽 -->
-                    <div class="bg-white rounded-xl shadow-md p-6">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-4">在用设备分布</h3>
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
+                    <!-- 设备分布图 -->
+                    <div class="bg-white rounded-xl shadow-md p-4">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-3">在用设备分布</h3>
+                        <div class="flex flex-col lg:flex-row items-center gap-4">
                             <!-- 图表 -->
-                            <div class="flex justify-center">
-                                <canvas id="categoryChart" width="400" height="400"></canvas>
+                            <div class="flex-shrink-0">
+                                <canvas id="categoryChart" width="280" height="280"></canvas>
                             </div>
                             <!-- 图例 -->
-                            <div class="flex flex-col">
-                                <div class="mb-4">
-                                    <h4 class="text-sm font-medium text-gray-700 mb-2">设备类别详细信息</h4>
+                            <div class="flex-1 min-w-0">
+                                <div class="mb-2">
+                                    <h4 class="text-sm font-medium text-gray-700">设备类别详情</h4>
                                 </div>
-                                <div id="categoryLegend" class="space-y-2 max-h-80 overflow-y-auto">
+                                <div id="categoryLegend" class="space-y-1 max-h-48 overflow-y-auto text-sm">
                                     <!-- 动态生成的图例 -->
                                 </div>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- 部门分布图 - 扩展为全宽 -->
-                    <div class="bg-white rounded-xl shadow-md p-6">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-4">在用设备部门分布</h3>
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- 部门分布图 -->
+                    <div class="bg-white rounded-xl shadow-md p-4">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-3">在用设备部门分布</h3>
+                        <div class="flex flex-col lg:flex-row items-center gap-4">
                             <!-- 图表 -->
-                            <div class="flex justify-center">
-                                <canvas id="departmentChart" width="400" height="400"></canvas>
+                            <div class="flex-shrink-0">
+                                <canvas id="departmentChart" width="280" height="280"></canvas>
                             </div>
                             <!-- 图例 -->
-                            <div class="flex flex-col">
-                                <div class="mb-4">
-                                    <h4 class="text-sm font-medium text-gray-700 mb-2">部门详细信息</h4>
+                            <div class="flex-1 min-w-0">
+                                <div class="mb-2">
+                                    <h4 class="text-sm font-medium text-gray-700">部门详情</h4>
                                 </div>
-                                <div id="departmentLegend" class="space-y-2 max-h-80 overflow-y-auto">
+                                <div id="departmentLegend" class="space-y-1 max-h-48 overflow-y-auto text-sm">
                                     <!-- 动态生成的图例 -->
                                 </div>
                             </div>
@@ -788,16 +788,26 @@
                             '#EC4899',   // 粉色
                             '#6366F1'    // 靛蓝色
                         ],
-                        borderWidth: 2,
+                        borderWidth: 1,
                         borderColor: '#ffffff'
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    cutout: '60%',
                     plugins: {
                         legend: {
-                            display: false  // 禁用默认图例，使用自定义图例
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((context.parsed * 100) / total).toFixed(1);
+                                    return `${context.label}: ${context.parsed}台 (${percentage}%)`;
+                                }
+                            }
                         }
                     }
                 }
@@ -947,16 +957,26 @@
                             '#EC4899',   // 粉色
                             '#6366F1'    // 靛蓝色
                         ],
-                        borderWidth: 2,
+                        borderWidth: 1,
                         borderColor: '#ffffff'
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    cutout: '60%',
                     plugins: {
                         legend: {
-                            display: false  // 禁用默认图例，使用自定义图例
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((context.parsed * 100) / total).toFixed(1);
+                                    return `${context.label}: ${context.parsed}台 (${percentage}%)`;
+                                }
+                            }
                         }
                     }
                 }
@@ -984,20 +1004,21 @@
                 return;
             }
             
+            const total = data.reduce((total, d) => total + d.count, 0);
+            
             const legendHTML = data.map((item, index) => {
                 const color = colors[index % colors.length];
-                const percentage = data.reduce((total, d) => total + d.count, 0) > 0 ? 
-                    ((item.count / data.reduce((total, d) => total + d.count, 0)) * 100).toFixed(1) : 0;
+                const percentage = total > 0 ? ((item.count / total) * 100).toFixed(1) : 0;
                 
                 return `
-                    <div class="flex items-center justify-between py-2 px-3 hover:bg-gray-50 rounded-md">
-                        <div class="flex items-center">
-                            <div class="w-3 h-3 rounded-full mr-3" style="background-color: ${color}"></div>
-                            <span class="text-sm text-gray-800 font-medium" title="${item.name}">${item.name}</span>
+                    <div class="flex items-center justify-between py-1 px-2 hover:bg-gray-50 rounded text-xs">
+                        <div class="flex items-center min-w-0 flex-1">
+                            <div class="w-2 h-2 rounded-full mr-2 flex-shrink-0" style="background-color: ${color}"></div>
+                            <span class="text-gray-700 truncate" title="${item.name}">${item.name}</span>
                         </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="text-sm text-gray-600">${item.count}台</span>
-                            <span class="text-xs text-gray-500">(${percentage}%)</span>
+                        <div class="flex items-center space-x-1 flex-shrink-0">
+                            <span class="text-gray-600">${item.count}</span>
+                            <span class="text-gray-400">(${percentage}%)</span>
                         </div>
                     </div>
                 `;

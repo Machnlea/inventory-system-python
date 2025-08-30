@@ -1027,7 +1027,11 @@
             categories.forEach(cat => {
                 const option = document.createElement('option');
                 option.value = cat.id;
-                option.textContent = cat.name;
+                
+                // 创建带有图标的文本内容
+                const icon = getCategoryIcon(cat.name);
+                const iconColor = getIconColor(cat.name);
+                option.innerHTML = `<i class="fas ${icon} ${iconColor} mr-2"></i>${cat.name}`;
                 categoryFilter.appendChild(option);
             });
         }
@@ -1332,37 +1336,44 @@
                 // 获取设备名称用于调试
                 const equipmentName = row.querySelector('td:nth-child(2) .text-sm.font-medium')?.textContent || '未知设备';
                 
+                // 获取设备状态
+                const statusCell = row.querySelector('td:nth-child(3) span');
+                const equipmentStatus = statusCell ? statusCell.textContent.trim() : '';
+                
                 // 检查设备状态
                 const isOverdue = expiryDate < now;
                 const isMonthlyDue = expiryDate.getMonth() === currentMonth && expiryDate.getFullYear() === currentYear;
                 
                 console.log(`设备: ${equipmentName}`);
+                console.log(`  状态: ${equipmentStatus}`);
                 console.log(`  有效期: ${expiryDate.toLocaleString()}`);
                 console.log(`  是否超期: ${isOverdue}`);
                 console.log(`  是否本月待检: ${isMonthlyDue}`);
                 
                 // 移除现有的背景色类
-                row.classList.remove('bg-red-50', 'bg-yellow-50', 'bg-red-100', 'bg-yellow-100', 'bg-green-100');
+                row.classList.remove('bg-red-50', 'bg-yellow-50', 'bg-gray-50', 'bg-red-100', 'bg-yellow-100', 'bg-green-100');
                 
-                // 优先级：超期 > 本月待检 > 正常
-                if (isOverdue) {
-                    // 超期未检 - 淡红色背景（最高优先级）
-                    row.classList.add('bg-red-50');
-                    overdueCount++;
-                    console.log(`  -> 标记为超期（红色背景）`);
-                    
-                    // 如果同时也是本月待检，特别标注
-                    if (isMonthlyDue) {
-                        console.log(`  -> 注意：此设备既是超期又是本月待检！`);
-                    }
-                } 
+                // 优先级：停用/报废 > 本月待检 > 超期 > 正常
+                if (equipmentStatus === '停用' || equipmentStatus === '报废') {
+                    // 停用或报废 - 淡灰色背景（最高优先级）
+                    row.classList.add('bg-gray-50');
+                    normalCount++;
+                    console.log(`  -> 标记为${equipmentStatus}（灰色背景）`);
+                }
                 else if (isMonthlyDue) {
                     // 本月待检 - 淡黄色背景
                     row.classList.add('bg-yellow-50');
                     monthlyDueCount++;
                     console.log(`  -> 标记为本月待检（黄色背景）`);
-                } else {
-                    // 正常状态
+                }
+                else if (isOverdue) {
+                    // 超期未检 - 淡红色背景（只有在用设备才会检查超期）
+                    row.classList.add('bg-red-50');
+                    overdueCount++;
+                    console.log(`  -> 标记为超期（红色背景）`);
+                }
+                else {
+                    // 正常在用状态 - 无背景色
                     normalCount++;
                     console.log(`  -> 正常状态（无背景色）`);
                 }
@@ -1388,12 +1399,200 @@
         // 获取设备类别图标
         function getCategoryIcon(categoryName) {
             const iconMap = {
+                // 大类名称映射
+                '温度环境类': 'fa-temperature-half',
+                '长度/几何量类': 'fa-ruler',
+                '质量称量类': 'fa-weight-scale',
+                '时间测量类': 'fa-stopwatch',
+                '容量测量类': 'fa-vial',
+                '压力测量类': 'fa-gauge',
+                '电学测试类': 'fa-bolt',
+                '光学测试类': 'fa-eye',
+                '环境试验类': 'fa-cloud-sun',
+                '化学分析类': 'fa-flask',
+                '涂层检测类': 'fa-paint-roller',
+                '粘度流变类': 'fa-droplet',
+                '流量测量类': 'fa-gear',
+                '样品制备类': 'fa-brush',
+                '计量标准类': 'fa-gavel',
+                '信号处理与显示类': 'fa-tv',
+                
+                // 具体设备名称（作为备选）
+                '温湿度计': 'fa-temperature-half',
+                '玻璃液体温度计': 'fa-temperature-high',
+                '温湿度表': 'fa-temperature-low',
+                '工作用玻璃温度计': 'fa-temperature-three-quarters',
+                '迷你温湿度计': 'fa-temperature-quarter',
+                '数显温度计': 'fa-temperature-arrow-up',
+                '双金属温度计': 'fa-temperature-empty',
+                
+                // 长度/几何量类
+                '钢直尺': 'fa-ruler',
+                '外径千分尺': 'fa-ruler-combined',
+                '游标卡尺': 'fa-ruler-horizontal',
+                '杠杆千分尺': 'fa-ruler-vertical',
+                '钢卷尺': 'fa-tape',
+                '深度千分尺': 'fa-ruler',
+                '刀口尺': 'fa-slash',
+                '刀口直角尺': 'fa-square',
+                '高度游标卡尺': 'fa-ruler-vertical',
+                '塞尺': 'fa-grip-lines',
+                '数显千分尺': 'fa-calculator',
+                '数显卡尺': 'fa-mobile-screen',
+                '深度游标卡尺': 'fa-ruler-vertical',
+                '条式水平仪': 'fa-level',
+                '内径百分表': 'fa-circle-notch',
+                '磁性位移测量仪': 'fa-magnet',
+                '立式光学计': 'fa-eye',
+                '百分表': 'fa-gauge-high',
+                '表面粗糙度比较样块': 'fa-grip',
+                
+                // 质量称量类
+                '案秤': 'fa-weight-scale',
+                '电子秤': 'fa-scale-balanced',
+                '电子台秤': 'fa-scale-unbalanced',
+                '工业天平': 'fa-weight-hanging',
+                '电子天平': 'fa-balance-scale-right',
+                '电子计数秤': 'fa-calculator',
+                '防爆电子秤': 'fa-shield-halved',
+                '数字式电子汽车衡': 'fa-truck',
+                '砝码': 'fa-weight',
+                
+                // 时间测量类
+                '电子秒表': 'fa-stopwatch',
+                
+                // 容量测量类
+                '分度吸量管': 'fa-droplet',
+                '酸式滴定管': 'fa-flask',
+                '碱式滴定管': 'fa-flask-vial',
+                '量杯': 'fa-mug-hot',
+                '量筒': 'fa-test-tube',
+                '单标线吸量管': 'fa-droplet',
+                '酸碱两用聚四氟滴定管': 'fa-flask',
+                '单标线容量瓶': 'fa-bottle-droplet',
+                '可调移液器': 'fa-pipette',
+                '移液枪': 'fa-syringe',
+                
+                // 压力测量类
                 '压力表': 'fa-gauge',
-                '温度计': 'fa-thermometer-half',
-                '电子秤': 'fa-balance-scale',
-                '卡尺': 'fa-tachometer-alt',
-                '万用表': 'fa-microchip',
-                '游标卡尺': 'fa-tachometer-alt'
+                '乙炔压力表': 'fa-gauge-high',
+                '氧压力表': 'fa-gauge-simple-high',
+                '氢气压力表': 'fa-gauge-simple',
+                '氩气压力表': 'fa-gauge-max',
+                '氮气压力表': 'fa-gauge-min',
+                '氦气压力表': 'fa-gauge-simple-min',
+                '电接点压力表': 'fa-plug',
+                '抗震压力表': 'fa-gauge-circle-bolt',
+                '耐震压力表': 'fa-gauge-circle-exclamation',
+                '精密真空表': 'fa-gauge-circle-minus',
+                '精密压力表': 'fa-gauge-circle-plus',
+                '数字式差压计': 'fa-gauge-circle-arrow-down',
+                
+                // 电学测试类
+                '耐压测试仪': 'fa-bolt',
+                '绝缘电阻表': 'fa-plug-circle-bolt',
+                '数字多用表': 'fa-multimeter',
+                'MT500P多路温度记录仪': 'fa-chart-line',
+                '高绝缘电阻测试仪': 'fa-plug-circle-exclamation',
+                '旋转式直流电阻箱': 'fa-dharmachakra',
+                '转换开关': 'fa-toggle-on',
+                '表面电阻测试仪': 'fa-square-nfi',
+                
+                // 光学测试类
+                '色差仪': 'fa-palette',
+                '白度仪': 'fa-circle-half-stroke',
+                '标准光源对色灯箱': 'fa-lightbulb',
+                '目视比色箱': 'fa-eye',
+                '黑白格玻璃板': 'fa-chess-board',
+                '铁钴比色计': 'fa-vial',
+                '光泽度仪': 'fa-star',
+                '阿贝折射仪': 'fa-water',
+                '反射率测定仪': 'fa-sun',
+                
+                // 环境试验类
+                '氙灯老化试验箱': 'fa-sun-bright',
+                '紫外老化试验箱': 'fa-sun-plant-wilt',
+                '盐雾试验机': 'fa-smog',
+                '高低温交变湿热实验箱': 'fa-cloud-rain',
+                '紫外综合试验箱': 'fa-cloud-sun',
+                
+                // 化学分析类
+                '气相色谱仪': 'fa-chart-column',
+                '紫外可见分光光度计': 'fa-wave-square',
+                '紫外分光光度计': 'fa-wave-pulse',
+                '原子吸收分光光度计': 'fa-atom',
+                'ICP发射光谱仪': 'fa-satellite-dish',
+                '凝胶色谱仪': 'fa-dna',
+                '化学需氧量（COD）快速测定仪': 'fa-flask-vial',
+                '水分测试仪': 'fa-droplet-slash',
+                '自动快速平衡法微量闪点测试仪': 'fa-fire-flame-curved',
+                '笔试PH计': 'fa-pen-ruler',
+                '微量水分测定仪': 'fa-droplet',
+                'PH计': 'fa-flask-round-poison',
+                
+                // 涂层检测类
+                '铅笔硬度计': 'fa-pencil',
+                '数显卡规式测厚仪': 'fa-ruler-combined',
+                '磁性测厚仪': 'fa-magnet',
+                '百格板': 'fa-grid-3x3',
+                '漆膜划格器': 'fa-grid-2-plus',
+                '漆膜柔韧性测定仪': 'fa-wave-square',
+                '漆膜弹性试验仪': 'fa-expand',
+                '干燥时间试验器': 'fa-hourglass-half',
+                '漆膜回粘性测定器': 'fa-hand-back-fist',
+                '杯突实验仪': 'fa-bowl-food',
+                '磨耗仪': 'fa-circle-notch',
+                '建筑涂料耐洗刷仪': 'fa-brush',
+                '流挂仪': 'fa-water',
+                '漆膜干燥测定仪': 'fa-hourglass',
+                '摩擦系数仪': 'fa-arrows-up-down-left-right',
+                '涂层测厚仪': 'fa-ruler-horizontal',
+                '厚漆腻子稠度测定仪': 'fa-fill-drip',
+                '比重杯': 'fa-beaker',
+                '摆杆式硬度试验计': 'fa-gavel',
+                '附着力测试仪': 'fa-hand',
+                '简支梁冲击试验机': 'fa-hammer',
+                '微机控制电子万能试验机': 'fa-computer',
+                '颗粒强度测定仪': 'fa-circle-dot',
+                '汽车密封条磨耗试验机': 'fa-car',
+                
+                // 粘度流变类
+                'ISO流出杯': 'fa-fill-drip',
+                '涂-1#粘度杯': 'fa-fill',
+                '涂-4#粘度杯': 'fa-droplet',
+                '斯托默粘度计': 'fa-tachometer-alt',
+                '旋转粘度计': 'fa-rotate',
+                '数字式粘度计': 'fa-mobile-button',
+                '粘度杯': 'fa-bottle-droplet',
+                
+                // 流量测量类
+                '罗茨流量计': 'fa-gear',
+                '腰轮流量计': 'fa-cog',
+                '齿轮流量计': 'fa-gears',
+                '智能浮子流量计': 'fa-circle-up',
+                
+                // 样品制备类
+                '湿膜制备器': 'fa-brush',
+                '涂膜器': 'fa-paint-roller',
+                '漆膜制备器': 'fa-paintbrush',
+                '腻子涂刮器': 'fa-scraper',
+                '可调式制备器（数显式）': 'fa-sliders',
+                
+                // 计量标准类
+                '标准铂电阻温度计': 'fa-temperature-high',
+                'M1级砝码': 'fa-weight',
+                '标准水银温度计': 'fa-temperature-high',
+                '标准水槽': 'fa-bath',
+                '标准油槽': 'fa-oil-can',
+                
+                // 信号处理与显示类
+                '温度变送器': 'fa-broadcast-tower',
+                '压力变送器': 'fa-satellite-dish',
+                '压力液位变送器': 'fa-satellite',
+                '智能变送器': 'fa-microchip',
+                '数显表': 'fa-display',
+                '无纸记录仪': 'fa-chart-simple',
+                '雷达液位计': 'fa-satellite-dish'
             };
             return iconMap[categoryName] || 'fa-cogs';
         }
@@ -1401,12 +1600,200 @@
         // 获取图标颜色
         function getIconColor(categoryName) {
             const colorMap = {
-                '压力表': 'text-blue-600',
-                '温度计': 'text-yellow-600',
-                '电子秤': 'text-red-600',
-                '卡尺': 'text-green-600',
-                '万用表': 'text-purple-600',
-                '游标卡尺': 'text-green-600'
+                // 大类名称映射
+                '温度环境类': 'text-red-600',
+                '长度/几何量类': 'text-blue-600',
+                '质量称量类': 'text-green-600',
+                '时间测量类': 'text-purple-600',
+                '容量测量类': 'text-cyan-600',
+                '压力测量类': 'text-orange-600',
+                '电学测试类': 'text-yellow-600',
+                '光学测试类': 'text-pink-600',
+                '环境试验类': 'text-indigo-600',
+                '化学分析类': 'text-amber-600',
+                '涂层检测类': 'text-rose-600',
+                '粘度流变类': 'text-lime-600',
+                '流量测量类': 'text-emerald-600',
+                '样品制备类': 'text-teal-600',
+                '计量标准类': 'text-fuchsia-600',
+                '信号处理与显示类': 'text-sky-600',
+                
+                // 温度环境类 - 红色系
+                '温湿度计': 'text-red-600',
+                '玻璃液体温度计': 'text-red-500',
+                '温湿度表': 'text-red-700',
+                '工作用玻璃温度计': 'text-red-800',
+                '迷你温湿度计': 'text-red-400',
+                '数显温度计': 'text-red-600',
+                '双金属温度计': 'text-red-500',
+                
+                // 长度/几何量类 - 蓝色系
+                '钢直尺': 'text-blue-600',
+                '外径千分尺': 'text-blue-700',
+                '游标卡尺': 'text-blue-500',
+                '杠杆千分尺': 'text-blue-800',
+                '钢卷尺': 'text-blue-400',
+                '深度千分尺': 'text-blue-600',
+                '刀口尺': 'text-blue-700',
+                '刀口直角尺': 'text-blue-800',
+                '高度游标卡尺': 'text-blue-600',
+                '塞尺': 'text-blue-500',
+                '数显千分尺': 'text-blue-400',
+                '数显卡尺': 'text-blue-600',
+                '深度游标卡尺': 'text-blue-700',
+                '条式水平仪': 'text-blue-800',
+                '内径百分表': 'text-blue-500',
+                '磁性位移测量仪': 'text-blue-600',
+                '立式光学计': 'text-blue-400',
+                '百分表': 'text-blue-700',
+                '表面粗糙度比较样块': 'text-blue-800',
+                
+                // 质量称量类 - 绿色系
+                '案秤': 'text-green-600',
+                '电子秤': 'text-green-500',
+                '电子台秤': 'text-green-700',
+                '工业天平': 'text-green-800',
+                '电子天平': 'text-green-400',
+                '电子计数秤': 'text-green-600',
+                '防爆电子秤': 'text-green-500',
+                '数字式电子汽车衡': 'text-green-700',
+                '砝码': 'text-green-800',
+                
+                // 时间测量类 - 紫色系
+                '电子秒表': 'text-purple-600',
+                
+                // 容量测量类 - 青色系
+                '分度吸量管': 'text-cyan-600',
+                '酸式滴定管': 'text-cyan-500',
+                '碱式滴定管': 'text-cyan-700',
+                '量杯': 'text-cyan-800',
+                '量筒': 'text-cyan-400',
+                '单标线吸量管': 'text-cyan-600',
+                '酸碱两用聚四氟滴定管': 'text-cyan-500',
+                '单标线容量瓶': 'text-cyan-700',
+                '可调移液器': 'text-cyan-800',
+                '移液枪': 'text-cyan-400',
+                
+                // 压力测量类 - 橙色系
+                '压力表': 'text-orange-600',
+                '乙炔压力表': 'text-orange-500',
+                '氧压力表': 'text-orange-700',
+                '氢气压力表': 'text-orange-800',
+                '氩气压力表': 'text-orange-400',
+                '氮气压力表': 'text-orange-600',
+                '氦气压力表': 'text-orange-500',
+                '电接点压力表': 'text-orange-700',
+                '抗震压力表': 'text-orange-800',
+                '耐震压力表': 'text-orange-400',
+                '精密真空表': 'text-orange-600',
+                '精密压力表': 'text-orange-500',
+                '数字式差压计': 'text-orange-700',
+                
+                // 电学测试类 - 黄色系
+                '耐压测试仪': 'text-yellow-600',
+                '绝缘电阻表': 'text-yellow-500',
+                '数字多用表': 'text-yellow-700',
+                'MT500P多路温度记录仪': 'text-yellow-800',
+                '高绝缘电阻测试仪': 'text-yellow-400',
+                '旋转式直流电阻箱': 'text-yellow-600',
+                '转换开关': 'text-yellow-500',
+                '表面电阻测试仪': 'text-yellow-700',
+                
+                // 光学测试类 - 粉色系
+                '色差仪': 'text-pink-600',
+                '白度仪': 'text-pink-500',
+                '标准光源对色灯箱': 'text-pink-700',
+                '目视比色箱': 'text-pink-800',
+                '黑白格玻璃板': 'text-pink-400',
+                '铁钴比色计': 'text-pink-600',
+                '光泽度仪': 'text-pink-500',
+                '阿贝折射仪': 'text-pink-700',
+                '反射率测定仪': 'text-pink-800',
+                
+                // 环境试验类 - 靛蓝色系
+                '氙灯老化试验箱': 'text-indigo-600',
+                '紫外老化试验箱': 'text-indigo-500',
+                '盐雾试验机': 'text-indigo-700',
+                '高低温交变湿热实验箱': 'text-indigo-800',
+                '紫外综合试验箱': 'text-indigo-400',
+                
+                // 化学分析类 - 琥珀色系
+                '气相色谱仪': 'text-amber-600',
+                '紫外可见分光光度计': 'text-amber-500',
+                '紫外分光光度计': 'text-amber-700',
+                '原子吸收分光光度计': 'text-amber-800',
+                'ICP发射光谱仪': 'text-amber-400',
+                '凝胶色谱仪': 'text-amber-600',
+                '化学需氧量（COD）快速测定仪': 'text-amber-500',
+                '水分测试仪': 'text-amber-700',
+                '自动快速平衡法微量闪点测试仪': 'text-amber-800',
+                '笔试PH计': 'text-amber-400',
+                '微量水分测定仪': 'text-amber-600',
+                'PH计': 'text-amber-500',
+                
+                // 涂层检测类 - 玫瑰色系
+                '铅笔硬度计': 'text-rose-600',
+                '数显卡规式测厚仪': 'text-rose-500',
+                '磁性测厚仪': 'text-rose-700',
+                '百格板': 'text-rose-800',
+                '漆膜划格器': 'text-rose-400',
+                '漆膜柔韧性测定仪': 'text-rose-600',
+                '漆膜弹性试验仪': 'text-rose-500',
+                '干燥时间试验器': 'text-rose-700',
+                '漆膜回粘性测定器': 'text-rose-800',
+                '杯突实验仪': 'text-rose-400',
+                '磨耗仪': 'text-rose-600',
+                '建筑涂料耐洗刷仪': 'text-rose-500',
+                '流挂仪': 'text-rose-700',
+                '漆膜干燥测定仪': 'text-rose-800',
+                '摩擦系数仪': 'text-rose-400',
+                '涂层测厚仪': 'text-rose-600',
+                '厚漆腻子稠度测定仪': 'text-rose-500',
+                '比重杯': 'text-rose-700',
+                '摆杆式硬度试验计': 'text-rose-800',
+                '附着力测试仪': 'text-rose-400',
+                '简支梁冲击试验机': 'text-rose-600',
+                '微机控制电子万能试验机': 'text-rose-500',
+                '颗粒强度测定仪': 'text-rose-700',
+                '汽车密封条磨耗试验机': 'text-rose-800',
+                
+                // 粘度流变类 - 石灰色系
+                'ISO流出杯': 'text-lime-600',
+                '涂-1#粘度杯': 'text-lime-500',
+                '涂-4#粘度杯': 'text-lime-700',
+                '斯托默粘度计': 'text-lime-800',
+                '旋转粘度计': 'text-lime-400',
+                '数字式粘度计': 'text-lime-600',
+                '粘度杯': 'text-lime-500',
+                
+                // 流量测量类 - 翠绿色系
+                '罗茨流量计': 'text-emerald-600',
+                '腰轮流量计': 'text-emerald-500',
+                '齿轮流量计': 'text-emerald-700',
+                '智能浮子流量计': 'text-emerald-800',
+                
+                // 样品制备类 - 蓝绿色系
+                '湿膜制备器': 'text-teal-600',
+                '涂膜器': 'text-teal-500',
+                '漆膜制备器': 'text-teal-700',
+                '腻子涂刮器': 'text-teal-800',
+                '可调式制备器（数显式）': 'text-teal-400',
+                
+                // 计量标准类 - 紫红色系
+                '标准铂电阻温度计': 'text-fuchsia-600',
+                'M1级砝码': 'text-fuchsia-500',
+                '标准水银温度计': 'text-fuchsia-700',
+                '标准水槽': 'text-fuchsia-800',
+                '标准油槽': 'text-fuchsia-400',
+                
+                // 信号处理与显示类 - 天蓝色系
+                '温度变送器': 'text-sky-600',
+                '压力变送器': 'text-sky-500',
+                '压力液位变送器': 'text-sky-700',
+                '智能变送器': 'text-sky-800',
+                '数显表': 'text-sky-400',
+                '无纸记录仪': 'text-sky-600',
+                '雷达液位计': 'text-sky-500'
             };
             return colorMap[categoryName] || 'text-gray-600';
         }
@@ -1414,12 +1801,200 @@
         // 获取类别背景色
         function getCategoryColor(categoryName) {
             const colorMap = {
-                '压力表': 'bg-blue-100',
-                '温度计': 'bg-yellow-100',
-                '电子秤': 'bg-red-100',
-                '卡尺': 'bg-green-100',
-                '万用表': 'bg-purple-100',
-                '游标卡尺': 'bg-green-100'
+                // 大类名称映射
+                '温度环境类': 'bg-red-100',
+                '长度/几何量类': 'bg-blue-100',
+                '质量称量类': 'bg-green-100',
+                '时间测量类': 'bg-purple-100',
+                '容量测量类': 'bg-cyan-100',
+                '压力测量类': 'bg-orange-100',
+                '电学测试类': 'bg-yellow-100',
+                '光学测试类': 'bg-pink-100',
+                '环境试验类': 'bg-indigo-100',
+                '化学分析类': 'bg-amber-100',
+                '涂层检测类': 'bg-rose-100',
+                '粘度流变类': 'bg-lime-100',
+                '流量测量类': 'bg-emerald-100',
+                '样品制备类': 'bg-teal-100',
+                '计量标准类': 'bg-fuchsia-100',
+                '信号处理与显示类': 'bg-sky-100',
+                
+                // 温度环境类 - 红色系
+                '温湿度计': 'bg-red-100',
+                '玻璃液体温度计': 'bg-red-50',
+                '温湿度表': 'bg-red-200',
+                '工作用玻璃温度计': 'bg-red-300',
+                '迷你温湿度计': 'bg-red-25',
+                '数显温度计': 'bg-red-100',
+                '双金属温度计': 'bg-red-50',
+                
+                // 长度/几何量类 - 蓝色系
+                '钢直尺': 'bg-blue-100',
+                '外径千分尺': 'bg-blue-50',
+                '游标卡尺': 'bg-blue-200',
+                '杠杆千分尺': 'bg-blue-300',
+                '钢卷尺': 'bg-blue-25',
+                '深度千分尺': 'bg-blue-100',
+                '刀口尺': 'bg-blue-50',
+                '刀口直角尺': 'bg-blue-200',
+                '高度游标卡尺': 'bg-blue-300',
+                '塞尺': 'bg-blue-25',
+                '数显千分尺': 'bg-blue-100',
+                '数显卡尺': 'bg-blue-50',
+                '深度游标卡尺': 'bg-blue-200',
+                '条式水平仪': 'bg-blue-300',
+                '内径百分表': 'bg-blue-25',
+                '磁性位移测量仪': 'bg-blue-100',
+                '立式光学计': 'bg-blue-50',
+                '百分表': 'bg-blue-200',
+                '表面粗糙度比较样块': 'bg-blue-300',
+                
+                // 质量称量类 - 绿色系
+                '案秤': 'bg-green-100',
+                '电子秤': 'bg-green-50',
+                '电子台秤': 'bg-green-200',
+                '工业天平': 'bg-green-300',
+                '电子天平': 'bg-green-25',
+                '电子计数秤': 'bg-green-100',
+                '防爆电子秤': 'bg-green-50',
+                '数字式电子汽车衡': 'bg-green-200',
+                '砝码': 'bg-green-300',
+                
+                // 时间测量类 - 紫色系
+                '电子秒表': 'bg-purple-100',
+                
+                // 容量测量类 - 青色系
+                '分度吸量管': 'bg-cyan-100',
+                '酸式滴定管': 'bg-cyan-50',
+                '碱式滴定管': 'bg-cyan-200',
+                '量杯': 'bg-cyan-300',
+                '量筒': 'bg-cyan-25',
+                '单标线吸量管': 'bg-cyan-100',
+                '酸碱两用聚四氟滴定管': 'bg-cyan-50',
+                '单标线容量瓶': 'bg-cyan-200',
+                '可调移液器': 'bg-cyan-300',
+                '移液枪': 'bg-cyan-25',
+                
+                // 压力测量类 - 橙色系
+                '压力表': 'bg-orange-100',
+                '乙炔压力表': 'bg-orange-50',
+                '氧压力表': 'bg-orange-200',
+                '氢气压力表': 'bg-orange-300',
+                '氩气压力表': 'bg-orange-25',
+                '氮气压力表': 'bg-orange-100',
+                '氦气压力表': 'bg-orange-50',
+                '电接点压力表': 'bg-orange-200',
+                '抗震压力表': 'bg-orange-300',
+                '耐震压力表': 'bg-orange-25',
+                '精密真空表': 'bg-orange-100',
+                '精密压力表': 'bg-orange-50',
+                '数字式差压计': 'bg-orange-200',
+                
+                // 电学测试类 - 黄色系
+                '耐压测试仪': 'bg-yellow-100',
+                '绝缘电阻表': 'bg-yellow-50',
+                '数字多用表': 'bg-yellow-200',
+                'MT500P多路温度记录仪': 'bg-yellow-300',
+                '高绝缘电阻测试仪': 'bg-yellow-25',
+                '旋转式直流电阻箱': 'bg-yellow-100',
+                '转换开关': 'bg-yellow-50',
+                '表面电阻测试仪': 'bg-yellow-200',
+                
+                // 光学测试类 - 粉色系
+                '色差仪': 'bg-pink-100',
+                '白度仪': 'bg-pink-50',
+                '标准光源对色灯箱': 'bg-pink-200',
+                '目视比色箱': 'bg-pink-300',
+                '黑白格玻璃板': 'bg-pink-25',
+                '铁钴比色计': 'bg-pink-100',
+                '光泽度仪': 'bg-pink-50',
+                '阿贝折射仪': 'bg-pink-200',
+                '反射率测定仪': 'bg-pink-300',
+                
+                // 环境试验类 - 靛蓝色系
+                '氙灯老化试验箱': 'bg-indigo-100',
+                '紫外老化试验箱': 'bg-indigo-50',
+                '盐雾试验机': 'bg-indigo-200',
+                '高低温交变湿热实验箱': 'bg-indigo-300',
+                '紫外综合试验箱': 'bg-indigo-25',
+                
+                // 化学分析类 - 琥珀色系
+                '气相色谱仪': 'bg-amber-100',
+                '紫外可见分光光度计': 'bg-amber-50',
+                '紫外分光光度计': 'bg-amber-200',
+                '原子吸收分光光度计': 'bg-amber-300',
+                'ICP发射光谱仪': 'bg-amber-25',
+                '凝胶色谱仪': 'bg-amber-100',
+                '化学需氧量（COD）快速测定仪': 'bg-amber-50',
+                '水分测试仪': 'bg-amber-200',
+                '自动快速平衡法微量闪点测试仪': 'bg-amber-300',
+                '笔试PH计': 'bg-amber-25',
+                '微量水分测定仪': 'bg-amber-100',
+                'PH计': 'bg-amber-50',
+                
+                // 涂层检测类 - 玫瑰色系
+                '铅笔硬度计': 'bg-rose-100',
+                '数显卡规式测厚仪': 'bg-rose-50',
+                '磁性测厚仪': 'bg-rose-200',
+                '百格板': 'bg-rose-300',
+                '漆膜划格器': 'bg-rose-25',
+                '漆膜柔韧性测定仪': 'bg-rose-100',
+                '漆膜弹性试验仪': 'bg-rose-50',
+                '干燥时间试验器': 'bg-rose-200',
+                '漆膜回粘性测定器': 'bg-rose-300',
+                '杯突实验仪': 'bg-rose-25',
+                '磨耗仪': 'bg-rose-100',
+                '建筑涂料耐洗刷仪': 'bg-rose-50',
+                '流挂仪': 'bg-rose-200',
+                '漆膜干燥测定仪': 'bg-rose-300',
+                '摩擦系数仪': 'bg-rose-25',
+                '涂层测厚仪': 'bg-rose-100',
+                '厚漆腻子稠度测定仪': 'bg-rose-50',
+                '比重杯': 'bg-rose-200',
+                '摆杆式硬度试验计': 'bg-rose-300',
+                '附着力测试仪': 'bg-rose-25',
+                '简支梁冲击试验机': 'bg-rose-100',
+                '微机控制电子万能试验机': 'bg-rose-50',
+                '颗粒强度测定仪': 'bg-rose-200',
+                '汽车密封条磨耗试验机': 'bg-rose-300',
+                
+                // 粘度流变类 - 石灰色系
+                'ISO流出杯': 'bg-lime-100',
+                '涂-1#粘度杯': 'bg-lime-50',
+                '涂-4#粘度杯': 'bg-lime-200',
+                '斯托默粘度计': 'bg-lime-300',
+                '旋转粘度计': 'bg-lime-25',
+                '数字式粘度计': 'bg-lime-100',
+                '粘度杯': 'bg-lime-50',
+                
+                // 流量测量类 - 翠绿色系
+                '罗茨流量计': 'bg-emerald-100',
+                '腰轮流量计': 'bg-emerald-50',
+                '齿轮流量计': 'bg-emerald-200',
+                '智能浮子流量计': 'bg-emerald-300',
+                
+                // 样品制备类 - 蓝绿色系
+                '湿膜制备器': 'bg-teal-100',
+                '涂膜器': 'bg-teal-50',
+                '漆膜制备器': 'bg-teal-200',
+                '腻子涂刮器': 'bg-teal-300',
+                '可调式制备器（数显式）': 'bg-teal-25',
+                
+                // 计量标准类 - 紫红色系
+                '标准铂电阻温度计': 'bg-fuchsia-100',
+                'M1级砝码': 'bg-fuchsia-50',
+                '标准水银温度计': 'bg-fuchsia-200',
+                '标准水槽': 'bg-fuchsia-300',
+                '标准油槽': 'bg-fuchsia-25',
+                
+                // 信号处理与显示类 - 天蓝色系
+                '温度变送器': 'bg-sky-100',
+                '压力变送器': 'bg-sky-50',
+                '压力液位变送器': 'bg-sky-200',
+                '智能变送器': 'bg-sky-300',
+                '数显表': 'bg-sky-25',
+                '无纸记录仪': 'bg-sky-100',
+                '雷达液位计': 'bg-sky-50'
             };
             return colorMap[categoryName] || 'bg-gray-100';
         }
@@ -1969,7 +2544,11 @@
                 response.forEach(category => {
                     const option = document.createElement('option');
                     option.value = category.id;
-                    option.textContent = category.name;
+                    
+                    // 创建带有图标的文本内容
+                    const icon = getCategoryIcon(category.name);
+                    const iconColor = getIconColor(category.name);
+                    option.innerHTML = `<i class="fas ${icon} ${iconColor} mr-2"></i>${category.name}`;
                     select.appendChild(option);
                 });
             } catch (error) {

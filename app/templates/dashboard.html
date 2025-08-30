@@ -387,21 +387,54 @@
             if (logoutBtn) {
                 logoutBtn.addEventListener('click', function() {
                     if (confirm('确定要退出登录吗？')) {
-                        // 使用会话管理器清除登录状态
-                        if (window.tabSessionManager) {
-                            tabSessionManager.clearSession();
+                        // 先调用后端登出API销毁会话
+                        const token = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
+                        if (token) {
+                            fetch('/api/auth/logout', {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': `Bearer ${token}`,
+                                    'Content-Type': 'application/json'
+                                }
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                console.log('Logout response:', data);
+                            })
+                            .catch(error => {
+                                console.error('Logout error:', error);
+                            })
+                            .finally(() => {
+                                // 使用会话管理器清除登录状态
+                                if (window.tabSessionManager) {
+                                    tabSessionManager.clearSession();
+                                } else {
+                                    // 兼容旧方式：清除本地存储
+                                    sessionStorage.removeItem('access_token');
+                                    sessionStorage.removeItem('refresh_token');
+                                    sessionStorage.removeItem('user_info');
+                                    localStorage.removeItem('access_token');
+                                    localStorage.removeItem('refresh_token');
+                                    localStorage.removeItem('user_info');
+                                }
+                                
+                                // 跳转到登录页面
+                                window.location.href = '/login';
+                            });
                         } else {
-                            // 兼容旧方式：清除本地存储
-                            sessionStorage.removeItem('access_token');
-                            sessionStorage.removeItem('refresh_token');
-                            sessionStorage.removeItem('user_info');
-                            localStorage.removeItem('access_token');
-                            localStorage.removeItem('refresh_token');
-                            localStorage.removeItem('user_info');
+                            // 如果没有token，直接清除并跳转
+                            if (window.tabSessionManager) {
+                                tabSessionManager.clearSession();
+                            } else {
+                                sessionStorage.removeItem('access_token');
+                                sessionStorage.removeItem('refresh_token');
+                                sessionStorage.removeItem('user_info');
+                                localStorage.removeItem('access_token');
+                                localStorage.removeItem('refresh_token');
+                                localStorage.removeItem('user_info');
+                            }
+                            window.location.href = '/login';
                         }
-                        
-                        // 跳转到登录页面
-                        window.location.href = '/login';
                     }
                 });
             }

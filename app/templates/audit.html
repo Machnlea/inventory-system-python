@@ -437,18 +437,47 @@
 
             // 登出按钮
             document.getElementById('logout-btn').addEventListener('click', function() {
-                // 清除sessionStorage（优先）
-                sessionStorage.removeItem('access_token');
-                sessionStorage.removeItem('refresh_token');
-                sessionStorage.removeItem('user_info');
-                
-                // 兼容旧系统：也清除localStorage
-                localStorage.removeItem('access_token');
-                localStorage.removeItem('refresh_token');
-                localStorage.removeItem('user_info');
-                localStorage.removeItem('current_user');
-                
-                window.location.href = '/login';
+                // 先调用后端登出API销毁会话
+                const token = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
+                if (token) {
+                    fetch('/api/auth/logout', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Logout response:', data);
+                    })
+                    .catch(error => {
+                        console.error('Logout error:', error);
+                    })
+                    .finally(() => {
+                        // 清除本地存储
+                        sessionStorage.removeItem('access_token');
+                        sessionStorage.removeItem('refresh_token');
+                        sessionStorage.removeItem('user_info');
+                        localStorage.removeItem('access_token');
+                        localStorage.removeItem('refresh_token');
+                        localStorage.removeItem('user_info');
+                        localStorage.removeItem('current_user');
+                        
+                        window.location.href = '/login';
+                    });
+                } else {
+                    // 如果没有token，直接清除并跳转
+                    sessionStorage.removeItem('access_token');
+                    sessionStorage.removeItem('refresh_token');
+                    sessionStorage.removeItem('user_info');
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('refresh_token');
+                    localStorage.removeItem('user_info');
+                    localStorage.removeItem('current_user');
+                    
+                    window.location.href = '/login';
+                }
             });
 
             // 筛选按钮

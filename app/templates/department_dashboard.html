@@ -924,9 +924,35 @@
             // 退出登录
             document.getElementById('logoutBtn').addEventListener('click', function() {
                 if (confirm('确定要退出登录吗？')) {
-                    sessionStorage.removeItem('department_access_token');
-                    sessionStorage.removeItem('department_user_info');
-                    window.location.href = '/department/login';
+                    // 先调用后端登出API销毁会话
+                    const token = sessionStorage.getItem('department_access_token');
+                    if (token) {
+                        fetch('/api/auth/logout', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            console.log('Logout response:', data);
+                        })
+                        .catch(error => {
+                            console.error('Logout error:', error);
+                        })
+                        .finally(() => {
+                            // 清除本地存储
+                            sessionStorage.removeItem('department_access_token');
+                            sessionStorage.removeItem('department_user_info');
+                            window.location.href = '/department/login';
+                        });
+                    } else {
+                        // 如果没有token，直接清除并跳转
+                        sessionStorage.removeItem('department_access_token');
+                        sessionStorage.removeItem('department_user_info');
+                        window.location.href = '/department/login';
+                    }
                 }
             });
         });

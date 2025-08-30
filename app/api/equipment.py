@@ -620,6 +620,82 @@ def batch_export_selected_equipments(
         headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"}
     )
 
+@router.post("/batch/transfer")
+def batch_transfer_equipments(
+    request_data: dict,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """批量转移设备到新部门"""
+    equipment_ids = request_data.get('equipment_ids', [])
+    target_department_id = request_data.get('target_department_id')
+    
+    if not equipment_ids:
+        raise HTTPException(status_code=400, detail="未选择设备")
+    
+    if not target_department_id:
+        raise HTTPException(status_code=400, detail="未选择目标部门")
+    
+    # 检查目标部门是否存在
+    from app.models.models import Department
+    target_department = db.query(Department).filter(Department.id == target_department_id).first()
+    if not target_department:
+        raise HTTPException(status_code=404, detail="目标部门不存在")
+    
+    success_count = 0
+    error_count = 0
+    transferred_equipment_names = []
+    
+    for equipment_id in equipment_ids:
+        try:
+            # 检查设备是否存在且用户有权限
+            db_equipment = equipment.get_equipment(
+                db, equipment_id=equipment_id,
+                user_id=current_user.id, is_admin=current_user.is_admin
+            )
+            if db_equipment is None:
+                error_count += 1
+                continue
+            
+            # 记录原部门信息
+            original_department = db_equipment.department.name
+            
+            # 更新设备部门
+            from app.schemas.schemas import EquipmentUpdate
+            equipment_update = EquipmentUpdate(department_id=target_department_id)
+            equipment.update_equipment(db, equipment_id=equipment_id, equipment_update=equipment_update)
+            
+            # 记录操作日志
+            create_audit_log(
+                db=db,
+                user_id=current_user.id,
+                equipment_id=int(equipment_id),
+                action="批量转移",
+                description=f"批量转移设备 {db_equipment.name} 从 {original_department} 到 {target_department.name}"
+            )
+            
+            transferred_equipment_names.append(f"{db_equipment.name} ({db_equipment.internal_id})")
+            success_count += 1
+            
+        except Exception:
+            error_count += 1
+            continue
+    
+    # 记录总体操作日志
+    create_audit_log(
+        db=db,
+        user_id=current_user.id,
+        action="批量操作",
+        description=f"批量转移设备，成功{success_count}台，失败{error_count}台"
+    )
+    
+    return {
+        "message": f"批量转移完成，成功转移{success_count}台设备到 {target_department.name}",
+        "success_count": success_count,
+        "error_count": error_count,
+        "transferred_equipment": transferred_equipment_names
+    }
+
 @router.post("/search", response_model=PaginatedEquipment)
 def search_equipments(search_params: EquipmentSearch, skip: int = 0, limit: int = 999999,
                      db: Session = Depends(get_db),

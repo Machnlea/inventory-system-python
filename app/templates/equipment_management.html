@@ -738,6 +738,38 @@
             </div>
         </div>
     </div>
+    <!-- 批量转移模态框 -->
+    <div id="batchTransferModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-900">批量转移设备</h3>
+                <button class="text-gray-400 hover:text-gray-600" onclick="closeBatchTransferModal()">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-4">
+                    <p class="text-sm text-gray-600 mb-4">已选择 <span id="batchTransferCount" class="font-semibold text-gray-900">0</span> 台设备</p>
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">目标部门</label>
+                        <select id="targetDepartment" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="">请选择目标部门</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end space-x-3">
+                    <button class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400" onclick="closeBatchTransferModal()">
+                        取消
+                    </button>
+                    <button id="batchTransferBtn" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed" onclick="performBatchTransfer()" disabled>
+                        <i class="fas fa-arrows-alt mr-2"></i>确认转移
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- 单个设备检定日期更新模态框 -->
     <div id="singleCalibrationModal" class="modal">
@@ -1710,7 +1742,7 @@
                     performBatchExport(selectedIds);
                     break;
                 case 'move':
-                    showNotification('批量转移功能开发中...', 'info');
+                    openBatchTransferModal(selectedIds);
                     break;
                 case 'status':
                     openBatchStatusModal(selectedIds);
@@ -1815,6 +1847,81 @@
                 console.error('批量状态更新失败:', error);
                 showNotification('批量状态更新失败: ' + error.message, 'error');
                 document.getElementById('batchStatusBtn').disabled = false;
+            }
+        }
+
+        // 打开批量转移模态框
+        function openBatchTransferModal(equipmentIds) {
+            document.getElementById('batchTransferCount').textContent = equipmentIds.length;
+            document.getElementById('targetDepartment').value = '';
+            document.getElementById('batchTransferBtn').disabled = true;
+            document.getElementById('batchTransferModal').classList.add('show');
+            
+            // 存储选中的设备ID
+            window.batchTransferEquipmentIds = equipmentIds;
+            
+            // 加载部门列表
+            loadDepartmentsForTransfer();
+        }
+
+        // 关闭批量转移模态框
+        function closeBatchTransferModal() {
+            document.getElementById('batchTransferModal').classList.remove('show');
+            window.batchTransferEquipmentIds = null;
+        }
+
+        // 加载部门列表用于转移
+        function loadDepartmentsForTransfer() {
+            try {
+                const select = document.getElementById('targetDepartment');
+                select.innerHTML = '<option value="">请选择目标部门</option>';
+                
+                if (departments && departments.length > 0) {
+                    departments.forEach(dept => {
+                        const option = document.createElement('option');
+                        option.value = dept.id;
+                        option.textContent = dept.name;
+                        select.appendChild(option);
+                    });
+                } else {
+                    showNotification('部门列表为空，请刷新页面重试', 'warning');
+                }
+            } catch (error) {
+                console.error('加载部门列表失败:', error);
+                showNotification('加载部门列表失败', 'error');
+            }
+        }
+
+        // 执行批量转移
+        async function performBatchTransfer() {
+            const targetDepartmentId = document.getElementById('targetDepartment').value;
+            
+            if (!targetDepartmentId) {
+                showNotification('请选择目标部门', 'warning');
+                return;
+            }
+            
+            try {
+                showNotification('正在批量转移设备...', 'info');
+                document.getElementById('batchTransferBtn').disabled = true;
+                
+                const requestData = {
+                    equipment_ids: window.batchTransferEquipmentIds,
+                    target_department_id: parseInt(targetDepartmentId)
+                };
+                
+                await EquipmentAPI.batchTransfer(requestData);
+                
+                showNotification(`成功转移 ${window.batchTransferEquipmentIds.length} 台设备`, 'success');
+                closeBatchTransferModal();
+                loadEquipmentData(); // 重新加载数据
+                await loadDashboardStats(); // 刷新统计数据
+                
+            } catch (error) {
+                console.error('批量转移失败:', error);
+                showNotification('批量转移失败: ' + error.message, 'error');
+            } finally {
+                document.getElementById('batchTransferBtn').disabled = false;
             }
         }
 
@@ -2403,6 +2510,12 @@
             batchCalibrationBtn.disabled = !this.value;
         });
 
+        // 批量转移模态框事件监听
+        document.getElementById('targetDepartment').addEventListener('change', function() {
+            const batchTransferBtn = document.getElementById('batchTransferBtn');
+            batchTransferBtn.disabled = !this.value;
+        });
+
         // 导出设备数据
         function exportEquipmentData() {
             document.getElementById('exportModal').classList.add('show');
@@ -2887,6 +3000,13 @@
         document.getElementById('batchCalibrationModal').addEventListener('click', function(e) {
             if (e.target === this) {
                 closeBatchCalibrationModal();
+            }
+        });
+
+        // 批量转移模态框点击外部关闭
+        document.getElementById('batchTransferModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeBatchTransferModal();
             }
         });
 

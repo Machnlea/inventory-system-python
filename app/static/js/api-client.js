@@ -334,6 +334,10 @@ const EquipmentAPI = {
         });
     },
 
+    async batchTransfer(data) {
+        return api.post('/api/equipment/batch/transfer', data);
+    },
+
     // 导出功能
     async exportMonthlyPlan() {
         return api.downloadFile('/api/equipment/export/monthly-plan', '月度检定计划.xlsx');

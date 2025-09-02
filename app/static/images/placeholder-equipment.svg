@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <rect width="200" height="200" fill="#e5e7eb"/>
+  <text x="100" y="90" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#6b7280">设备照片</text>
+  <text x="100" y="110" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#6b7280">暂无照片</text>
+  <circle cx="100" cy="130" r="15" stroke="#6b7280" stroke-width="2" fill="none"/>
+  <circle cx="100" cy="130" r="3" fill="#6b7280"/>
+  <path d="M85 130 L115 130 M100 115 L100 145" stroke="#6b7280" stroke-width="2"/>
+</svg>

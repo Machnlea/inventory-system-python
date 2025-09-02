@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <rect width="200" height="200" fill="#e5e7eb"/>
+  <text x="100" y="100" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#6b7280">暂无照片</text>
+  <circle cx="100" cy="120" r="12" stroke="#9ca3af" stroke-width="1.5" fill="none"/>
+  <circle cx="100" cy="120" r="2" fill="#9ca3af"/>
+  <path d="M88 120 L112 120 M100 108 L100 132" stroke="#9ca3af" stroke-width="1.5"/>
+</svg>

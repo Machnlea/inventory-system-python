@@ -379,7 +379,7 @@
                         
                         <div class="text-center">
                             <img id="equipmentPhoto" 
-                                 src="https://via.placeholder.com/200x200/e5e7eb/6b7280?text=压力表" 
+                                 src="/static/images/placeholder-equipment.svg" 
                                  alt="设备照片" 
                                  class="equipment-photo mx-auto mb-4 cursor-pointer hover:opacity-80 transition-opacity"
                                  onclick="previewPhoto()">
@@ -542,8 +542,8 @@
 
     <!-- 附件预览模态框 -->
     <div id="attachmentPreviewModal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center p-4">
-        <div class="modal-content bg-white rounded-xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-200">
+        <div class="modal-content bg-white rounded-xl shadow-2xl max-w-5xl w-full mx-4 max-h-[95vh] overflow-hidden flex flex-col">
+            <div class="px-6 py-4 border-b border-gray-200 flex-shrink-0">
                 <div class="flex items-center justify-between">
                     <h3 class="text-lg font-semibold text-gray-900" id="previewModalTitle">
                         <i class="fas fa-eye text-green-600 mr-2"></i>附件预览
@@ -554,14 +554,14 @@
                 </div>
             </div>
             
-            <div class="px-6 py-4 overflow-y-auto" style="max-height: 60vh;">
-                <div id="previewContent" class="text-center">
+            <div class="px-6 py-4 overflow-y-auto flex-1">
+                <div id="previewContent" class="text-center h-full">
                     <!-- 预览内容将在这里显示 -->
                 </div>
             </div>
             
-            <div class="px-6 py-4 border-t border-gray-200 flex justify-between items-center">
-                <button type="button" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors" onclick="downloadAttachment()">
+            <div class="px-6 py-4 border-t border-gray-200 flex justify-between items-center flex-shrink-0">
+                <button type="button" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors" onclick="downloadCurrentAttachment()">
                     <i class="fas fa-download mr-2"></i>下载附件
                 </button>
                 <button type="button" class="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors" onclick="closePreviewModal()">
@@ -705,7 +705,7 @@
                 } else {
                     // 没有找到图片附件，使用默认占位图
                     const photoElement = document.getElementById('equipmentPhoto');
-                    photoElement.src = 'https://via.placeholder.com/200x200/e5e7eb/6b7280?text=暂无照片';
+                    photoElement.src = '/static/images/no-photo.svg';
                     currentEquipmentPhoto = null;
                     console.log('设备没有照片附件');
                 }
@@ -713,7 +713,7 @@
                 console.error('加载设备照片失败:', error);
                 // 加载失败时使用默认占位图
                 const photoElement = document.getElementById('equipmentPhoto');
-                photoElement.src = 'https://via.placeholder.com/200x200/e5e7eb/6b7280?text=加载失败';
+                photoElement.src = '/static/images/load-error.svg';
                 currentEquipmentPhoto = null;
             }
         }
@@ -844,11 +844,6 @@
             }
         }
 
-        // 预览附件
-        function previewAttachment(attachmentId) {
-            // 这里可以实现附件预览功能
-            showNotification('附件预览功能开发中...', 'info');
-        }
 
         // 下载附件
         async function downloadAttachment(attachmentId, filename) {
@@ -1022,7 +1017,7 @@
                             </div>
                         </div>
                         <div class="flex items-center space-x-2 flex-shrink-0">
-                            <button onclick="previewAttachment(${attachment.id})" 
+                            <button onclick="previewAttachment(${attachment.id}, '${attachment.original_filename || attachment.filename}', '${fileType}')" 
                                     class="text-green-600 hover:text-green-800 p-2 rounded-full hover:bg-green-50 transition-colors" 
                                     title="预览">
                                 <i class="fas fa-eye"></i>
@@ -1114,91 +1109,52 @@
         }
 
         // 预览附件
-        async function previewAttachment(attachmentId) {
+        async function previewAttachment(attachmentId, filename, fileType) {
             try {
-                showNotification('正在加载预览...', 'info');
+                const previewUrl = await AttachmentAPI.previewAttachment(attachmentId);
                 
-                // 获取附件信息
-                const attachment = await AttachmentAPI.getAttachment(attachmentId);
-                currentPreviewAttachment = attachment;
-                
-                // 设置预览模态框标题
-                document.getElementById('previewModalTitle').innerHTML = 
-                    `<i class="fas fa-eye text-green-600 mr-2"></i>附件预览 - ${attachment.original_filename || attachment.filename}`;
-
-                const previewContent = document.getElementById('previewContent');
-                const fileType = attachment.file_type || (attachment.original_filename || attachment.filename).split('.').pop().toLowerCase();
-
-                if (fileType === 'pdf') {
-                    previewContent.innerHTML = `
-                        <div class="bg-gray-100 p-8 rounded-lg">
-                            <i class="fas fa-file-pdf text-red-500 text-6xl mb-4"></i>
-                            <p class="text-gray-600 mb-4">PDF 文件预览</p>
-                            <p class="text-sm text-gray-500">文件名: ${attachment.original_filename || attachment.filename}</p>
-                            <p class="text-sm text-gray-500">文件大小: ${formatFileSize(attachment.file_size)}</p>
-                            <button class="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors btn-click-effect" onclick="downloadCurrentAttachment()">
-                                <i class="fas fa-download mr-2"></i>下载文件
+                // 创建预览模态框
+                const modal = document.createElement('div');
+                modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[2000]';
+                modal.innerHTML = `
+                    <div class="bg-white rounded-lg max-w-4xl max-h-[90vh] w-full mx-4 flex flex-col">
+                        <div class="flex items-center justify-between p-4 border-b">
+                            <h3 class="text-lg font-semibold">预览: ${filename}</h3>
+                            <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
+                                <i class="fas fa-times text-xl"></i>
                             </button>
                         </div>
-                    `;
-                } else if (['jpg', 'jpeg', 'png'].includes(fileType.toLowerCase())) {
-                    // 使用API客户端获取预览URL
-                    try {
-                        const previewUrl = await AttachmentAPI.previewAttachment(attachmentId);
-                        previewContent.innerHTML = `
-                            <div class="text-center">
-                                <img src="${previewUrl}" 
-                                     alt="${attachment.original_filename || attachment.filename}" 
-                                     class="max-w-full max-h-96 mx-auto rounded-lg shadow-lg">
-                                <p class="mt-4 text-sm text-gray-500">文件名: ${attachment.original_filename || attachment.filename}</p>
-                                <p class="text-sm text-gray-500">文件大小: ${formatFileSize(attachment.file_size)}</p>
-                            </div>
-                        `;
-                    } catch (error) {
-                        previewContent.innerHTML = `
-                            <div class="bg-gray-100 p-8 rounded-lg text-center">
-                                <i class="fas fa-exclamation-triangle text-yellow-500 text-6xl mb-4"></i>
-                                <p class="text-gray-600 mb-4">图片预览失败</p>
-                                <p class="text-sm text-gray-500 mb-4">错误信息: ${error.message}</p>
-                                <button class="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors btn-click-effect" onclick="downloadCurrentAttachment()">
-                                    <i class="fas fa-download mr-2"></i>下载文件
+                        <div class="flex-1 p-4 overflow-auto">
+                            ${fileType && fileType.toUpperCase() === 'PDF' ? 
+                                `<iframe src="${previewUrl}" class="w-full h-full min-h-[600px] border-none"></iframe>` :
+                                `<img src="${previewUrl}" class="max-w-full max-h-full mx-auto" alt="${filename}" />`
+                            }
+                        </div>
+                        <div class="p-4 border-t bg-gray-50">
+                            <div class="flex justify-end space-x-2">
+                                <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">
+                                    关闭
+                                </button>
+                                <button onclick="downloadAttachmentById(${attachmentId}); this.closest('.fixed').remove();" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                                    下载
                                 </button>
                             </div>
-                        `;
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(modal);
+                
+                // 点击背景关闭
+                modal.addEventListener('click', function(e) {
+                    if (e.target === modal) {
+                        modal.remove();
                     }
-                } else if (fileType === 'docx') {
-                    previewContent.innerHTML = `
-                        <div class="bg-gray-100 p-8 rounded-lg">
-                            <i class="fas fa-file-word text-blue-500 text-6xl mb-4"></i>
-                            <p class="text-gray-600 mb-4">Word 文档预览</p>
-                            <p class="text-sm text-gray-500">文件名: ${attachment.original_filename || attachment.filename}</p>
-                            <p class="text-sm text-gray-500">文件大小: ${formatFileSize(attachment.file_size)}</p>
-                            <button class="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors btn-click-effect" onclick="downloadCurrentAttachment()">
-                                <i class="fas fa-download mr-2"></i>下载文件
-                            </button>
-                        </div>
-                    `;
-                } else {
-                    previewContent.innerHTML = `
-                        <div class="bg-gray-100 p-8 rounded-lg">
-                            <i class="fas fa-file text-gray-500 text-6xl mb-4"></i>
-                            <p class="text-gray-600 mb-4">文件预览</p>
-                            <p class="text-sm text-gray-500">文件名: ${attachment.original_filename || attachment.filename}</p>
-                            <p class="text-sm text-gray-500">文件大小: ${formatFileSize(attachment.file_size)}</p>
-                            <button class="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors btn-click-effect" onclick="downloadCurrentAttachment()">
-                                <i class="fas fa-download mr-2"></i>下载文件
-                            </button>
-                        </div>
-                    `;
-                }
-
-                // 显示预览模态框
-                showModal('attachmentPreviewModal');
-                showNotification('预览加载成功', 'success');
+                });
                 
             } catch (error) {
-                console.error('加载预览失败:', error);
-                showNotification('预览加载失败: ' + error.message, 'error');
+                console.error('预览失败:', error);
+                showNotification('预览失败: ' + error.message, 'error');
             }
         }
 

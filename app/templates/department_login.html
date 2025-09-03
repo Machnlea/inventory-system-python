@@ -166,50 +166,90 @@
                 <div class="inline-flex items-center justify-center w-16 h-16 bg-orange-100 rounded-full mb-4">
                     <i class="fas fa-key text-2xl text-orange-600"></i>
                 </div>
-                <h2 class="text-2xl font-bold text-gray-900 mb-2">首次登录密码修改</h2>
-                <p class="text-gray-600">为了账户安全，请修改您的初始密码</p>
+                <h2 class="text-2xl font-bold text-gray-900 mb-2">修改登录密码</h2>
+                <p class="text-gray-600">为了账户安全，请设置您的新密码</p>
             </div>
 
             <form id="changePasswordForm" class="space-y-4">
                 <div>
-                    <label class="block text-gray-700 text-sm font-medium mb-2">当前密码</label>
-                    <input
-                        type="password"
-                        id="currentPassword"
-                        required
-                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-                        placeholder="请输入当前密码"
-                    >
+                    <label class="block text-gray-700 text-sm font-medium mb-2">初始密码</label>
+                    <div class="relative">
+                        <input
+                            type="password"
+                            id="currentPassword"
+                            required
+                            class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            placeholder="请输入您的初始密码"
+                        >
+                        <button
+                            type="button"
+                            id="toggleCurrentPassword"
+                            class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                            <i class="fas fa-eye" id="currentEyeIcon"></i>
+                        </button>
+                    </div>
                 </div>
                 
                 <div>
                     <label class="block text-gray-700 text-sm font-medium mb-2">新密码</label>
-                    <input
-                        type="password"
-                        id="newPassword"
-                        required
-                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-                        placeholder="请输入新密码（6位以上，包含字母和数字）"
-                    >
+                    <div class="relative">
+                        <input
+                            type="password"
+                            id="newPassword"
+                            required
+                            class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            placeholder="请输入新密码（6位以上，包含字母和数字）"
+                        >
+                        <button
+                            type="button"
+                            id="toggleNewPassword"
+                            class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                            <i class="fas fa-eye" id="newEyeIcon"></i>
+                        </button>
+                    </div>
                 </div>
                 
                 <div>
                     <label class="block text-gray-700 text-sm font-medium mb-2">确认密码</label>
-                    <input
-                        type="password"
-                        id="confirmPassword"
-                        required
-                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-                        placeholder="请再次输入新密码"
-                    >
+                    <div class="relative">
+                        <input
+                            type="password"
+                            id="confirmPassword"
+                            required
+                            class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            placeholder="请再次输入新密码"
+                        >
+                        <button
+                            type="button"
+                            id="toggleConfirmPassword"
+                            class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                            <i class="fas fa-eye" id="confirmEyeIcon"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
                     <h4 class="text-blue-800 font-medium text-sm mb-2">密码要求：</h4>
-                    <ul class="text-blue-700 text-xs space-y-1">
-                        <li>• 至少6个字符长度</li>
-                        <li>• 必须包含字母和数字</li>
-                        <li>• 不能与当前密码相同</li>
+                    <ul class="text-xs space-y-2">
+                        <li id="lengthCheck" class="flex items-center">
+                            <i class="fas fa-times text-red-500 mr-2 w-4"></i>
+                            <span class="text-gray-600">至少6个字符长度</span>
+                        </li>
+                        <li id="letterCheck" class="flex items-center">
+                            <i class="fas fa-times text-red-500 mr-2 w-4"></i>
+                            <span class="text-gray-600">必须包含字母</span>
+                        </li>
+                        <li id="numberCheck" class="flex items-center">
+                            <i class="fas fa-times text-red-500 mr-2 w-4"></i>
+                            <span class="text-gray-600">必须包含数字</span>
+                        </li>
+                        <li id="matchCheck" class="flex items-center">
+                            <i class="fas fa-times text-red-500 mr-2 w-4"></i>
+                            <span class="text-gray-600">两次密码输入一致</span>
+                        </li>
                     </ul>
                 </div>
 
@@ -250,19 +290,75 @@
             }, duration);
         }
 
-        // 密码显示/隐藏切换
-        document.getElementById('togglePassword').addEventListener('click', function() {
-            const passwordInput = document.getElementById('password');
-            const eyeIcon = document.getElementById('eyeIcon');
+        // 密码显示/隐藏切换功能
+        function setupPasswordToggle(toggleId, inputId, iconId) {
+            document.getElementById(toggleId).addEventListener('click', function() {
+                const passwordInput = document.getElementById(inputId);
+                const eyeIcon = document.getElementById(iconId);
+                
+                if (passwordInput.type === 'password') {
+                    passwordInput.type = 'text';
+                    eyeIcon.className = 'fas fa-eye-slash';
+                } else {
+                    passwordInput.type = 'password';
+                    eyeIcon.className = 'fas fa-eye';
+                }
+            });
+        }
+
+        // 设置所有密码字段的显示/隐藏切换
+        setupPasswordToggle('togglePassword', 'password', 'eyeIcon');
+        setupPasswordToggle('toggleCurrentPassword', 'currentPassword', 'currentEyeIcon');
+        setupPasswordToggle('toggleNewPassword', 'newPassword', 'newEyeIcon');
+        setupPasswordToggle('toggleConfirmPassword', 'confirmPassword', 'confirmEyeIcon');
+
+        // 密码实时验证
+        function updatePasswordCheck(checkId, isValid) {
+            const checkElement = document.getElementById(checkId);
+            const icon = checkElement.querySelector('i');
+            const text = checkElement.querySelector('span');
             
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-                eyeIcon.className = 'fas fa-eye-slash';
+            if (isValid) {
+                icon.className = 'fas fa-check text-green-500 mr-2 w-4';
+                text.className = 'text-green-600';
             } else {
-                passwordInput.type = 'password';
-                eyeIcon.className = 'fas fa-eye';
+                icon.className = 'fas fa-times text-red-500 mr-2 w-4';
+                text.className = 'text-gray-600';
             }
-        });
+        }
+
+        // 密码验证函数
+        function validatePassword() {
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            // 检查长度
+            updatePasswordCheck('lengthCheck', newPassword.length >= 6);
+            
+            // 检查字母
+            updatePasswordCheck('letterCheck', /[a-zA-Z]/.test(newPassword));
+            
+            // 检查数字
+            updatePasswordCheck('numberCheck', /\d/.test(newPassword));
+            
+            // 检查密码匹配（只有两个密码都不为空时才检查）
+            if (newPassword && confirmPassword) {
+                updatePasswordCheck('matchCheck', newPassword === confirmPassword);
+            } else {
+                updatePasswordCheck('matchCheck', false);
+            }
+            
+            // 返回所有条件是否满足
+            return newPassword.length >= 6 && 
+                   /[a-zA-Z]/.test(newPassword) && 
+                   /\d/.test(newPassword) && 
+                   newPassword === confirmPassword && 
+                   confirmPassword !== '';
+        }
+
+        // 为密码字段添加实时验证
+        document.getElementById('newPassword').addEventListener('input', validatePassword);
+        document.getElementById('confirmPassword').addEventListener('input', validatePassword);
 
         // 登录表单处理
         document.getElementById('loginForm').addEventListener('submit', async function(e) {
@@ -305,7 +401,8 @@
                         const userInfo = await userResponse.json();
                         
                         if (userInfo.first_login) {
-                            // 首次登录，显示密码修改模态框
+                            // 首次登录，标记需要修改密码并显示模态框
+                            sessionStorage.setItem('requires_password_change', 'true');
                             document.getElementById('changePasswordModal').classList.remove('hidden');
                         } else {
                             // 直接跳转到部门仪表盘
@@ -335,19 +432,15 @@
             const newPassword = document.getElementById('newPassword').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
             
-            // 验证密码
-            if (newPassword !== confirmPassword) {
-                showNotification('新密码和确认密码不匹配', 'error');
+            // 使用实时验证函数检查密码
+            if (!validatePassword()) {
+                showNotification('请确保新密码满足所有要求', 'error');
                 return;
             }
             
-            if (newPassword.length < 6) {
-                showNotification('新密码长度至少6位', 'error');
-                return;
-            }
-            
-            if (!/[a-zA-Z]/.test(newPassword) || !/\d/.test(newPassword)) {
-                showNotification('新密码必须包含字母和数字', 'error');
+            // 检查当前密码不能为空
+            if (!currentPassword.trim()) {
+                showNotification('请输入初始密码', 'error');
                 return;
             }
             
@@ -372,6 +465,9 @@
                 if (response.ok) {
                     showNotification('密码修改成功！即将跳转...', 'success');
                     
+                    // 清除密码修改标记
+                    sessionStorage.removeItem('requires_password_change');
+                    
                     // 关闭模态框并跳转
                     setTimeout(() => {
                         document.getElementById('changePasswordModal').classList.add('hidden');
@@ -386,17 +482,24 @@
             }
         });
 
-        // 页面加载完成时检查是否已登录
+        // 页面加载完成时检查是否已登录和密码修改状态
         document.addEventListener('DOMContentLoaded', function() {
             const token = sessionStorage.getItem('department_access_token');
             const userInfo = sessionStorage.getItem('department_user_info');
+            const requiresPasswordChange = sessionStorage.getItem('requires_password_change');
             
             if (token && userInfo) {
-                // 已登录，直接跳转
-                showNotification('检测到已登录，正在跳转...', 'info');
-                setTimeout(() => {
-                    window.location.href = '/department/dashboard';
-                }, 1000);
+                if (requiresPasswordChange === 'true') {
+                    // 需要修改密码，显示密码修改模态框
+                    showNotification('检测到需要修改密码，请完成密码设置', 'warning');
+                    document.getElementById('changePasswordModal').classList.remove('hidden');
+                } else {
+                    // 已完成所有登录流程，直接跳转
+                    showNotification('检测到已登录，正在跳转...', 'info');
+                    setTimeout(() => {
+                        window.location.href = '/department/dashboard';
+                    }, 1000);
+                }
             }
         });
     </script>

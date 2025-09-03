@@ -249,7 +249,7 @@ def update_equipment(db: Session, equipment_id: int, equipment_update: Equipment
 
 def delete_equipment(db: Session, equipment_id: int):
     import os
-    from app.models.models import EquipmentAttachment
+    from app.models.models import EquipmentAttachment, CalibrationHistory
     
     db_equipment = db.query(Equipment).filter(Equipment.id == equipment_id).first()
     if db_equipment:
@@ -266,6 +266,9 @@ def delete_equipment(db: Session, equipment_id: int):
         
         # 删除数据库中的附件记录
         db.query(EquipmentAttachment).filter(EquipmentAttachment.equipment_id == equipment_id).delete()
+        
+        # 删除检定历史记录
+        db.query(CalibrationHistory).filter(CalibrationHistory.equipment_id == equipment_id).delete()
         
         # 删除设备
         db.delete(db_equipment)

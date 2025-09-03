@@ -20,6 +20,7 @@ def create_equipment_attachment(db: Session, attachment: EquipmentAttachmentCrea
         description=attachment.description,
         is_certificate=attachment.is_certificate,
         certificate_type=attachment.certificate_type,
+        calibration_history_id=attachment.calibration_history_id,  # 添加缺失的字段
         uploaded_by=uploaded_by
     )
     db.add(db_attachment)

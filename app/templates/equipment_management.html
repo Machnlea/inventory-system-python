@@ -987,11 +987,11 @@
                         </label>
 
                         <!-- 检定结果 -->
-                        <label class="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                            <input type="checkbox" id="updateCalibrationResult" class="batch-field-checkbox">
+                        <label class="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg bg-blue-50 cursor-not-allowed">
+                            <input type="checkbox" id="updateCalibrationResult" class="batch-field-checkbox" checked disabled>
                             <div class="flex-1">
                                 <span class="text-sm font-medium text-gray-900">检定结果</span>
-                                <p class="text-xs text-gray-500">合格/不合格</p>
+                                <p class="text-xs text-gray-500">必填字段</p>
                             </div>
                         </label>
 
@@ -1043,10 +1043,12 @@
                         <input type="date" id="batchCalibrationDate" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
                     </div>
 
-                    <!-- 检定结果字段 -->
-                    <div id="batchCalibrationResultField" class="field-input-group hidden">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">检定结果</label>
-                        <select id="batchCalibrationResult" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <!-- 检定结果字段（必填字段，默认显示） -->
+                    <div id="batchCalibrationResultField" class="field-input-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            检定结果 <span class="text-red-500">*</span>
+                        </label>
+                        <select id="batchCalibrationResult" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
                             <option value="合格">合格</option>
                             <option value="不合格">不合格</option>
                         </select>
@@ -1105,8 +1107,37 @@
 
                     <!-- 检定备注字段 -->
                     <div id="batchNotesField" class="field-input-group hidden">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">检定备注</label>
-                        <textarea id="batchNotes" rows="3" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="输入检定备注信息"></textarea>
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="block text-sm font-medium text-gray-700">检定备注</label>
+                            <div class="flex items-center space-x-4">
+                                <label class="flex items-center">
+                                    <input type="radio" name="notesMode" value="unified" checked class="mr-1">
+                                    <span class="text-sm text-gray-600">统一值</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" name="notesMode" value="individual" class="mr-1">
+                                    <span class="text-sm text-gray-600">逐个输入</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- 统一值输入 -->
+                        <div id="unifiedNotes">
+                            <textarea id="batchNotes" rows="3" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="输入检定备注（所有设备使用相同内容）"></textarea>
+                        </div>
+                        
+                        <!-- 个体值输入 -->
+                        <div id="individualNotes" class="hidden">
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+                                <p class="text-sm text-blue-800">
+                                    <i class="fas fa-info-circle mr-2"></i>
+                                    为每台设备输入不同的检定备注
+                                </p>
+                            </div>
+                            <div id="notesList" class="space-y-2 max-h-60 overflow-y-auto">
+                                <!-- 动态生成的设备备注输入框 -->
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -2837,9 +2868,9 @@
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('batchCalibrationDate').value = today;
             
-            // 重置所有复选框（除了检定日期）
+            // 重置所有复选框（除了检定日期和检定结果）
             document.querySelectorAll('.batch-field-checkbox').forEach(checkbox => {
-                if (checkbox.id !== 'updateCalibrationDate') {
+                if (checkbox.id !== 'updateCalibrationDate' && checkbox.id !== 'updateCalibrationResult') {
                     checkbox.checked = false;
                 }
             });
@@ -2877,9 +2908,9 @@
 
         // 重置批量字段输入显示状态
         function resetBatchFieldInputs() {
-            // 隐藏所有字段输入（除了检定日期）
+            // 隐藏所有字段输入（除了检定日期和检定结果）
             document.querySelectorAll('.field-input-group').forEach(field => {
-                if (field.id !== 'batchCalibrationDateField') {
+                if (field.id !== 'batchCalibrationDateField' && field.id !== 'batchCalibrationResultField') {
                     field.classList.add('hidden');
                 }
             });
@@ -2899,12 +2930,20 @@
             document.getElementById('unifiedCertificateNumber').classList.remove('hidden');
             document.getElementById('individualCertificateNumber').classList.add('hidden');
             document.getElementById('certificateNumberList').innerHTML = '';
+            
+            // 重置备注模式
+            const unifiedNotesRadio = document.querySelector('input[name="notesMode"][value="unified"]');
+            if (unifiedNotesRadio) {
+                unifiedNotesRadio.checked = true;
+            }
+            document.getElementById('unifiedNotes').classList.remove('hidden');
+            document.getElementById('individualNotes').classList.add('hidden');
+            document.getElementById('notesList').innerHTML = '';
         }
 
         // 设置批量字段选择监听器
         function setupBatchFieldListeners() {
             const fieldMappings = {
-                'updateCalibrationResult': 'batchCalibrationResultField',
                 'updateCertificateNumber': 'batchCertificateNumberField',
                 'updateCertificateForm': 'batchCertificateFormField',
                 'updateVerificationAgency': 'batchVerificationAgencyField',
@@ -2922,9 +2961,40 @@
                         // 如果是证书编号字段，需要特殊处理
                         if (checkboxId === 'updateCertificateNumber') {
                             setupCertificateNumberMode();
+                            // 联动选择证书形式
+                            const certificateFormCheckbox = document.getElementById('updateCertificateForm');
+                            if (certificateFormCheckbox && !certificateFormCheckbox.checked) {
+                                certificateFormCheckbox.checked = true;
+                                document.getElementById('batchCertificateFormField').classList.remove('hidden');
+                            }
+                        } else if (checkboxId === 'updateCertificateForm') {
+                            // 联动选择证书编号
+                            const certificateNumberCheckbox = document.getElementById('updateCertificateNumber');
+                            if (certificateNumberCheckbox && !certificateNumberCheckbox.checked) {
+                                certificateNumberCheckbox.checked = true;
+                                document.getElementById('batchCertificateNumberField').classList.remove('hidden');
+                                setupCertificateNumberMode();
+                            }
+                        } else if (checkboxId === 'updateNotes') {
+                            // 设置备注模式
+                            setupNotesMode();
                         }
                     } else {
                         fieldElement.classList.add('hidden');
+                        // 取消选择时也要联动取消对方
+                        if (checkboxId === 'updateCertificateNumber') {
+                            const certificateFormCheckbox = document.getElementById('updateCertificateForm');
+                            if (certificateFormCheckbox && certificateFormCheckbox.checked) {
+                                certificateFormCheckbox.checked = false;
+                                document.getElementById('batchCertificateFormField').classList.add('hidden');
+                            }
+                        } else if (checkboxId === 'updateCertificateForm') {
+                            const certificateNumberCheckbox = document.getElementById('updateCertificateNumber');
+                            if (certificateNumberCheckbox && certificateNumberCheckbox.checked) {
+                                certificateNumberCheckbox.checked = false;
+                                document.getElementById('batchCertificateNumberField').classList.add('hidden');
+                            }
+                        }
                     }
                 });
             });
@@ -2933,6 +3003,13 @@
             document.querySelectorAll('input[name="certificateNumberMode"]').forEach(radio => {
                 radio.addEventListener('change', function() {
                     toggleCertificateNumberMode(this.value);
+                });
+            });
+            
+            // 设置备注模式切换监听器
+            document.querySelectorAll('input[name="notesMode"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    toggleNotesMode(this.value);
                 });
             });
         }
@@ -2956,6 +3033,56 @@
                 unifiedSection.classList.remove('hidden');
                 individualSection.classList.add('hidden');
             }
+        }
+
+        // 设置备注模式
+        function setupNotesMode() {
+            const selectedMode = document.querySelector('input[name="notesMode"]:checked').value;
+            toggleNotesMode(selectedMode);
+        }
+
+        // 切换备注输入模式
+        function toggleNotesMode(mode) {
+            const unifiedSection = document.getElementById('unifiedNotes');
+            const individualSection = document.getElementById('individualNotes');
+            
+            if (mode === 'individual') {
+                unifiedSection.classList.add('hidden');
+                individualSection.classList.remove('hidden');
+                generateIndividualNotesInputs();
+            } else {
+                unifiedSection.classList.remove('hidden');
+                individualSection.classList.add('hidden');
+            }
+        }
+
+        // 生成个体备注输入框
+        function generateIndividualNotesInputs() {
+            if (!window.batchCalibrationEquipmentData) return;
+            
+            const container = document.getElementById('notesList');
+            container.innerHTML = '';
+            
+            window.batchCalibrationEquipmentData.forEach((equipment, index) => {
+                const inputGroup = document.createElement('div');
+                inputGroup.className = 'flex items-center space-x-3 p-3 bg-gray-50 rounded-lg border';
+                inputGroup.innerHTML = `
+                    <div class="flex-shrink-0 w-8 h-8 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-sm font-medium">
+                        ${index + 1}
+                    </div>
+                    <div class="flex-1">
+                        <div class="text-sm font-medium text-gray-900">${equipment.name}</div>
+                        <div class="text-xs text-gray-500">${equipment.model} - ${equipment.department}</div>
+                    </div>
+                    <div class="flex-1">
+                        <textarea rows="2"
+                                  class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-green-500 focus:border-transparent individual-notes-input resize-none" 
+                                  placeholder="输入检定备注" 
+                                  data-equipment-id="${equipment.id}"></textarea>
+                    </div>
+                `;
+                container.appendChild(inputGroup);
+            });
         }
 
         // 生成个体证书编号输入框
@@ -3183,6 +3310,9 @@
                 // 设置文件上传事件监听器
                 setupFileUploadListeners();
                 
+                // 设置证书信息相互依赖验证
+                setupCertificateFieldsValidation();
+                
                 // 显示模态框
                 document.getElementById('singleCalibrationBtn').disabled = false;
                 document.getElementById('singleCalibrationModal').classList.add('show');
@@ -3201,6 +3331,46 @@
         function closeSingleCalibrationModal() {
             document.getElementById('singleCalibrationModal').classList.remove('show');
             window.singleCalibrationEquipmentId = null;
+        }
+
+        // 设置证书信息相互依赖监听器（内检设备）
+        function setupCertificateFieldsValidation() {
+            const certificateNumberField = document.getElementById('singleCertificateNumber');
+            const certificateFormField = document.getElementById('singleCertificateForm');
+            
+            if (!certificateNumberField || !certificateFormField) return;
+            
+            // 证书编号输入监听器
+            certificateNumberField.addEventListener('input', function() {
+                const hasNumber = this.value.trim() !== '';
+                if (hasNumber) {
+                    // 如果填写了证书编号，证书形式变为必填
+                    certificateFormField.required = true;
+                    document.getElementById('certificateFormRequired').classList.remove('hidden');
+                } else {
+                    // 如果清空证书编号，且证书形式也没选择，则都不必填
+                    if (certificateFormField.value === '') {
+                        certificateFormField.required = false;
+                        document.getElementById('certificateFormRequired').classList.add('hidden');
+                    }
+                }
+            });
+            
+            // 证书形式选择监听器
+            certificateFormField.addEventListener('change', function() {
+                const hasForm = this.value !== '';
+                if (hasForm) {
+                    // 如果选择了证书形式，证书编号变为必填
+                    certificateNumberField.required = true;
+                    document.getElementById('certificateNumberRequired').classList.remove('hidden');
+                } else {
+                    // 如果清空证书形式，且证书编号也没填，则都不必填
+                    if (certificateNumberField.value.trim() === '') {
+                        certificateNumberField.required = false;
+                        document.getElementById('certificateNumberRequired').classList.add('hidden');
+                    }
+                }
+            });
         }
 
         // 根据检定方式切换字段显示
@@ -3430,6 +3600,26 @@
                 
                 if (hasErrors) {
                     showNotification('请填写所有必填字段', 'warning');
+                    return;
+                }
+            } else {
+                // 内检设备的证书信息相互依赖验证
+                const certificateNumber = document.getElementById('singleCertificateNumber').value.trim();
+                const certificateForm = document.getElementById('singleCertificateForm').value.trim();
+                
+                // 证书编号和证书形式要么都不填，要么都填
+                const hasNumber = certificateNumber !== '';
+                const hasForm = certificateForm !== '';
+                
+                if (hasNumber && !hasForm) {
+                    showFieldError(document.getElementById('singleCertificateForm'), '填写证书编号时证书形式为必填项');
+                    showNotification('证书编号和证书形式必须同时填写或同时留空', 'warning');
+                    return;
+                }
+                
+                if (hasForm && !hasNumber) {
+                    showFieldError(document.getElementById('singleCertificateNumber'), '选择证书形式时证书编号为必填项');
+                    showNotification('证书编号和证书形式必须同时填写或同时留空', 'warning');
                     return;
                 }
             }
@@ -3720,9 +3910,21 @@
                     }
                     
                     if (document.getElementById('updateNotes').checked) {
-                        const notes = document.getElementById('batchNotes').value.trim();
-                        if (notes) {
-                            updateData.notes = notes;
+                        const notesMode = document.querySelector('input[name="notesMode"]:checked').value;
+                        if (notesMode === 'unified') {
+                            const notes = document.getElementById('batchNotes').value.trim();
+                            if (notes) {
+                                updateData.notes = notes;
+                            }
+                        } else {
+                            // 个别输入模式：获取当前设备的特定备注
+                            const individualNotesInput = document.querySelector(`.individual-notes-input[data-equipment-id="${equipment.id}"]`);
+                            if (individualNotesInput) {
+                                const individualNotes = individualNotesInput.value.trim();
+                                if (individualNotes) {
+                                    updateData.notes = individualNotes;
+                                }
+                            }
                         }
                     }
                     
@@ -4137,7 +4339,7 @@
         });
 
         // 批量检定日期更新模态框事件监听
-        document.getElementById('newCalibrationDate').addEventListener('change', function() {
+        document.getElementById('batchCalibrationDate').addEventListener('change', function() {
             const batchCalibrationBtn = document.getElementById('batchCalibrationBtn');
             batchCalibrationBtn.disabled = !this.value;
         });

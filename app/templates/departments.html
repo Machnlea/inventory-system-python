@@ -1318,16 +1318,130 @@
 
         // 重置用户密码
         async function resetUserPassword(user) {
-            const newPassword = prompt('请输入新密码（至少6位，包含字母和数字）:', 'sxyq123');
+            // 创建密码重置模态框
+            const modal = document.createElement('div');
+            modal.className = 'modal show';
+            modal.innerHTML = `
+                <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-lg font-semibold text-gray-900">重置密码</h3>
+                        <button class="text-gray-400 hover:text-gray-600" onclick="this.closest('.modal').remove()">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <p class="text-sm text-gray-600 mb-4">为用户 <strong>${user.username}</strong> 设置新密码</p>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">新密码</label>
+                            <div class="relative">
+                                <input type="password" id="resetNewPassword" 
+                                    class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                    placeholder="请输入新密码" />
+                                <button type="button" id="toggleResetPassword" 
+                                    class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                    <i class="fas fa-eye" id="resetEyeIcon"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                            <h4 class="text-blue-800 font-medium text-sm mb-2">密码要求：</h4>
+                            <ul class="text-xs space-y-1">
+                                <li id="resetLengthCheck" class="flex items-center">
+                                    <i class="fas fa-times text-red-500 mr-2 w-4"></i>
+                                    <span class="text-gray-600">至少6个字符长度</span>
+                                </li>
+                                <li id="resetLetterCheck" class="flex items-center">
+                                    <i class="fas fa-times text-red-500 mr-2 w-4"></i>
+                                    <span class="text-gray-600">必须包含字母</span>
+                                </li>
+                                <li id="resetNumberCheck" class="flex items-center">
+                                    <i class="fas fa-times text-red-500 mr-2 w-4"></i>
+                                    <span class="text-gray-600">必须包含数字</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="flex space-x-3">
+                        <button type="button" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                            onclick="this.closest('.modal').remove()">取消</button>
+                        <button type="button" id="confirmResetPassword" 
+                            class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled>确认重置</button>
+                    </div>
+                </div>
+            `;
             
-            if (!newPassword) {
-                return; // 用户取消
+            document.body.appendChild(modal);
+            
+            // 设置密码显示/隐藏切换
+            document.getElementById('toggleResetPassword').onclick = function() {
+                const passwordInput = document.getElementById('resetNewPassword');
+                const eyeIcon = document.getElementById('resetEyeIcon');
+                
+                if (passwordInput.type === 'password') {
+                    passwordInput.type = 'text';
+                    eyeIcon.className = 'fas fa-eye-slash';
+                } else {
+                    passwordInput.type = 'password';
+                    eyeIcon.className = 'fas fa-eye';
+                }
+            };
+            
+            // 密码实时验证
+            function updateResetPasswordCheck(checkId, isValid) {
+                const checkElement = document.getElementById(checkId);
+                const icon = checkElement.querySelector('i');
+                const text = checkElement.querySelector('span');
+                
+                if (isValid) {
+                    icon.className = 'fas fa-check text-green-500 mr-2 w-4';
+                    text.className = 'text-green-600';
+                } else {
+                    icon.className = 'fas fa-times text-red-500 mr-2 w-4';
+                    text.className = 'text-gray-600';
+                }
             }
             
-            if (newPassword.length < 6 || !/[a-zA-Z]/.test(newPassword) || !/\d/.test(newPassword)) {
-                showNotification('密码格式不正确，至少6位且包含字母和数字', 'error');
-                return;
+            function validateResetPassword() {
+                const password = document.getElementById('resetNewPassword').value;
+                
+                const lengthValid = password.length >= 6;
+                const letterValid = /[a-zA-Z]/.test(password);
+                const numberValid = /\d/.test(password);
+                
+                updateResetPasswordCheck('resetLengthCheck', lengthValid);
+                updateResetPasswordCheck('resetLetterCheck', letterValid);
+                updateResetPasswordCheck('resetNumberCheck', numberValid);
+                
+                const allValid = lengthValid && letterValid && numberValid;
+                document.getElementById('confirmResetPassword').disabled = !allValid;
+                
+                return allValid;
             }
+            
+            // 绑定实时验证
+            document.getElementById('resetNewPassword').addEventListener('input', validateResetPassword);
+            
+            // 绑定确认按钮事件
+            document.getElementById('confirmResetPassword').onclick = async function() {
+                const newPassword = document.getElementById('resetNewPassword').value;
+                
+                if (!validateResetPassword()) {
+                    showNotification('请确保密码满足所有要求', 'error');
+                    return;
+                }
+                
+                modal.remove(); // 关闭模态框
+                await performPasswordReset(user, newPassword);
+            };
+        }
+        
+        // 执行密码重置
+        async function performPasswordReset(user, newPassword) {
             
             try {
                 const response = await api.post('/api/department/admin/reset-password', {
@@ -1335,12 +1449,11 @@
                     new_password: newPassword
                 });
                 
-                if (response && response.success) {
-                    showNotification('密码重置成功，用户下次登录需修改密码', 'success');
-                } else if (response && response.message) {
-                    throw new Error(response.message);
+                // API成功返回时，response.message包含成功消息
+                if (response && response.message) {
+                    showNotification(response.message, 'success');
                 } else {
-                    throw new Error('重置失败');
+                    showNotification('密码重置成功，用户下次登录需修改密码', 'success');
                 }
             } catch (error) {
                 console.error('重置密码失败:', error);

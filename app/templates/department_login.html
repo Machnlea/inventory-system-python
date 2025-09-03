@@ -171,25 +171,7 @@
             </div>
 
             <form id="changePasswordForm" class="space-y-4">
-                <div>
-                    <label class="block text-gray-700 text-sm font-medium mb-2">初始密码</label>
-                    <div class="relative">
-                        <input
-                            type="password"
-                            id="currentPassword"
-                            required
-                            class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-                            placeholder="请输入您的初始密码"
-                        >
-                        <button
-                            type="button"
-                            id="toggleCurrentPassword"
-                            class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                        >
-                            <i class="fas fa-eye" id="currentEyeIcon"></i>
-                        </button>
-                    </div>
-                </div>
+                <!-- 移除了初始密码输入，因为用户刚刚输入过 -->
                 
                 <div>
                     <label class="block text-gray-700 text-sm font-medium mb-2">新密码</label>
@@ -308,7 +290,6 @@
 
         // 设置所有密码字段的显示/隐藏切换
         setupPasswordToggle('togglePassword', 'password', 'eyeIcon');
-        setupPasswordToggle('toggleCurrentPassword', 'currentPassword', 'currentEyeIcon');
         setupPasswordToggle('toggleNewPassword', 'newPassword', 'newEyeIcon');
         setupPasswordToggle('toggleConfirmPassword', 'confirmPassword', 'confirmEyeIcon');
 
@@ -403,6 +384,7 @@
                         if (userInfo.first_login) {
                             // 首次登录，标记需要修改密码并显示模态框
                             sessionStorage.setItem('requires_password_change', 'true');
+                            sessionStorage.setItem('current_password', password); // 保存当前密码用于后续API调用
                             document.getElementById('changePasswordModal').classList.remove('hidden');
                         } else {
                             // 直接跳转到部门仪表盘
@@ -428,19 +410,13 @@
         document.getElementById('changePasswordForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            const currentPassword = document.getElementById('currentPassword').value;
+            const currentPassword = sessionStorage.getItem('current_password'); // 从存储中获取当前密码
             const newPassword = document.getElementById('newPassword').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
             
             // 使用实时验证函数检查密码
             if (!validatePassword()) {
                 showNotification('请确保新密码满足所有要求', 'error');
-                return;
-            }
-            
-            // 检查当前密码不能为空
-            if (!currentPassword.trim()) {
-                showNotification('请输入初始密码', 'error');
                 return;
             }
             
@@ -465,8 +441,9 @@
                 if (response.ok) {
                     showNotification('密码修改成功！即将跳转...', 'success');
                     
-                    // 清除密码修改标记
+                    // 清除密码修改标记和临时存储的密码
                     sessionStorage.removeItem('requires_password_change');
+                    sessionStorage.removeItem('current_password');
                     
                     // 关闭模态框并跳转
                     setTimeout(() => {

@@ -299,7 +299,7 @@
                                 <i class="fas fa-edit text-yellow-500 mr-2"></i>批量状态更新
                             </button>
                             <button class="w-full text-left px-4 py-2 hover:bg-gray-50 rounded-b-lg" onclick="batchOperation('calibration')">
-                                <i class="fas fa-calendar-alt text-purple-500 mr-2"></i>批量更新检定日期
+                                <i class="fas fa-calendar-alt text-purple-500 mr-2"></i>批量更新检定
                             </button>
                         </div>
                     </div>
@@ -850,13 +850,13 @@
                     
                     <div class="grid grid-cols-1 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">检定结果描述 <span class="text-red-500">*</span></label>
-                            <input type="text" id="singleVerificationResult" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="输入检定结果详细描述">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">检定机构 <span class="text-red-500">*</span></label>
+                            <input type="text" id="singleVerificationAgency" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="输入检定机构名称">
                         </div>
                         
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">检定机构 <span class="text-red-500">*</span></label>
-                            <input type="text" id="singleVerificationAgency" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="输入检定机构名称">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">检定备注</label>
+                            <textarea id="singleExternalCalibrationNotes" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows="3" placeholder="输入外检相关备注信息"></textarea>
                         </div>
                     </div>
                 </div>
@@ -949,38 +949,194 @@
         </div>
     </div>
 
-    <!-- 批量检定日期更新模态框 -->
+    <!-- 增强的批量检定更新模态框 -->
     <div id="batchCalibrationModal" class="modal">
-        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                <h3 class="text-lg font-semibold text-gray-900">批量更新检定日期</h3>
+                <h3 class="text-lg font-semibold text-gray-900">批量更新检定信息</h3>
                 <button class="text-gray-400 hover:text-gray-600" onclick="closeBatchCalibrationModal()">
                     <i class="fas fa-times text-xl"></i>
                 </button>
             </div>
             <div class="p-6">
-                <div class="mb-4">
-                    <p class="text-sm text-gray-600 mb-4">已选择 <span id="batchCalibrationCount" class="font-semibold text-gray-900">0</span> 台设备</p>
-                    
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">新检定日期</label>
-                        <input type="date" id="newCalibrationDate" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <!-- 设备选择信息 -->
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <span class="text-sm font-medium text-gray-700">已选择设备:</span>
+                            <span id="batchCalibrationCount" class="ml-2 text-lg font-bold text-blue-600">0</span>
+                            <span class="text-sm text-gray-500">台</span>
+                        </div>
+                        <button onclick="showBatchEquipmentList()" class="text-sm text-blue-600 hover:text-blue-800">
+                            <i class="fas fa-list mr-1"></i>查看设备列表
+                        </button>
                     </div>
-                    
-                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <p class="text-sm text-blue-800">
-                            <i class="fas fa-info-circle mr-2"></i>
-                            系统将根据设备原有的检定周期自动计算新的有效期
-                        </p>
+                </div>
+
+                <!-- 字段选择区域 -->
+                <div class="mb-6">
+                    <h4 class="text-md font-medium text-gray-900 mb-4">选择要批量更新的字段:</h4>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <!-- 检定日期 -->
+                        <label class="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                            <input type="checkbox" id="updateCalibrationDate" class="batch-field-checkbox" checked disabled>
+                            <div class="flex-1">
+                                <span class="text-sm font-medium text-gray-900">检定日期</span>
+                                <p class="text-xs text-gray-500">必填字段</p>
+                            </div>
+                        </label>
+
+                        <!-- 检定结果 -->
+                        <label class="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                            <input type="checkbox" id="updateCalibrationResult" class="batch-field-checkbox">
+                            <div class="flex-1">
+                                <span class="text-sm font-medium text-gray-900">检定结果</span>
+                                <p class="text-xs text-gray-500">合格/不合格</p>
+                            </div>
+                        </label>
+
+                        <!-- 证书编号 -->
+                        <label class="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                            <input type="checkbox" id="updateCertificateNumber" class="batch-field-checkbox">
+                            <div class="flex-1">
+                                <span class="text-sm font-medium text-gray-900">证书编号</span>
+                                <p class="text-xs text-gray-500">检定证书编号</p>
+                            </div>
+                        </label>
+
+                        <!-- 证书形式 -->
+                        <label class="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                            <input type="checkbox" id="updateCertificateForm" class="batch-field-checkbox">
+                            <div class="flex-1">
+                                <span class="text-sm font-medium text-gray-900">证书形式</span>
+                                <p class="text-xs text-gray-500">证书类型</p>
+                            </div>
+                        </label>
+
+                        <!-- 检定机构 -->
+                        <label class="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                            <input type="checkbox" id="updateVerificationAgency" class="batch-field-checkbox">
+                            <div class="flex-1">
+                                <span class="text-sm font-medium text-gray-900">检定机构</span>
+                                <p class="text-xs text-gray-500">外检专用</p>
+                            </div>
+                        </label>
+
+                        <!-- 检定备注 -->
+                        <label class="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                            <input type="checkbox" id="updateNotes" class="batch-field-checkbox">
+                            <div class="flex-1">
+                                <span class="text-sm font-medium text-gray-900">检定备注</span>
+                                <p class="text-xs text-gray-500">备注信息</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 动态字段输入区域 -->
+                <div id="batchFieldInputs" class="space-y-4 mb-6">
+                    <!-- 检定日期字段（默认显示） -->
+                    <div id="batchCalibrationDateField" class="field-input-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            检定日期 <span class="text-red-500">*</span>
+                        </label>
+                        <input type="date" id="batchCalibrationDate" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+                    </div>
+
+                    <!-- 检定结果字段 -->
+                    <div id="batchCalibrationResultField" class="field-input-group hidden">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">检定结果</label>
+                        <select id="batchCalibrationResult" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="合格">合格</option>
+                            <option value="不合格">不合格</option>
+                        </select>
+                    </div>
+
+                    <!-- 证书编号字段 -->
+                    <div id="batchCertificateNumberField" class="field-input-group hidden">
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="block text-sm font-medium text-gray-700">证书编号</label>
+                            <div class="flex items-center space-x-4">
+                                <label class="flex items-center">
+                                    <input type="radio" name="certificateNumberMode" value="unified" checked class="mr-1">
+                                    <span class="text-sm text-gray-600">统一值</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" name="certificateNumberMode" value="individual" class="mr-1">
+                                    <span class="text-sm text-gray-600">逐个输入</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- 统一值输入 -->
+                        <div id="unifiedCertificateNumber">
+                            <input type="text" id="batchCertificateNumber" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="输入证书编号（所有设备使用相同值）">
+                        </div>
+                        
+                        <!-- 个体值输入 -->
+                        <div id="individualCertificateNumber" class="hidden">
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+                                <p class="text-sm text-blue-800">
+                                    <i class="fas fa-info-circle mr-2"></i>
+                                    为每台设备输入不同的证书编号
+                                </p>
+                            </div>
+                            <div id="certificateNumberList" class="space-y-2 max-h-60 overflow-y-auto">
+                                <!-- 动态生成的设备证书编号输入框 -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 证书形式字段 -->
+                    <div id="batchCertificateFormField" class="field-input-group hidden">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">证书形式</label>
+                        <select id="batchCertificateForm" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="">请选择</option>
+                            <option value="检定证书">检定证书</option>
+                            <option value="校准证书">校准证书</option>
+                        </select>
+                    </div>
+
+                    <!-- 检定机构字段 -->
+                    <div id="batchVerificationAgencyField" class="field-input-group hidden">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">检定机构</label>
+                        <input type="text" id="batchVerificationAgency" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="输入检定机构名称">
+                    </div>
+
+                    <!-- 检定备注字段 -->
+                    <div id="batchNotesField" class="field-input-group hidden">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">检定备注</label>
+                        <textarea id="batchNotes" rows="3" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="输入检定备注信息"></textarea>
+                    </div>
+                </div>
+
+                <!-- 提示信息 -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-info-circle text-blue-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-blue-800">批量更新说明</h3>
+                            <div class="mt-2 text-sm text-blue-700">
+                                <ul class="list-disc pl-5 space-y-1">
+                                    <li>检定日期为必填字段，系统将自动计算有效期</li>
+                                    <li>只有勾选的字段才会进行批量更新</li>
+                                    <li>未勾选的字段将保持设备原有值不变</li>
+                                    <li>检定结果为"不合格"时，设备状态将变更为"报废"</li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
+                <!-- 操作按钮 -->
                 <div class="flex justify-end space-x-3">
-                    <button class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400" onclick="closeBatchCalibrationModal()">
+                    <button class="px-6 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors" onclick="closeBatchCalibrationModal()">
                         取消
                     </button>
-                    <button id="batchCalibrationBtn" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed" onclick="performBatchCalibrationUpdate()" disabled>
-                        <i class="fas fa-calendar-check mr-2"></i>确认更新
+                    <button id="batchCalibrationBtn" class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" onclick="performEnhancedBatchCalibrationUpdate()">
+                        <i class="fas fa-calendar-check mr-2"></i>批量更新检定
                     </button>
                 </div>
             </div>
@@ -1383,7 +1539,7 @@
                             <button class="equipment-action-btn text-green-600 hover:text-green-900" title="编辑" onclick="editEquipment('${equipment.id}')">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button class="equipment-action-btn text-purple-600 hover:text-purple-900" title="更新检定日期" onclick="updateCalibrationDate('${equipment.id}')">
+                            <button class="equipment-action-btn text-purple-600 hover:text-purple-900" title="更新检定" onclick="updateCalibrationDate('${equipment.id}')">
                                 <i class="fas fa-calendar-alt"></i>
                             </button>
                             <button class="equipment-action-btn text-red-600 hover:text-red-900" title="删除" onclick="deleteEquipment('${equipment.id}', '${equipment.name || '设备'}')">
@@ -2446,7 +2602,7 @@
             window.location.href = `/equipment/edit?id=${equipmentId}`;
         }
 
-        // 更新检定日期
+        // 更新检定
         function updateCalibrationDate(equipmentId) {
             // 打开单个设备检定日期更新模态框
             openSingleCalibrationModal(equipmentId);
@@ -2679,19 +2835,185 @@
             
             // 设置默认日期为今天
             const today = new Date().toISOString().split('T')[0];
-            document.getElementById('newCalibrationDate').value = today;
+            document.getElementById('batchCalibrationDate').value = today;
+            
+            // 重置所有复选框（除了检定日期）
+            document.querySelectorAll('.batch-field-checkbox').forEach(checkbox => {
+                if (checkbox.id !== 'updateCalibrationDate') {
+                    checkbox.checked = false;
+                }
+            });
+            
+            // 重置所有输入字段的显示状态
+            resetBatchFieldInputs();
+            
+            // 设置字段选择事件监听器
+            setupBatchFieldListeners();
             
             document.getElementById('batchCalibrationBtn').disabled = false;
             document.getElementById('batchCalibrationModal').classList.add('show');
             
-            // 存储选中的设备ID
+            // 存储选中的设备ID和详细信息
             window.batchCalibrationEquipmentIds = equipmentIds;
+            window.batchCalibrationEquipmentData = equipmentIds.map(id => {
+                const row = document.querySelector(`input[value="${id}"]`).closest('tr');
+                return {
+                    id: id,
+                    name: row.querySelector('.text-sm.font-medium.text-gray-900').textContent,
+                    model: row.cells[2].textContent.trim(),
+                    department: row.cells[3].textContent.trim(),
+                    calibration_method: row.cells[7]?.textContent.trim() || '内检'
+                };
+            });
         }
 
-        // 关闭批量检定日期更新模态框
+        // 关闭批量检定更新模态框
         function closeBatchCalibrationModal() {
             document.getElementById('batchCalibrationModal').classList.remove('show');
             window.batchCalibrationEquipmentIds = null;
+            window.batchCalibrationEquipmentData = null;
+            resetBatchFieldInputs();
+        }
+
+        // 重置批量字段输入显示状态
+        function resetBatchFieldInputs() {
+            // 隐藏所有字段输入（除了检定日期）
+            document.querySelectorAll('.field-input-group').forEach(field => {
+                if (field.id !== 'batchCalibrationDateField') {
+                    field.classList.add('hidden');
+                }
+            });
+            
+            // 清空所有输入字段的值
+            document.getElementById('batchCalibrationResult').value = '合格';
+            document.getElementById('batchCertificateNumber').value = '';
+            document.getElementById('batchCertificateForm').value = '';
+            document.getElementById('batchVerificationAgency').value = '';
+            document.getElementById('batchNotes').value = '';
+            
+            // 重置证书编号模式
+            const unifiedRadio = document.querySelector('input[name="certificateNumberMode"][value="unified"]');
+            if (unifiedRadio) {
+                unifiedRadio.checked = true;
+            }
+            document.getElementById('unifiedCertificateNumber').classList.remove('hidden');
+            document.getElementById('individualCertificateNumber').classList.add('hidden');
+            document.getElementById('certificateNumberList').innerHTML = '';
+        }
+
+        // 设置批量字段选择监听器
+        function setupBatchFieldListeners() {
+            const fieldMappings = {
+                'updateCalibrationResult': 'batchCalibrationResultField',
+                'updateCertificateNumber': 'batchCertificateNumberField',
+                'updateCertificateForm': 'batchCertificateFormField',
+                'updateVerificationAgency': 'batchVerificationAgencyField',
+                'updateNotes': 'batchNotesField'
+            };
+            
+            Object.keys(fieldMappings).forEach(checkboxId => {
+                const checkbox = document.getElementById(checkboxId);
+                const fieldId = fieldMappings[checkboxId];
+                
+                checkbox.addEventListener('change', function() {
+                    const fieldElement = document.getElementById(fieldId);
+                    if (this.checked) {
+                        fieldElement.classList.remove('hidden');
+                        // 如果是证书编号字段，需要特殊处理
+                        if (checkboxId === 'updateCertificateNumber') {
+                            setupCertificateNumberMode();
+                        }
+                    } else {
+                        fieldElement.classList.add('hidden');
+                    }
+                });
+            });
+
+            // 设置证书编号模式切换监听器
+            document.querySelectorAll('input[name="certificateNumberMode"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    toggleCertificateNumberMode(this.value);
+                });
+            });
+        }
+
+        // 设置证书编号模式
+        function setupCertificateNumberMode() {
+            const selectedMode = document.querySelector('input[name="certificateNumberMode"]:checked').value;
+            toggleCertificateNumberMode(selectedMode);
+        }
+
+        // 切换证书编号输入模式
+        function toggleCertificateNumberMode(mode) {
+            const unifiedSection = document.getElementById('unifiedCertificateNumber');
+            const individualSection = document.getElementById('individualCertificateNumber');
+            
+            if (mode === 'individual') {
+                unifiedSection.classList.add('hidden');
+                individualSection.classList.remove('hidden');
+                generateIndividualCertificateInputs();
+            } else {
+                unifiedSection.classList.remove('hidden');
+                individualSection.classList.add('hidden');
+            }
+        }
+
+        // 生成个体证书编号输入框
+        function generateIndividualCertificateInputs() {
+            if (!window.batchCalibrationEquipmentData) return;
+            
+            const container = document.getElementById('certificateNumberList');
+            container.innerHTML = '';
+            
+            window.batchCalibrationEquipmentData.forEach((equipment, index) => {
+                const inputGroup = document.createElement('div');
+                inputGroup.className = 'flex items-center space-x-3 p-3 bg-gray-50 rounded-lg border';
+                inputGroup.innerHTML = `
+                    <div class="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium">
+                        ${index + 1}
+                    </div>
+                    <div class="flex-1">
+                        <div class="text-sm font-medium text-gray-900">${equipment.name}</div>
+                        <div class="text-xs text-gray-500">${equipment.model} - ${equipment.department}</div>
+                    </div>
+                    <div class="flex-1">
+                        <input type="text" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent individual-certificate-input" 
+                               placeholder="输入证书编号" 
+                               data-equipment-id="${equipment.id}">
+                    </div>
+                `;
+                container.appendChild(inputGroup);
+            });
+        }
+
+        // 显示批量设备列表
+        function showBatchEquipmentList() {
+            if (!window.batchCalibrationEquipmentData) return;
+            
+            let listHtml = '<div class="space-y-2 max-h-60 overflow-y-auto">';
+            window.batchCalibrationEquipmentData.forEach(equipment => {
+                listHtml += `
+                    <div class="flex items-center justify-between p-2 bg-gray-50 rounded border">
+                        <div>
+                            <span class="font-medium text-gray-900">${equipment.name}</span>
+                            <span class="text-sm text-gray-500 ml-2">${equipment.model}</span>
+                        </div>
+                        <div class="text-xs text-gray-500">
+                            <span>${equipment.department}</span>
+                            <span class="ml-2 px-2 py-1 bg-blue-100 text-blue-600 rounded">${equipment.calibration_method}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            listHtml += '</div>';
+            
+            showNotification(`
+                <div>
+                    <h3 class="font-medium mb-2">选中的设备列表 (${window.batchCalibrationEquipmentData.length} 台):</h3>
+                    ${listHtml}
+                </div>
+            `, 'info', 8000);
         }
 
         // 预定义器具名称管理相关函数
@@ -2899,12 +3221,10 @@
                 
                 // 设置外检必填字段
                 const certificateNumberField = document.getElementById('singleCertificateNumber');
-                const verificationResultField = document.getElementById('singleVerificationResult');
                 const verificationAgencyField = document.getElementById('singleVerificationAgency');
                 const certificateFormField = document.getElementById('singleCertificateForm');
                 
                 if (certificateNumberField) certificateNumberField.required = true;
-                if (verificationResultField) verificationResultField.required = true;
                 if (verificationAgencyField) verificationAgencyField.required = true;
                 if (certificateFormField) certificateFormField.required = true;
             } else {
@@ -2918,12 +3238,10 @@
                 
                 // 清除外检必填字段
                 const certificateNumberField = document.getElementById('singleCertificateNumber');
-                const verificationResultField = document.getElementById('singleVerificationResult');
                 const verificationAgencyField = document.getElementById('singleVerificationAgency');
                 const certificateFormField = document.getElementById('singleCertificateForm');
                 
                 if (certificateNumberField) certificateNumberField.required = false;
-                if (verificationResultField) verificationResultField.required = false;
                 if (verificationAgencyField) verificationAgencyField.required = false;
                 if (certificateFormField) certificateFormField.required = false;
             }
@@ -2934,9 +3252,9 @@
             // 清空表单字段（需要检查元素是否存在）
             const elementsToReset = [
                 'singleCalibrationNotes',
+                'singleExternalCalibrationNotes',
                 'singleCertificateNumber', 
                 'singleCertificateForm',
-                'singleVerificationResult',
                 'singleVerificationAgency',
                 'singleDisposalReason'
             ];
@@ -3092,7 +3410,6 @@
             
             if (calibrationMethod === '外检') {
                 const certificateNumber = document.getElementById('singleCertificateNumber').value.trim();
-                const verificationResult = document.getElementById('singleVerificationResult').value.trim();
                 const verificationAgency = document.getElementById('singleVerificationAgency').value.trim();
                 const certificateForm = document.getElementById('singleCertificateForm').value.trim();
                 
@@ -3100,10 +3417,6 @@
                 
                 if (!certificateNumber) {
                     showFieldError(document.getElementById('singleCertificateNumber'), '证书编号为必填项');
-                    hasErrors = true;
-                }
-                if (!verificationResult) {
-                    showFieldError(document.getElementById('singleVerificationResult'), '检定结果描述为必填项');
                     hasErrors = true;
                 }
                 if (!verificationAgency) {
@@ -3154,12 +3467,15 @@
                 
                 // 添加外检特有字段
                 if (calibrationMethod === '外检') {
-                    requestData.verification_result = document.getElementById('singleVerificationResult').value.trim();
                     requestData.verification_agency = document.getElementById('singleVerificationAgency').value.trim();
-                }
-                
-                // 添加内检备注
-                if (calibrationMethod === '内检') {
+                    
+                    // 添加外检备注
+                    const externalNotes = document.getElementById('singleExternalCalibrationNotes').value.trim();
+                    if (externalNotes) {
+                        requestData.notes = externalNotes;
+                    }
+                } else if (calibrationMethod === '内检') {
+                    // 添加内检备注
                     const internalNotes = document.getElementById('singleCalibrationNotes').value.trim();
                     if (internalNotes) {
                         requestData.notes = internalNotes;
@@ -3263,7 +3579,6 @@
             const requiredFields = [
                 'singleCertificateNumber',
                 'singleCertificateForm', 
-                'singleVerificationResult',
                 'singleVerificationAgency'
             ];
 
@@ -3339,7 +3654,6 @@
             const labelMap = {
                 'singleCertificateNumber': '证书编号',
                 'singleCertificateForm': '证书形式',
-                'singleVerificationResult': '检定结果描述',
                 'singleVerificationAgency': '检定机构',
                 'singleStatusChangeDate': '状态变更时间'
             };
@@ -3347,35 +3661,140 @@
         }
 
         // 执行批量检定日期更新
-        async function performBatchCalibrationUpdate() {
-            const newCalibrationDate = document.getElementById('newCalibrationDate').value;
-            
-            if (!newCalibrationDate) {
-                showNotification('请选择新检定日期', 'warning');
+        // 增强的批量检定更新函数
+        async function performEnhancedBatchCalibrationUpdate() {
+            // 验证必填字段
+            const calibrationDate = document.getElementById('batchCalibrationDate').value;
+            if (!calibrationDate) {
+                showNotification('请选择检定日期', 'warning');
                 return;
             }
             
             try {
-                showNotification('正在批量更新检定日期...', 'info');
+                showNotification('正在批量更新检定信息...', 'info');
                 document.getElementById('batchCalibrationBtn').disabled = true;
                 
-                const requestData = {
+                // 构建所有设备的检定更新数据
+                const calibrationUpdates = window.batchCalibrationEquipmentIds.map((equipmentId, index) => {
+                    const updateData = {
+                        calibration_date: calibrationDate,
+                        calibration_result: '合格' // 默认值
+                    };
+                    
+                    // 根据选中的字段添加相应的数据
+                    if (document.getElementById('updateCalibrationResult').checked) {
+                        updateData.calibration_result = document.getElementById('batchCalibrationResult').value;
+                    }
+                    
+                    if (document.getElementById('updateCertificateNumber').checked) {
+                        const certificateNumberMode = document.querySelector('input[name="certificateNumberMode"]:checked').value;
+                        
+                        if (certificateNumberMode === 'individual') {
+                            // 个体模式：从对应的输入框获取证书编号
+                            const individualInput = document.querySelector(`input[data-equipment-id="${equipmentId}"]`);
+                            if (individualInput && individualInput.value.trim()) {
+                                updateData.certificate_number = individualInput.value.trim();
+                            }
+                        } else {
+                            // 统一模式：所有设备使用相同的证书编号
+                            const certificateNumber = document.getElementById('batchCertificateNumber').value.trim();
+                            if (certificateNumber) {
+                                updateData.certificate_number = certificateNumber;
+                            }
+                        }
+                    }
+                    
+                    if (document.getElementById('updateCertificateForm').checked) {
+                        const certificateForm = document.getElementById('batchCertificateForm').value;
+                        if (certificateForm) {
+                            updateData.certificate_form = certificateForm;
+                        }
+                    }
+                    
+                    if (document.getElementById('updateVerificationAgency').checked) {
+                        const agency = document.getElementById('batchVerificationAgency').value.trim();
+                        if (agency) {
+                            updateData.verification_agency = agency;
+                            updateData.verification_result = '检定合格'; // 有检定机构时的默认值
+                        }
+                    }
+                    
+                    if (document.getElementById('updateNotes').checked) {
+                        const notes = document.getElementById('batchNotes').value.trim();
+                        if (notes) {
+                            updateData.notes = notes;
+                        }
+                    }
+                    
+                    // 如果检定结果为不合格，需要设置报废相关字段
+                    if (updateData.calibration_result === '不合格') {
+                        updateData.status_change_date = calibrationDate;
+                        updateData.disposal_reason = updateData.notes || '检定不合格';
+                    }
+                    
+                    return updateData;
+                });
+                
+                // 构建批量更新请求
+                const batchUpdateData = {
                     equipment_ids: window.batchCalibrationEquipmentIds,
-                    calibration_date: newCalibrationDate
+                    calibration_updates: calibrationUpdates
                 };
                 
-                await EquipmentAPI.batchUpdateCalibration(requestData);
+                // 调用新的批量更新API
+                const response = await fetch('/api/calibration/equipment/batch-update', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getAuthToken()}`
+                    },
+                    body: JSON.stringify(batchUpdateData)
+                });
                 
-                showNotification(`成功更新 ${window.batchCalibrationEquipmentIds.length} 台设备检定日期`, 'success');
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || '批量更新失败');
+                }
+                
+                const response_data = await response.json();
+                
+                // 从API响应中提取results数组
+                const results = response_data.results || [];
+                const successCount = response_data.success_count || 0;
+                const errorCount = response_data.failed_count || 0;
+                
+                if (errorCount > 0) {
+                    const errorMessages = results
+                        .filter(r => !r.success)
+                        .map(r => `设备ID ${r.equipment_id}: ${r.message}`)
+                        .join('<br>');
+                    
+                    showNotification(`
+                        <div>
+                            <div class="font-medium mb-2">批量更新完成</div>
+                            <div>成功: ${successCount} 台，失败: ${errorCount} 台</div>
+                            <div class="mt-2 text-sm">失败详情:<br>${errorMessages}</div>
+                        </div>
+                    `, 'warning', 10000);
+                } else {
+                    showNotification(`成功批量更新 ${successCount} 台设备的检定信息`, 'success');
+                }
+                
                 closeBatchCalibrationModal();
                 loadEquipmentData(); // 重新加载数据
                 await loadDashboardStats(); // 刷新统计数据
                 
             } catch (error) {
-                console.error('批量检定日期更新失败:', error);
-                showNotification('批量检定日期更新失败: ' + error.message, 'error');
+                console.error('批量检定更新失败:', error);
+                showNotification('批量检定更新失败: ' + error.message, 'error');
                 document.getElementById('batchCalibrationBtn').disabled = false;
             }
+        }
+
+        // 获取认证令牌
+        function getAuthToken() {
+            // 从sessionStorage或localStorage获取令牌
+            return sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
         }
 
         // 管理附件
@@ -3816,6 +4235,11 @@
         }
 
         // 执行导入操作
+        // 导入功能全局变量 - 必须在函数调用之前声明
+        let globalImportResult = null;
+        let currentFilter = '全部';
+        let isErrorGrouped = false;
+
         async function performImport() {
             const fileInput = document.getElementById('importFileInput');
             const file = fileInput.files[0];
@@ -3826,12 +4250,18 @@
             }
             
             const overwrite = document.getElementById('overwriteExisting').checked;
+            console.log('上传文件参数:', {
+                filename: file.name,
+                overwrite: overwrite,
+                overwriteType: typeof overwrite
+            });
             
             try {
                 showNotification('正在导入数据，请稍候...', 'info');
                 document.getElementById('importBtn').disabled = true;
                 
                 const result = await ImportExportAPI.uploadImportFile(file, overwrite);
+                console.log('导入结果:', result);
                 showImportResult(result);
                 closeImportModal();
                 
@@ -3847,10 +4277,6 @@
         }
 
         // 显示导入结果
-        // 全局变量存储导入结果
-        let globalImportResult = null;
-        let currentFilter = '全部';
-        let isErrorGrouped = false;
 
         function showImportResult(result) {
             globalImportResult = result; // 保存结果供过滤使用

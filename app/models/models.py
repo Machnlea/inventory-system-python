@@ -134,6 +134,11 @@ class Equipment(Base):
     status_change_date = Column(Date)  # 状态变更时间
     notes = Column(Text)  # 备注
     
+    # 检定历史相关字段
+    calibration_notes = Column(Text)  # 检定备注
+    disposal_reason = Column(Text)  # 报废原因
+    current_calibration_result = Column(String(20), default="合格")  # 当前检定结果
+    
     # 时间戳
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -143,6 +148,7 @@ class Equipment(Base):
     category = relationship("EquipmentCategory", back_populates="equipments")
     audit_logs = relationship("AuditLog", back_populates="equipment")
     attachments = relationship("EquipmentAttachment", back_populates="equipment")
+    calibration_history = relationship("CalibrationHistory", back_populates="equipment", order_by="CalibrationHistory.calibration_date.desc()")
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"
@@ -175,6 +181,8 @@ class EquipmentAttachment(Base):
     description = Column(Text)  # 文件描述
     is_certificate = Column(Boolean, default=False)  # 是否为证书文件
     certificate_type = Column(String(50))  # 证书类型：检定证书/校准证书
+    calibration_history_id = Column(Integer, ForeignKey("calibration_history.id"))  # 检定历史记录ID
+    attachment_category = Column(String(50), default="equipment")  # 附件类别：equipment/calibration/disposal
     uploaded_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -182,6 +190,7 @@ class EquipmentAttachment(Base):
     # 关联
     equipment = relationship("Equipment", back_populates="attachments")
     uploader = relationship("User")
+    calibration_history = relationship("CalibrationHistory")
 
 
 # 部门用户操作日志
@@ -198,3 +207,26 @@ class DepartmentUserLog(Base):
     
     # 关联
     user = relationship("User", back_populates="department_user_logs")
+
+
+class CalibrationHistory(Base):
+    __tablename__ = "calibration_history"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    equipment_id = Column(Integer, ForeignKey("equipments.id"), nullable=False)
+    calibration_date = Column(Date, nullable=False)  # 检定日期
+    valid_until = Column(Date, nullable=False)  # 有效期至
+    calibration_method = Column(String(20), nullable=False)  # 检定方式（内检/外检）
+    calibration_result = Column(String(20), nullable=False)  # 本次检定结果（合格/不合格）
+    certificate_number = Column(String(100))  # 证书编号
+    certificate_form = Column(String(50))  # 证书形式（检定证书/校准证书）
+    verification_result = Column(String(100))  # 检定结果描述
+    verification_agency = Column(String(100))  # 检定机构
+    notes = Column(Text)  # 检定备注
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"))
+    
+    # 关联
+    equipment = relationship("Equipment", back_populates="calibration_history")
+    creator = relationship("User")
+    attachments = relationship("EquipmentAttachment", back_populates="calibration_history")

@@ -1185,13 +1185,13 @@
                 console.log('部门用户API响应:', response);
                 
                 let allUsers;
-                if (response.success) {
-                    allUsers = response.data;
-                } else if (Array.isArray(response)) {
+                if (Array.isArray(response)) {
                     // 如果直接返回数组
                     allUsers = response;
+                } else if (response && response.success) {
+                    allUsers = response.data;
                 } else {
-                    throw new Error(response.message || '获取用户信息失败');
+                    throw new Error(response?.detail || response?.message || '获取用户信息失败');
                 }
                 
                 const departmentUser = allUsers.find(user => user.department_id === departmentId);
@@ -1275,12 +1275,13 @@
         async function createDepartmentUser() {
             try {
                 const response = await api.post(`/api/department/admin/create?department_id=${currentDepartmentId}`, {});
-                if (response.success) {
+                // 直接检查响应对象，如果存在用户数据则表示成功
+                if (response && response.id) {
                     showNotification('部门用户创建成功', 'success');
                     // 重新加载用户信息
                     manageDepartmentUser(currentDepartmentId, currentDepartmentUserData?.department?.name || '');
                 } else {
-                    throw new Error(response.message || '创建失败');
+                    throw new Error(response?.detail || '创建失败');
                 }
             } catch (error) {
                 console.error('创建部门用户失败:', error);
@@ -1299,13 +1300,15 @@
             
             try {
                 const response = await api.put(`/api/department/admin/status/${user.id}?is_active=${newStatus}`, {});
-                if (response.success) {
-                    showNotification(response.message, 'success');
+                if (response && response.success) {
+                    showNotification(response.message || `${action}成功`, 'success');
                     // 更新用户数据
-                    Object.assign(user, response.user);
+                    Object.assign(user, response.user || user);
                     showUserInfoContent(user);
+                } else if (response && response.message) {
+                    throw new Error(response.message);
                 } else {
-                    throw new Error(response.message || `${action}失败`);
+                    throw new Error(`${action}失败`);
                 }
             } catch (error) {
                 console.error(`${action}用户失败:`, error);
@@ -1332,10 +1335,12 @@
                     new_password: newPassword
                 });
                 
-                if (response.success) {
+                if (response && response.success) {
                     showNotification('密码重置成功，用户下次登录需修改密码', 'success');
+                } else if (response && response.message) {
+                    throw new Error(response.message);
                 } else {
-                    throw new Error(response.message || '重置失败');
+                    throw new Error('重置失败');
                 }
             } catch (error) {
                 console.error('重置密码失败:', error);
@@ -1375,12 +1380,12 @@
                 const response = await api.get(`/api/department/admin/logs/${userId}?limit=5`);
                 let logs;
                 
-                if (response.success) {
-                    logs = response.data;
-                } else if (Array.isArray(response)) {
+                if (Array.isArray(response)) {
                     logs = response;
+                } else if (response && response.success) {
+                    logs = response.data;
                 } else {
-                    throw new Error(response.message || '获取日志失败');
+                    throw new Error(response?.detail || response?.message || '获取日志失败');
                 }
                 
                 // 隐藏加载状态

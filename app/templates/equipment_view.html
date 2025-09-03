@@ -279,12 +279,20 @@
                                 <span id="calibrationMethod" class="info-value">加载中...</span>
                             </div>
                             
-                            <!-- 外检专用字段 - 默认隐藏 -->
-                            <div id="externalInspectionFields" style="display: none;">
+                            <!-- 内检设备证书字段 - 默认隐藏 -->
+                            <div id="internalInspectionFields" class="space-y-4" style="display: none;">
                                 <div class="info-row">
                                     <span class="info-label">证书编号</span>
                                     <span id="certificateNumber" class="info-value">-</span>
                                 </div>
+                                <div class="info-row">
+                                    <span class="info-label">证书形式</span>
+                                    <span id="certificateForm" class="info-value">-</span>
+                                </div>
+                            </div>
+
+                            <!-- 外检设备字段 - 默认隐藏 -->
+                            <div id="externalInspectionFields" class="space-y-4" style="display: none;">
                                 <div class="info-row">
                                     <span class="info-label">检定结果</span>
                                     <span id="verificationResult" class="info-value">-</span>
@@ -292,10 +300,6 @@
                                 <div class="info-row">
                                     <span class="info-label">检定机构</span>
                                     <span id="verificationAgency" class="info-value">-</span>
-                                </div>
-                                <div class="info-row">
-                                    <span class="info-label">证书形式</span>
-                                    <span id="certificateForm" class="info-value">-</span>
                                 </div>
                             </div>
                             
@@ -710,19 +714,33 @@
                     new Date(equipmentData.valid_until).toLocaleDateString('zh-CN') : '-';
                 document.getElementById('calibrationMethod').textContent = equipmentData.calibration_method || '-';
                 
-                // 处理外检专用字段的显示
+                // 根据检定方式显示不同的字段
+                const internalInspectionFields = document.getElementById('internalInspectionFields');
                 const externalInspectionFields = document.getElementById('externalInspectionFields');
-                if (equipmentData.calibration_method === '外检') {
-                    // 显示外检专用字段
+                
+                if (equipmentData.calibration_method === '内检') {
+                    // 内检设备：总是显示证书编号和证书形式
+                    internalInspectionFields.style.display = 'block';
+                    externalInspectionFields.style.display = 'none';
+                    
+                    // 填充内检证书字段数据
+                    document.getElementById('certificateNumber').textContent = equipmentData.certificate_number || '-';
+                    document.getElementById('certificateForm').textContent = equipmentData.certificate_form || '-';
+                } else if (equipmentData.calibration_method === '外检') {
+                    // 外检设备：显示检定结果和检定机构，以及证书信息
+                    internalInspectionFields.style.display = 'block';
                     externalInspectionFields.style.display = 'block';
                     
-                    // 填充外检专用字段数据
+                    // 填充证书字段数据
                     document.getElementById('certificateNumber').textContent = equipmentData.certificate_number || '-';
+                    document.getElementById('certificateForm').textContent = equipmentData.certificate_form || '-';
+                    
+                    // 填充外检特有字段数据
                     document.getElementById('verificationResult').textContent = equipmentData.verification_result || '-';
                     document.getElementById('verificationAgency').textContent = equipmentData.verification_agency || '-';
-                    document.getElementById('certificateForm').textContent = equipmentData.certificate_form || '-';
                 } else {
-                    // 隐藏外检专用字段
+                    // 隐藏所有额外字段
+                    internalInspectionFields.style.display = 'none';
                     externalInspectionFields.style.display = 'none';
                 }
 
@@ -1582,11 +1600,126 @@
                             </div>
                         </div>
                         ${history.notes ? `<div class="mt-2 text-xs text-gray-600 bg-gray-50 p-2 rounded">${history.notes}</div>` : ''}
+                        <div class="mt-2 flex flex-wrap gap-2" id="calibration-attachments-${history.id}">
+                            <!-- 附件按钮将在这里动态加载 -->
+                        </div>
                     </div>
                 `;
             });
             
             container.innerHTML = timelineHtml;
+            
+            // 异步加载每个检定历史记录的附件
+            histories.forEach(async (history) => {
+                await loadCalibrationAttachments(history.id, currentEquipmentId);
+            });
+        }
+        
+        // 加载检定历史记录的附件
+        async function loadCalibrationAttachments(historyId, equipmentId) {
+            try {
+                const currentToken = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
+                const response = await fetch(`/api/attachments/equipment/${equipmentId}/attachments`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    console.warn(`无法加载检定历史 ${historyId} 的附件`);
+                    return;
+                }
+                
+                const attachments = await response.json();
+                
+                // 筛选属于此检定历史记录的附件
+                const calibrationAttachments = attachments.filter(attachment => 
+                    attachment.calibration_history_id === historyId
+                );
+                
+                const attachmentContainer = document.getElementById(`calibration-attachments-${historyId}`);
+                if (!attachmentContainer) return;
+                
+                if (calibrationAttachments.length === 0) {
+                    // 没有附件时隐藏容器
+                    attachmentContainer.style.display = 'none';
+                    return;
+                }
+                
+                // 构建附件按钮HTML
+                let attachmentHtml = '';
+                calibrationAttachments.forEach(attachment => {
+                    const isImage = ['jpg', 'jpeg', 'png', 'gif'].includes(
+                        attachment.file_type ? attachment.file_type.toLowerCase() : ''
+                    );
+                    const isPdf = attachment.file_type && attachment.file_type.toLowerCase() === 'pdf';
+                    
+                    attachmentHtml += `
+                        <div class="inline-flex items-center text-xs bg-gray-100 hover:bg-gray-200 rounded px-2 py-1 cursor-pointer transition-colors"
+                             onclick="previewCalibrationAttachment(${attachment.id}, '${attachment.original_filename}', '${attachment.file_type}')">
+                            <i class="fas ${isImage ? 'fa-image' : isPdf ? 'fa-file-pdf' : 'fa-file'} text-gray-600 mr-1"></i>
+                            <span class="text-gray-700">${attachment.original_filename}</span>
+                        </div>
+                    `;
+                });
+                
+                attachmentContainer.innerHTML = attachmentHtml;
+                attachmentContainer.style.display = 'flex';
+                
+            } catch (error) {
+                console.error('加载检定附件失败:', error);
+            }
+        }
+        
+        // 预览检定附件
+        async function previewCalibrationAttachment(attachmentId, filename, fileType) {
+            try {
+                const previewUrl = await AttachmentAPI.previewAttachment(attachmentId);
+                
+                // 创建预览模态框
+                const modal = document.createElement('div');
+                modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[2000]';
+                modal.innerHTML = `
+                    <div class="bg-white rounded-lg max-w-4xl max-h-[90vh] w-full mx-4 flex flex-col">
+                        <div class="flex items-center justify-between p-4 border-b">
+                            <h3 class="text-lg font-semibold">预览检定附件: ${filename}</h3>
+                            <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+                        <div class="flex-1 p-4 overflow-auto">
+                            ${fileType && fileType.toUpperCase() === 'PDF' ? 
+                                `<iframe src="${previewUrl}" class="w-full h-full min-h-[600px] border-none"></iframe>` :
+                                `<img src="${previewUrl}" class="max-w-full max-h-full mx-auto" alt="${filename}" />`
+                            }
+                        </div>
+                        <div class="p-4 border-t flex justify-end space-x-3">
+                            <button onclick="this.closest('.fixed').remove()" 
+                                    class="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg">
+                                关闭
+                            </button>
+                            <a href="${previewUrl}" download="${filename}" 
+                               class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
+                                <i class="fas fa-download mr-2"></i>下载
+                            </a>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(modal);
+                
+                // 点击背景关闭
+                modal.addEventListener('click', function(e) {
+                    if (e.target === modal) {
+                        modal.remove();
+                    }
+                });
+                
+            } catch (error) {
+                console.error('预览检定附件失败:', error);
+                showNotification('预览附件失败: ' + error.message, 'error');
+            }
         }
         
         // 获取检定状态对应的时间线点样式
@@ -1621,13 +1754,15 @@
         // 格式化日期时间为中文格式
         function formatDateTime(dateString) {
             if (!dateString) return '-';
-            const date = new Date(dateString);
-            return date.toLocaleString('zh-CN', {
+            // 数据库存储的是UTC时间，需要添加UTC标识符然后转换为本地时间
+            const utcDate = new Date(dateString + 'Z'); // 添加Z表示UTC时间
+            return utcDate.toLocaleString('zh-CN', {
                 year: 'numeric',
                 month: '2-digit',
                 day: '2-digit',
                 hour: '2-digit',
-                minute: '2-digit'
+                minute: '2-digit',
+                timeZone: 'Asia/Shanghai' // 明确指定中国时区
             });
         }
         
@@ -1654,7 +1789,7 @@
                 // 创建模态框HTML
                 const modalHTML = `
                     <div id="calibrationHistoryModal" class="fixed inset-0 modal-overlay flex items-center justify-center p-4 z-50">
-                        <div class="modal-content bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                        <div class="modal-content bg-white rounded-lg shadow-xl max-w-7xl w-full mx-4 max-h-[90vh] overflow-y-auto">
                             <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
                                 <h3 class="text-lg font-semibold text-gray-900">
                                     <i class="fas fa-history mr-2 text-indigo-600"></i>
@@ -1683,6 +1818,13 @@
                         }
                     });
                 }
+                
+                // 加载模态框中的附件
+                setTimeout(() => {
+                    allHistories.forEach(async (history) => {
+                        await loadModalCalibrationAttachments(history.id, currentEquipmentId);
+                    });
+                }, 100);
                 
             } catch (error) {
                 console.error('打开检定历史模态框失败:', error);
@@ -1729,6 +1871,7 @@
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">检定结果</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">证书编号</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">检定机构</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">附件</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">备注</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">记录时间</th>
                                 </tr>
@@ -1758,6 +1901,11 @@
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                             ${history.verification_agency || '-'}
                                         </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                            <div id="modal-attachments-${history.id}" class="flex flex-wrap gap-1">
+                                                <span class="text-gray-400 text-xs">加载中...</span>
+                                            </div>
+                                        </td>
                                         <td class="px-6 py-4 text-sm text-gray-900 max-w-xs truncate" title="${history.notes || ''}">
                                             ${history.notes || '-'}
                                         </td>
@@ -1771,6 +1919,66 @@
                     </div>
                 </div>
             `;
+        }
+        
+        // 加载模态框中检定历史记录的附件
+        async function loadModalCalibrationAttachments(historyId, equipmentId) {
+            try {
+                const currentToken = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
+                const response = await fetch(`/api/attachments/equipment/${equipmentId}/attachments`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    console.warn(`无法加载检定历史 ${historyId} 的附件`);
+                    return;
+                }
+                
+                const attachments = await response.json();
+                
+                // 筛选属于此检定历史记录的附件
+                const calibrationAttachments = attachments.filter(attachment => 
+                    attachment.calibration_history_id === historyId
+                );
+                
+                const attachmentContainer = document.getElementById(`modal-attachments-${historyId}`);
+                if (!attachmentContainer) return;
+                
+                if (calibrationAttachments.length === 0) {
+                    attachmentContainer.innerHTML = '<span class="text-gray-400 text-xs">无附件</span>';
+                    return;
+                }
+                
+                // 构建附件按钮HTML
+                let attachmentHtml = '';
+                calibrationAttachments.forEach(attachment => {
+                    const isImage = ['jpg', 'jpeg', 'png', 'gif'].includes(
+                        attachment.file_type ? attachment.file_type.toLowerCase() : ''
+                    );
+                    const isPdf = attachment.file_type && attachment.file_type.toLowerCase() === 'pdf';
+                    
+                    attachmentHtml += `
+                        <div class="inline-flex items-center text-xs bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded px-2 py-1 cursor-pointer transition-colors mr-1 mb-1"
+                             onclick="previewCalibrationAttachment(${attachment.id}, '${attachment.original_filename}', '${attachment.file_type}')"
+                             title="点击预览或下载 ${attachment.original_filename}">
+                            <i class="fas ${isImage ? 'fa-image' : isPdf ? 'fa-file-pdf' : 'fa-file'} text-blue-600 mr-1"></i>
+                            <span class="text-blue-700">${attachment.original_filename.length > 15 ? attachment.original_filename.substring(0, 12) + '...' : attachment.original_filename}</span>
+                        </div>
+                    `;
+                });
+                
+                attachmentContainer.innerHTML = attachmentHtml;
+                
+            } catch (error) {
+                console.error('加载模态框检定附件失败:', error);
+                const attachmentContainer = document.getElementById(`modal-attachments-${historyId}`);
+                if (attachmentContainer) {
+                    attachmentContainer.innerHTML = '<span class="text-red-400 text-xs">加载失败</span>';
+                }
+            }
         }
         
     </script>

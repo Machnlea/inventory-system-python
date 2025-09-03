@@ -15,6 +15,7 @@ from app.api.settings import router as settings_router
 from app.api.reports import router as reports_router
 from app.api.department_users import router as department_users_router
 from app.api.external_api import router as external_api_router
+from app.api.calibration import router as calibration_router
 from app.db.database import engine
 from app.models import models
 
@@ -49,6 +50,7 @@ app.include_router(settings_router, prefix="/api/settings", tags=["系统设置"
 app.include_router(reports_router, prefix="/api/reports", tags=["统计报表"])
 app.include_router(department_users_router, prefix="/api/department", tags=["部门用户"])
 app.include_router(external_api_router, prefix="/api/external", tags=["外部系统API"])
+app.include_router(calibration_router, prefix="/api", tags=["检定管理"])
 
 @app.get("/favicon.ico")
 async def favicon():

@@ -313,54 +313,20 @@
                         <h2 class="text-xl font-semibold text-gray-900 mb-6 flex items-center">
                             <i class="fas fa-history text-green-600 mr-3"></i>
                             检定历史
+                            <button onclick="loadCalibrationHistory()" class="ml-auto px-3 py-1 text-xs bg-blue-100 text-blue-800 rounded-lg hover:bg-blue-200 transition-colors">
+                                <i class="fas fa-sync-alt mr-1"></i>刷新
+                            </button>
                         </h2>
                         
-                        <div class="space-y-4">
-                            <div class="timeline-item">
-                                <div class="timeline-dot success"></div>
-                                <div class="flex justify-between items-center">
-                                    <div>
-                                        <div class="font-medium text-gray-900">最新检定</div>
-                                        <div class="text-sm text-gray-600">2023-10-15</div>
-                                    </div>
-                                    <div class="text-right">
-                                        <div class="text-sm font-medium text-green-600">合格</div>
-                                        <div class="text-xs text-gray-500">内检</div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="timeline-item">
-                                <div class="timeline-dot success"></div>
-                                <div class="flex justify-between items-center">
-                                    <div>
-                                        <div class="font-medium text-gray-900">历史检定</div>
-                                        <div class="text-sm text-gray-600">2022-10-15</div>
-                                    </div>
-                                    <div class="text-right">
-                                        <div class="text-sm font-medium text-green-600">合格</div>
-                                        <div class="text-xs text-gray-500">内检</div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="timeline-item">
-                                <div class="timeline-dot success"></div>
-                                <div class="flex justify-between items-center">
-                                    <div>
-                                        <div class="font-medium text-gray-900">首次检定</div>
-                                        <div class="text-sm text-gray-600">2021-10-15</div>
-                                    </div>
-                                    <div class="text-right">
-                                        <div class="text-sm font-medium text-green-600">合格</div>
-                                        <div class="text-xs text-gray-500">外检</div>
-                                    </div>
-                                </div>
+                        <div id="calibrationHistoryContainer" class="space-y-4">
+                            <div class="text-center py-8">
+                                <i class="fas fa-spinner fa-spin text-3xl text-gray-400 mb-4"></i>
+                                <p class="text-gray-500">正在加载检定历史...</p>
                             </div>
                         </div>
                         
                         <div class="mt-6">
-                            <button onclick="viewCalibrationHistory('YB-001')" 
+                            <button onclick="openCalibrationHistoryModal()" 
                                     class="w-full text-center py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors duration-200">
                                 <i class="fas fa-external-link-alt mr-2"></i>查看完整检定记录
                             </button>
@@ -651,6 +617,9 @@
                 
                 // 更新附件计数
                 await updateAttachmentCount(currentEquipmentId);
+                
+                // 加载检定历史
+                await loadCalibrationHistory();
 
             } catch (error) {
                 console.error('页面初始化失败:', error);
@@ -1522,6 +1491,288 @@
                 closeNotesEditModal();
             }
         });
+
+        // 检定历史相关函数
+        
+        // 加载检定历史
+        async function loadCalibrationHistory() {
+            try {
+                const container = document.getElementById('calibrationHistoryContainer');
+                
+                // 显示加载状态
+                container.innerHTML = `
+                    <div class="text-center py-8">
+                        <i class="fas fa-spinner fa-spin text-3xl text-gray-400 mb-4"></i>
+                        <p class="text-gray-500">正在加载检定历史...</p>
+                    </div>
+                `;
+                
+                // 调用API获取检定历史
+                const currentToken = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
+                const response = await fetch(`/api/calibration/equipment/${currentEquipmentId}/history?limit=5`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('获取检定历史失败');
+                }
+                
+                const calibrationHistories = await response.json();
+                
+                // 渲染检定历史时间线
+                renderCalibrationHistoryTimeline(calibrationHistories);
+                
+            } catch (error) {
+                console.error('加载检定历史失败:', error);
+                const container = document.getElementById('calibrationHistoryContainer');
+                container.innerHTML = `
+                    <div class="text-center py-8">
+                        <i class="fas fa-exclamation-triangle text-3xl text-yellow-500 mb-4"></i>
+                        <p class="text-gray-500 mb-4">加载检定历史失败</p>
+                        <button onclick="loadCalibrationHistory()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            重试
+                        </button>
+                    </div>
+                `;
+            }
+        }
+        
+        // 渲染检定历史时间线
+        function renderCalibrationHistoryTimeline(histories) {
+            const container = document.getElementById('calibrationHistoryContainer');
+            
+            if (!histories || histories.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8">
+                        <i class="fas fa-history text-3xl text-gray-400 mb-4"></i>
+                        <p class="text-gray-500">暂无检定历史记录</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // 构建时间线HTML
+            let timelineHtml = '';
+            
+            histories.forEach((history, index) => {
+                const isLatest = index === 0;
+                const isOldest = index === histories.length - 1;
+                const dotClass = getCalibrationStatusDotClass(history.calibration_result);
+                const resultClass = getCalibrationResultClass(history.calibration_result);
+                
+                const displayTitle = isLatest ? '最新检定' : 
+                                   isOldest && histories.length > 2 ? '首次检定' : '历史检定';
+                
+                timelineHtml += `
+                    <div class="timeline-item">
+                        <div class="timeline-dot ${dotClass}"></div>
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="font-medium text-gray-900">${displayTitle}</div>
+                                <div class="text-sm text-gray-600">${formatDate(history.calibration_date)}</div>
+                                ${history.valid_until ? `<div class="text-xs text-gray-500">有效期至: ${formatDate(history.valid_until)}</div>` : ''}
+                            </div>
+                            <div class="text-right">
+                                <div class="text-sm font-medium ${resultClass}">${history.calibration_result}</div>
+                                <div class="text-xs text-gray-500">${history.calibration_method}</div>
+                                ${history.certificate_number ? `<div class="text-xs text-gray-400">证书: ${history.certificate_number}</div>` : ''}
+                            </div>
+                        </div>
+                        ${history.notes ? `<div class="mt-2 text-xs text-gray-600 bg-gray-50 p-2 rounded">${history.notes}</div>` : ''}
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = timelineHtml;
+        }
+        
+        // 获取检定状态对应的时间线点样式
+        function getCalibrationStatusDotClass(result) {
+            switch(result) {
+                case '合格': return 'success';
+                case '不合格': return 'danger';
+                default: return 'warning';
+            }
+        }
+        
+        // 获取检定结果对应的文字样式
+        function getCalibrationResultClass(result) {
+            switch(result) {
+                case '合格': return 'text-green-600';
+                case '不合格': return 'text-red-600';
+                default: return 'text-yellow-600';
+            }
+        }
+        
+        // 格式化日期显示
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+        }
+        
+        // 格式化日期时间为中文格式
+        function formatDateTime(dateString) {
+            if (!dateString) return '-';
+            const date = new Date(dateString);
+            return date.toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+        
+        // 打开完整检定历史模态框
+        async function openCalibrationHistoryModal() {
+            try {
+                showNotification('正在加载完整检定历史...', 'info');
+                
+                // 获取完整的检定历史记录
+                const currentToken = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
+                const response = await fetch(`/api/calibration/equipment/${currentEquipmentId}/history`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('获取完整检定历史失败');
+                }
+                
+                const allHistories = await response.json();
+                
+                // 创建模态框HTML
+                const modalHTML = `
+                    <div id="calibrationHistoryModal" class="fixed inset-0 modal-overlay flex items-center justify-center p-4 z-50">
+                        <div class="modal-content bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                                <h3 class="text-lg font-semibold text-gray-900">
+                                    <i class="fas fa-history mr-2 text-indigo-600"></i>
+                                    完整检定历史记录 - ${equipmentData.name}
+                                </h3>
+                                <button onclick="closeCalibrationHistoryModal()" class="text-gray-400 hover:text-gray-600">
+                                    <i class="fas fa-times text-xl"></i>
+                                </button>
+                            </div>
+                            <div class="p-6">
+                                ${renderFullCalibrationHistory(allHistories)}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // 将模态框添加到页面
+                document.body.insertAdjacentHTML('beforeend', modalHTML);
+                
+                // 添加点击背景关闭模态框的事件
+                const modal = document.getElementById('calibrationHistoryModal');
+                if (modal) {
+                    modal.addEventListener('click', function(e) {
+                        if (e.target === modal) {
+                            closeCalibrationHistoryModal();
+                        }
+                    });
+                }
+                
+            } catch (error) {
+                console.error('打开检定历史模态框失败:', error);
+                showNotification('加载检定历史失败: ' + error.message, 'error');
+            }
+        }
+        
+        // 关闭检定历史模态框
+        function closeCalibrationHistoryModal() {
+            const modal = document.getElementById('calibrationHistoryModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+        
+        // 渲染完整检定历史记录
+        function renderFullCalibrationHistory(histories) {
+            if (!histories || histories.length === 0) {
+                return `
+                    <div class="text-center py-12">
+                        <i class="fas fa-history text-4xl text-gray-400 mb-4"></i>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">暂无检定历史记录</h3>
+                        <p class="text-gray-500">该设备还没有检定历史记录</p>
+                    </div>
+                `;
+            }
+            
+            return `
+                <div class="space-y-6">
+                    <div class="flex justify-between items-center">
+                        <h4 class="text-lg font-medium text-gray-900">检定历史记录 (${histories.length} 条)</h4>
+                        <div class="text-sm text-gray-500">
+                            最近更新: ${formatDateTime(histories[0]?.created_at)}
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">检定日期</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">有效期至</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">检定方式</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">检定结果</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">证书编号</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">检定机构</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">备注</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">记录时间</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                ${histories.map(history => `
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                            ${formatDate(history.calibration_date)}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                            ${formatDate(history.valid_until)}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${history.calibration_method === '内检' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}">
+                                                ${history.calibration_method}
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${history.calibration_result === '合格' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                                ${history.calibration_result}
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                            ${history.certificate_number || '-'}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                            ${history.verification_agency || '-'}
+                                        </td>
+                                        <td class="px-6 py-4 text-sm text-gray-900 max-w-xs truncate" title="${history.notes || ''}">
+                                            ${history.notes || '-'}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            ${formatDateTime(history.created_at)}
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+        
     </script>
 </body>
 </html>

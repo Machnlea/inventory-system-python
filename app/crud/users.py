@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
-from app.models.models import User, UserCategory
+from app.models.models import User, UserCategory, UserEquipmentPermission
 from app.schemas.schemas import UserCreate, UserUpdate
 from app.core.security import get_password_hash, verify_password
 from typing import Optional, List
@@ -150,3 +150,23 @@ def update_user_categories(db: Session, user_id: int, category_ids: List[int]):
     
     db.commit()
     return True
+
+def update_user_password(db: Session, user_id: int, new_password: str):
+    """更新用户密码"""
+    db_user = db.query(User).filter(User.id == user_id).first()
+    if db_user:
+        db_user.hashed_password = get_password_hash(new_password)
+        db.commit()
+        db.refresh(db_user)
+        return True
+    return False
+
+def update_user_first_login(db: Session, user_id: int, first_login: bool):
+    """更新用户的首次登录标记"""
+    db_user = db.query(User).filter(User.id == user_id).first()
+    if db_user:
+        db_user.first_login = first_login
+        db.commit()
+        db.refresh(db_user)
+        return True
+    return False

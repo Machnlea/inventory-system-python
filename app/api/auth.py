@@ -137,7 +137,8 @@ async def login_json(login_request: LoginRequest, request: Request, db: Session 
         "user": {
             "id": user.id,
             "username": user.username,
-            "is_admin": user.is_admin
+            "is_admin": user.is_admin,
+            "first_login": user.first_login
         }
     }
 
@@ -198,3 +199,62 @@ async def terminate_session(session_id: str, current_user: User = Depends(get_cu
 async def get_session_stats(current_user: User = Depends(get_current_admin_user)):
     """获取会话统计（仅管理员）"""
     return session_manager.get_session_stats()
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+    confirm_password: str
+
+@router.post("/change-password")
+async def change_password(
+    request: ChangePasswordRequest, 
+    current_user: User = Depends(get_current_user), 
+    db: Session = Depends(get_db)
+):
+    """用户修改密码"""
+    # 验证当前密码
+    if not users.verify_password(request.current_password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="当前密码错误"
+        )
+    
+    # 验证新密码和确认密码是否一致
+    if request.new_password != request.confirm_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="新密码和确认密码不一致"
+        )
+    
+    # 验证新密码强度
+    if len(request.new_password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="密码长度至少6个字符"
+        )
+    
+    if not any(c.isalpha() for c in request.new_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="密码必须包含字母"
+        )
+    
+    if not any(c.isdigit() for c in request.new_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="密码必须包含数字"
+        )
+    
+    # 更新密码
+    success = users.update_user_password(db, current_user.id, request.new_password)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="密码更新失败"
+        )
+    
+    # 如果是首次登录，更新first_login标记
+    if current_user.first_login:
+        users.update_user_first_login(db, current_user.id, False)
+    
+    return {"message": "密码修改成功"}

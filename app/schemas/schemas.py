@@ -368,6 +368,7 @@ class EquipmentAttachmentBase(BaseModel):
     description: Optional[str] = None
     is_certificate: bool = False
     certificate_type: Optional[str] = None
+    calibration_history_id: Optional[int] = None
 
 class EquipmentAttachmentCreate(EquipmentAttachmentBase):
     equipment_id: int
@@ -376,6 +377,7 @@ class EquipmentAttachmentUpdate(BaseModel):
     description: Optional[str] = None
     is_certificate: Optional[bool] = None
     certificate_type: Optional[str] = None
+    calibration_history_id: Optional[int] = None
 
 class EquipmentAttachment(EquipmentAttachmentBase):
     id: int

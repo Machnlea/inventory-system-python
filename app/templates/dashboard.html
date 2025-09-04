@@ -654,8 +654,9 @@
                 document.getElementById('singleCalibrationEquipmentModel').textContent = equipment.model || '-';
                 document.getElementById('singleCalibrationCycle').textContent = equipment.calibration_cycle || '-';
                 
-                // 预填当前检定信息
-                document.getElementById('singleCalibrationDate').value = equipment.calibration_date || '';
+                // 预填当前检定信息 - 检定日期默认为今天
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('singleCalibrationDate').value = today;
                 document.getElementById('singleCalibrationResult').value = equipment.verification_result || '合格';
                 
                 // 设置证书信息

@@ -627,11 +627,341 @@
             }
         }
 
-        // 处理检定操作
+        // 处理检定操作 - 打开检定信息更新模态框
         function handleCalibration(equipmentId, equipmentName) {
-            showNotification(`正在处理 ${equipmentName} 的检定...`, 'info');
-            // 这里可以跳转到检定页面或打开检定模态框
-            // 例如: window.location.href = `/equipment/edit?id=${equipmentId}`;
+            // 打开单个设备检定日期更新模态框
+            openSingleCalibrationModal(equipmentId, equipmentName);
+        }
+
+        // 打开单个设备检定更新模态框
+        async function openSingleCalibrationModal(equipmentId, equipmentName) {
+            try {
+                // 获取设备详细信息
+                const response = await fetch(`/api/equipment/${equipmentId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${sessionStorage.getItem('access_token') || localStorage.getItem('access_token')}`
+                    }
+                });
+                if (!response.ok) {
+                    throw new Error('获取设备信息失败');
+                }
+                
+                const equipment = await response.json();
+                
+                // 设置设备信息显示
+                document.getElementById('singleCalibrationEquipmentName').textContent = equipment.name || '未知设备';
+                document.getElementById('singleCalibrationMethodDisplay').textContent = equipment.calibration_method || '内检';
+                document.getElementById('singleCalibrationEquipmentModel').textContent = equipment.model || '-';
+                document.getElementById('singleCalibrationCycle').textContent = equipment.calibration_cycle || '-';
+                
+                // 预填当前检定信息
+                document.getElementById('singleCalibrationDate').value = equipment.calibration_date || '';
+                document.getElementById('singleCalibrationResult').value = equipment.verification_result || '合格';
+                
+                // 设置证书信息
+                document.getElementById('singleCertificateNumber').value = equipment.certificate_number || '';
+                document.getElementById('singleCertificateForm').value = equipment.certificate_form || '';
+                
+                // 根据检定方式显示/隐藏字段
+                toggleCalibrationFields(equipment.calibration_method || '内检');
+                
+                // 外检信息
+                if (equipment.calibration_method === '外检') {
+                    document.getElementById('singleVerificationAgency').value = equipment.verification_agency || '';
+                    document.getElementById('singleExternalCalibrationNotes').value = equipment.calibration_notes || '';
+                } else {
+                    document.getElementById('singleCalibrationNotes').value = equipment.calibration_notes || '';
+                }
+                
+                // 设置证书信息相互依赖验证
+                setupCertificateFieldsValidation();
+                
+                // 显示模态框
+                document.getElementById('singleCalibrationBtn').disabled = false;
+                document.getElementById('singleCalibrationModal').classList.add('show');
+                
+                // 存储设备ID和设备信息
+                window.singleCalibrationEquipmentId = equipmentId;
+                window.singleCalibrationEquipmentData = equipment;
+                
+            } catch (error) {
+                console.error('获取设备信息失败:', error);
+                showNotification('获取设备信息失败: ' + error.message, 'error');
+            }
+        }
+
+        // 关闭单个设备检定日期更新模态框
+        function closeSingleCalibrationModal() {
+            document.getElementById('singleCalibrationModal').classList.remove('show');
+            window.singleCalibrationEquipmentId = null;
+        }
+
+        // 设置证书信息相互依赖监听器（内检设备）
+        function setupCertificateFieldsValidation() {
+            const certificateNumberField = document.getElementById('singleCertificateNumber');
+            const certificateFormField = document.getElementById('singleCertificateForm');
+            
+            if (!certificateNumberField || !certificateFormField) return;
+            
+            // 证书编号输入监听器
+            certificateNumberField.addEventListener('input', function() {
+                const hasNumber = this.value.trim() !== '';
+                if (hasNumber) {
+                    // 如果填写了证书编号，证书形式变为必填
+                    certificateFormField.required = true;
+                    document.getElementById('certificateFormRequired').classList.remove('hidden');
+                } else {
+                    // 如果清空证书编号，且证书形式也没选择，则都不必填
+                    if (certificateFormField.value === '') {
+                        certificateFormField.required = false;
+                        document.getElementById('certificateFormRequired').classList.add('hidden');
+                    }
+                }
+            });
+            
+            // 证书形式选择监听器
+            certificateFormField.addEventListener('change', function() {
+                const hasForm = this.value !== '';
+                if (hasForm) {
+                    // 如果选择了证书形式，证书编号变为必填
+                    certificateNumberField.required = true;
+                    document.getElementById('certificateNumberRequired').classList.remove('hidden');
+                } else {
+                    // 如果清空证书形式，且证书编号也没填，则都不必填
+                    if (certificateNumberField.value.trim() === '') {
+                        certificateNumberField.required = false;
+                        document.getElementById('certificateNumberRequired').classList.add('hidden');
+                    }
+                }
+            });
+        }
+
+        // 根据检定方式切换字段显示
+        function toggleCalibrationFields(calibrationMethod) {
+            const externalFields = document.getElementById('externalCalibrationFields');
+            const internalFields = document.getElementById('internalCalibrationFields');
+            const certificateNumberRequired = document.getElementById('certificateNumberRequired');
+            const certificateFormRequired = document.getElementById('certificateFormRequired');
+            
+            if (calibrationMethod === '外检') {
+                externalFields.classList.remove('hidden');
+                internalFields.classList.add('hidden');
+                
+                // 外检时检定机构为必填
+                document.getElementById('singleVerificationAgency').required = true;
+                
+                // 外检时证书信息不强制必填，但如果有一个，另一个也必填
+                // 这个逻辑在setupCertificateFieldsValidation中处理
+            } else {
+                externalFields.classList.add('hidden');
+                internalFields.classList.remove('hidden');
+                
+                // 内检时检定机构不必填
+                document.getElementById('singleVerificationAgency').required = false;
+            }
+        }
+
+        // 切换报废信息区域显示
+        function toggleDisposalSection() {
+            const calibrationResult = document.getElementById('singleCalibrationResult').value;
+            const disposalSection = document.getElementById('disposalSection');
+            
+            if (calibrationResult === '不合格') {
+                disposalSection.classList.remove('hidden');
+                document.getElementById('singleStatusChangeDate').required = true;
+                // 设置默认日期为今天
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('singleStatusChangeDate').value = today;
+            } else {
+                disposalSection.classList.add('hidden');
+                document.getElementById('singleStatusChangeDate').required = false;
+                document.getElementById('singleStatusChangeDate').value = '';
+                document.getElementById('singleDisposalReason').value = '';
+            }
+        }
+
+        // 增强的单个设备检定更新
+        async function performEnhancedSingleCalibrationUpdate() {
+            const calibrationDate = document.getElementById('singleCalibrationDate').value;
+            const calibrationResult = document.getElementById('singleCalibrationResult').value;
+            
+            if (!calibrationDate) {
+                showNotification('请选择检定日期', 'warning');
+                return;
+            }
+            
+            // 根据设备检定方式验证必填字段
+            const equipment = window.singleCalibrationEquipmentData;
+            const calibrationMethod = equipment.calibration_method || '内检';
+            
+            if (calibrationMethod === '外检') {
+                const certificateNumber = document.getElementById('singleCertificateNumber').value.trim();
+                const verificationAgency = document.getElementById('singleVerificationAgency').value.trim();
+                const certificateForm = document.getElementById('singleCertificateForm').value.trim();
+                
+                let hasErrors = false;
+                
+                if (!certificateNumber) {
+                    showFieldError(document.getElementById('singleCertificateNumber'), '证书编号为必填项');
+                    hasErrors = true;
+                }
+                if (!verificationAgency) {
+                    showFieldError(document.getElementById('singleVerificationAgency'), '检定机构为必填项');
+                    hasErrors = true;
+                }
+                if (!certificateForm) {
+                    showFieldError(document.getElementById('singleCertificateForm'), '证书形式为必填项');
+                    hasErrors = true;
+                }
+                
+                if (hasErrors) {
+                    showNotification('请填写所有必填字段', 'warning');
+                    return;
+                }
+            } else {
+                // 内检设备的证书信息相互依赖验证
+                const certificateNumber = document.getElementById('singleCertificateNumber').value.trim();
+                const certificateForm = document.getElementById('singleCertificateForm').value.trim();
+                
+                // 证书编号和证书形式要么都不填，要么都填
+                const hasNumber = certificateNumber !== '';
+                const hasForm = certificateForm !== '';
+                
+                if (hasNumber && !hasForm) {
+                    showFieldError(document.getElementById('singleCertificateForm'), '填写证书编号时证书形式为必填项');
+                    showNotification('证书编号和证书形式必须同时填写或同时留空', 'warning');
+                    return;
+                }
+                
+                if (hasForm && !hasNumber) {
+                    showFieldError(document.getElementById('singleCertificateNumber'), '选择证书形式时证书编号为必填项');
+                    showNotification('证书编号和证书形式必须同时填写或同时留空', 'warning');
+                    return;
+                }
+            }
+            
+            // 检定不合格时验证报废信息
+            if (calibrationResult === '不合格') {
+                const statusChangeDate = document.getElementById('singleStatusChangeDate').value;
+                if (!statusChangeDate) {
+                    showNotification('检定不合格时状态变更时间为必填项', 'warning');
+                    return;
+                }
+            }
+            
+            try {
+                showNotification('正在更新检定信息...', 'info');
+                document.getElementById('singleCalibrationBtn').disabled = true;
+                
+                // 构建请求数据
+                const requestData = {
+                    calibration_date: calibrationDate,
+                    calibration_result: calibrationResult,
+                    notes: document.getElementById('singleCalibrationNotes').value.trim() || null
+                };
+                
+                // 添加证书字段（内检和外检都可能有证书信息）
+                const certificateNumber = document.getElementById('singleCertificateNumber')?.value.trim() || '';
+                const certificateForm = document.getElementById('singleCertificateForm')?.value.trim() || '';
+                
+                if (certificateNumber) {
+                    requestData.certificate_number = certificateNumber;
+                }
+                if (certificateForm) {
+                    requestData.certificate_form = certificateForm;
+                }
+                
+                // 添加外检特有字段
+                if (calibrationMethod === '外检') {
+                    requestData.verification_agency = document.getElementById('singleVerificationAgency').value.trim();
+                    
+                    // 添加外检备注
+                    const externalNotes = document.getElementById('singleExternalCalibrationNotes').value.trim();
+                    if (externalNotes) {
+                        requestData.notes = externalNotes;
+                    }
+                } else if (calibrationMethod === '内检') {
+                    // 添加内检备注
+                    const internalNotes = document.getElementById('singleCalibrationNotes').value.trim();
+                    if (internalNotes) {
+                        requestData.notes = internalNotes;
+                    }
+                }
+                
+                // 检定不合格时的报废信息
+                if (calibrationResult === '不合格') {
+                    requestData.status = '报废';
+                    requestData.status_change_date = document.getElementById('singleStatusChangeDate').value;
+                    
+                    const disposalReason = document.getElementById('singleDisposalReason').value.trim();
+                    if (disposalReason) {
+                        requestData.notes = requestData.notes 
+                            ? `${requestData.notes}\n报废原因：${disposalReason}` 
+                            : `报废原因：${disposalReason}`;
+                    }
+                }
+                
+                const response = await fetch(`/api/calibration/equipment/${window.singleCalibrationEquipmentId}/update`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${sessionStorage.getItem('access_token') || localStorage.getItem('access_token')}`
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || '更新检定信息失败');
+                }
+                
+                const result = await response.json();
+                showNotification('检定信息更新成功', 'success');
+                
+                // 关闭模态框
+                closeSingleCalibrationModal();
+                
+                // 重新加载仪表盘数据以反映更新
+                await loadMonthlyDueEquipments();
+                
+            } catch (error) {
+                console.error('更新检定信息失败:', error);
+                showNotification('更新检定信息失败: ' + error.message, 'error');
+            } finally {
+                document.getElementById('singleCalibrationBtn').disabled = false;
+            }
+        }
+
+        // 显示字段错误
+        function showFieldError(field, message) {
+            // 移除已存在的错误提示
+            hideFieldError(field);
+            
+            // 创建错误提示元素
+            const errorElement = document.createElement('div');
+            errorElement.className = 'field-error text-red-600 text-sm mt-1';
+            errorElement.textContent = message;
+            errorElement.setAttribute('data-field-error', field.id);
+            
+            // 添加错误样式
+            field.classList.add('border-red-500', 'focus:ring-red-500');
+            field.classList.remove('border-gray-300', 'focus:ring-blue-500');
+            
+            // 插入错误提示
+            field.parentElement.appendChild(errorElement);
+        }
+
+        // 隐藏字段错误
+        function hideFieldError(field) {
+            // 移除错误样式
+            field.classList.remove('border-red-500', 'focus:ring-red-500');
+            field.classList.add('border-gray-300', 'focus:ring-blue-500');
+            
+            // 移除错误提示
+            const errorElement = field.parentElement.querySelector(`[data-field-error="${field.id}"]`);
+            if (errorElement) {
+                errorElement.remove();
+            }
         }
 
         // 创建图表
@@ -1709,6 +2039,145 @@
         </div>
     </div>
 
+    <!-- 增强的检定信息更新模态框 -->
+    <div id="singleCalibrationModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-900">更新检定信息</h3>
+                <button class="text-gray-400 hover:text-gray-600" onclick="closeSingleCalibrationModal()">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <!-- 设备信息展示 -->
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <span class="font-medium text-gray-700">设备名称:</span>
+                            <span id="singleCalibrationEquipmentName" class="ml-2 text-gray-900">-</span>
+                        </div>
+                        <div>
+                            <span class="font-medium text-gray-700">检定方式:</span>
+                            <span id="singleCalibrationMethodDisplay" class="ml-2 text-gray-900">-</span>
+                        </div>
+                        <div>
+                            <span class="font-medium text-gray-700">设备型号:</span>
+                            <span id="singleCalibrationEquipmentModel" class="ml-2 text-gray-900">-</span>
+                        </div>
+                        <div>
+                            <span class="font-medium text-gray-700">检定周期:</span>
+                            <span id="singleCalibrationCycle" class="ml-2 text-gray-900">-</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- 基础检定信息 -->
+                <div class="space-y-4 mb-6">
+                    <h4 class="text-md font-medium text-gray-900 border-b pb-2">基础检定信息</h4>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">检定日期 <span class="text-red-500">*</span></label>
+                            <input type="date" id="singleCalibrationDate" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">检定结果 <span class="text-red-500">*</span></label>
+                            <select id="singleCalibrationResult" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" onchange="toggleDisposalSection()">
+                                <option value="合格">合格</option>
+                                <option value="不合格">不合格</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <!-- 证书信息（内检外检共有） -->
+                <div class="space-y-4 mb-6">
+                    <h4 class="text-md font-medium text-gray-900 border-b pb-2">证书信息</h4>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">证书编号 <span id="certificateNumberRequired" class="text-red-500 hidden">*</span></label>
+                            <input type="text" id="singleCertificateNumber" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="输入证书编号">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">证书形式 <span id="certificateFormRequired" class="text-red-500 hidden">*</span></label>
+                            <select id="singleCertificateForm" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="">请选择</option>
+                                <option value="检定证书">检定证书</option>
+                                <option value="校准证书">校准证书</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <!-- 外检专有字段 -->
+                <div id="externalCalibrationFields" class="space-y-4 mb-6 hidden">
+                    <h4 class="text-md font-medium text-gray-900 border-b pb-2">外检信息</h4>
+                    
+                    <div class="grid grid-cols-1 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">检定机构 <span class="text-red-500">*</span></label>
+                            <input type="text" id="singleVerificationAgency" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="输入检定机构名称">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">检定备注</label>
+                            <textarea id="singleExternalCalibrationNotes" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows="3" placeholder="输入外检相关备注信息"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <!-- 内检备注字段 -->
+                <div id="internalCalibrationFields" class="space-y-4 mb-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">检定备注</label>
+                        <textarea id="singleCalibrationNotes" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows="3" placeholder="输入检定相关备注信息"></textarea>
+                    </div>
+                </div>
+                <!-- 报废信息（检定不合格时显示） -->
+                <div id="disposalSection" class="space-y-4 mb-6 bg-red-50 border border-red-200 rounded-lg p-4 hidden">
+                    <h4 class="text-md font-medium text-red-900 flex items-center">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>报废信息
+                    </h4>
+                    
+                    <div class="grid grid-cols-1 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-red-700 mb-2">状态变更时间 <span class="text-red-500">*</span></label>
+                            <input type="date" id="singleStatusChangeDate" class="w-full px-4 py-3 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-red-700 mb-2">报废原因</label>
+                            <textarea id="singleDisposalReason" class="w-full px-4 py-3 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent" rows="3" placeholder="输入报废原因"></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-red-100 border border-red-300 rounded-lg p-3">
+                        <p class="text-sm text-red-800">
+                            <i class="fas fa-warning mr-2"></i>
+                            <strong>警告:</strong> 检定不合格将自动将设备状态变更为"报废"
+                        </p>
+                    </div>
+                </div>
+                <!-- 系统提示 -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <p class="text-sm text-blue-800">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        系统将根据设备的检定周期自动计算有效期至日期
+                    </p>
+                </div>
+                
+                <!-- 操作按钮 -->
+                <div class="flex justify-end space-x-3">
+                    <button class="px-6 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors" onclick="closeSingleCalibrationModal()">
+                        取消
+                    </button>
+                    <button id="singleCalibrationBtn" class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" onclick="performEnhancedSingleCalibrationUpdate()">
+                        <i class="fas fa-calendar-check mr-2"></i>确认更新
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 模态框样式 -->
     <style>
         .modal {
@@ -1736,6 +2205,10 @@
             border-color: #3b82f6 !important;
             background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.05)) !important;
             box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
         }
     </style>
 </body>

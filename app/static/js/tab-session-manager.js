@@ -338,21 +338,40 @@ class TabSessionManager {
                         </button>
                     </div>
                     <div class="mt-4 text-xs text-gray-500 text-center">
-                        选择"强制登录"将会终止其他设备的登录会话
+                        选择"强制登录"将会终止其他设备的登录会话<br>
+                        <span class="text-gray-400">按 Enter 键强制登录，按 Esc 键取消</span>
                     </div>
                 </div>
             `;
             
             document.body.appendChild(modal);
             
+            // 键盘事件处理函数
+            const keyHandler = (e) => {
+                if (e.key === 'Enter') {
+                    document.body.removeChild(modal);
+                    document.removeEventListener('keydown', keyHandler);
+                    resolve(true);
+                    e.preventDefault();
+                }
+                if (e.key === 'Escape') {
+                    document.body.removeChild(modal);
+                    document.removeEventListener('keydown', keyHandler);
+                    resolve(false);
+                    e.preventDefault();
+                }
+            };
+            
             // 绑定事件
             modal.querySelector('#cancelLogin').addEventListener('click', () => {
                 document.body.removeChild(modal);
+                document.removeEventListener('keydown', keyHandler);
                 resolve(false);
             });
             
             modal.querySelector('#forceLogin').addEventListener('click', () => {
                 document.body.removeChild(modal);
+                document.removeEventListener('keydown', keyHandler);
                 resolve(true);
             });
             
@@ -360,9 +379,17 @@ class TabSessionManager {
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) {
                     document.body.removeChild(modal);
+                    document.removeEventListener('keydown', keyHandler);
                     resolve(false);
                 }
             });
+            
+            // 添加键盘事件监听
+            document.addEventListener('keydown', keyHandler);
+            
+            // 确保模态框可以获得焦点以接收键盘事件
+            modal.setAttribute('tabindex', '-1');
+            modal.focus();
         });
     }
     
@@ -400,21 +427,40 @@ class TabSessionManager {
                         </button>
                     </div>
                     <div class="mt-4 text-xs text-gray-500 text-center">
-                        选择"强制登录"将会退出其他标签页的登录状态
+                        选择"强制登录"将会退出其他标签页的登录状态<br>
+                        <span class="text-gray-400">按 Enter 键强制登录，按 Esc 键取消</span>
                     </div>
                 </div>
             `;
             
             document.body.appendChild(modal);
             
+            // 键盘事件处理函数
+            const keyHandler = (e) => {
+                if (e.key === 'Enter') {
+                    document.body.removeChild(modal);
+                    document.removeEventListener('keydown', keyHandler);
+                    resolve(true);
+                    e.preventDefault();
+                }
+                if (e.key === 'Escape') {
+                    document.body.removeChild(modal);
+                    document.removeEventListener('keydown', keyHandler);
+                    resolve(false);
+                    e.preventDefault();
+                }
+            };
+            
             // 绑定事件
             modal.querySelector('#cancelLogin').addEventListener('click', () => {
                 document.body.removeChild(modal);
+                document.removeEventListener('keydown', keyHandler);
                 resolve(false);
             });
             
             modal.querySelector('#forceLogin').addEventListener('click', () => {
                 document.body.removeChild(modal);
+                document.removeEventListener('keydown', keyHandler);
                 resolve(true);
             });
             
@@ -422,9 +468,17 @@ class TabSessionManager {
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) {
                     document.body.removeChild(modal);
+                    document.removeEventListener('keydown', keyHandler);
                     resolve(false);
                 }
             });
+            
+            // 添加键盘事件监听
+            document.addEventListener('keydown', keyHandler);
+            
+            // 确保模态框可以获得焦点以接收键盘事件
+            modal.setAttribute('tabindex', '-1');
+            modal.focus();
         });
     }
     

@@ -104,7 +104,6 @@ async def update_equipment_calibration(
         equipment.current_calibration_result = calibration_data.calibration_result
         equipment.certificate_number = calibration_data.certificate_number
         equipment.certificate_form = calibration_data.certificate_form
-        equipment.verification_result = calibration_data.verification_result
         equipment.verification_agency = calibration_data.verification_agency
         equipment.calibration_notes = calibration_data.notes
         
@@ -123,7 +122,6 @@ async def update_equipment_calibration(
             calibration_result=calibration_data.calibration_result,
             certificate_number=calibration_data.certificate_number,
             certificate_form=calibration_data.certificate_form,
-            verification_result=calibration_data.verification_result,
             verification_agency=calibration_data.verification_agency,
             notes=calibration_data.notes
         )
@@ -165,7 +163,6 @@ async def update_equipment_calibration_with_files(
     calibration_result: str = Form(..., description="检定结果"),
     certificate_number: Optional[str] = Form(None, description="证书编号"),
     certificate_form: Optional[str] = Form(None, description="证书形式"),
-    verification_result: Optional[str] = Form(None, description="检定结果描述"),
     verification_agency: Optional[str] = Form(None, description="检定机构"),
     notes: Optional[str] = Form(None, description="备注"),
     status_change_date: Optional[str] = Form(None, description="状态变更日期"),
@@ -249,7 +246,6 @@ async def update_equipment_calibration_with_files(
         equipment.current_calibration_result = calibration_result
         equipment.certificate_number = certificate_number
         equipment.certificate_form = certificate_form
-        equipment.verification_result = verification_result
         equipment.verification_agency = verification_agency
         equipment.calibration_notes = notes
         
@@ -268,7 +264,6 @@ async def update_equipment_calibration_with_files(
             calibration_result=calibration_result,
             certificate_number=certificate_number,
             certificate_form=certificate_form,
-            verification_result=verification_result,
             verification_agency=verification_agency,
             notes=notes
         )

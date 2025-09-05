@@ -1547,10 +1547,6 @@ function showEditEquipmentModal(equipment) {
                                         <label class="form-label">证书编号 *</label>
                                         <input type="text" class="form-control" name="certificate_number" value="${equipment.certificate_number || ''}" ${equipment.calibration_method === '外检' ? 'required' : ''}>
                                     </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">检定结果 *</label>
-                                        <input type="text" class="form-control" name="verification_result" value="${equipment.verification_result || ''}" ${equipment.calibration_method === '外检' ? 'required' : ''}>
-                                    </div>
                                 </div>
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
@@ -1665,7 +1661,7 @@ async function submitEditEquipment() {
     
     // 验证外检字段
     if (equipmentData.calibration_method === '外检') {
-        const externalFields = ['certificate_number', 'verification_result', 'verification_agency', 'certificate_form'];
+        const externalFields = ['certificate_number', 'verification_agency', 'certificate_form'];
         for (const field of externalFields) {
             if (!equipmentData[field]) {
                 showAlert('外检时，证书编号、检定结果、检定机构、证书形式为必填项', 'warning');
@@ -1908,7 +1904,6 @@ function showAddEquipmentModal() {
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label">检定结果 *</label>
-                                        <input type="text" class="form-control" name="verification_result" required>
                                     </div>
                                 </div>
                                 <div class="row">
@@ -2123,7 +2118,7 @@ async function submitAddEquipment() {
     
     // 验证外检字段
     if (equipmentData.calibration_method === '外检') {
-        const externalFields = ['certificate_number', 'verification_result', 'verification_agency', 'certificate_form'];
+        const externalFields = ['certificate_number', 'verification_agency', 'certificate_form'];
         for (const field of externalFields) {
             if (!equipmentData[field]) {
                 missingFields.push(field);

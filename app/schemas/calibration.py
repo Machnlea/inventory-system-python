@@ -17,7 +17,6 @@ class CalibrationHistoryBase(BaseModel):
     calibration_result: str = Field(..., description="检定结果", pattern="^(合格|不合格)$")
     certificate_number: Optional[str] = Field(None, description="证书编号", max_length=100)
     certificate_form: Optional[str] = Field(None, description="证书形式", max_length=50)
-    verification_result: Optional[str] = Field(None, description="检定结果描述", max_length=100)
     verification_agency: Optional[str] = Field(None, description="检定机构", max_length=100)
     notes: Optional[str] = Field(None, description="检定备注")
 
@@ -63,7 +62,6 @@ class CalibrationHistoryUpdate(BaseModel):
     calibration_result: Optional[str] = Field(None, pattern="^(合格|不合格)$")
     certificate_number: Optional[str] = Field(None, max_length=100)
     certificate_form: Optional[str] = Field(None, max_length=50)
-    verification_result: Optional[str] = Field(None, max_length=100)
     verification_agency: Optional[str] = Field(None, max_length=100)
     notes: Optional[str] = None
 
@@ -114,7 +112,6 @@ class CalibrationUpdateRequest(BaseModel):
     notes: Optional[str] = Field(None, description="检定备注")
     
     # 外检专有字段
-    verification_result: Optional[str] = Field(None, description="检定结果描述", max_length=100)
     verification_agency: Optional[str] = Field(None, description="检定机构", max_length=100)
     
     # 报废相关字段（检定不合格时）
@@ -128,11 +125,6 @@ class CalibrationUpdateRequest(BaseModel):
             raise ValueError('检定不合格时状态变更时间为必填项')
         return v
 
-    @validator('verification_result')
-    def validate_verification_result_for_external(cls, v, values, **kwargs):
-        """外检设备的检定结果描述必填验证（需要设备信息）"""
-        # 这个验证需要在业务逻辑层进行，因为需要查询设备的检定方式
-        return v
 
 
 class BatchCalibrationUpdateRequest(BaseModel):

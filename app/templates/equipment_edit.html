@@ -258,11 +258,6 @@
                                            placeholder="外检时必填">
                                 </div>
 
-                                <div class="form-group">
-                                    <label class="form-label required-field" for="calibrationResult">检定结果</label>
-                                    <input type="text" id="calibrationResult" name="calibrationResult" class="form-input" 
-                                           placeholder="外检时必填">
-                                </div>
 
                                 <div class="form-group">
                                     <label class="form-label required-field" for="calibrationOrg">检定机构</label>
@@ -549,7 +544,6 @@
 
             // 外检字段
             document.getElementById('certificateNumber').value = equipment.certificate_number || '';
-            document.getElementById('calibrationResult').value = equipment.verification_result || '';
             document.getElementById('calibrationOrg').value = equipment.verification_agency || '';
             document.getElementById('certificateType').value = equipment.certificate_form || '';
 
@@ -753,7 +747,6 @@
             // 外检字段
             if (calibrationMethod === '外检') {
                 formData.certificate_number = document.getElementById('certificateNumber').value;
-                formData.verification_result = document.getElementById('calibrationResult').value;
                 formData.verification_agency = document.getElementById('calibrationOrg').value;
                 formData.certificate_form = document.getElementById('certificateType').value;
                 formData.management_level = '-';
@@ -792,7 +785,7 @@
             // 外检时验证外检字段
             const calibrationMethod = document.getElementById('calibrationMethod').value;
             if (calibrationMethod === '外检') {
-                const externalFields = ['certificateNumber', 'calibrationResult', 'calibrationOrg'];
+                const externalFields = ['certificateNumber', 'calibrationOrg'];
                 externalFields.forEach(fieldId => {
                     const field = document.getElementById(fieldId);
                     if (!field.value.trim()) {

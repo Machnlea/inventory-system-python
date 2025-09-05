@@ -554,7 +554,6 @@ async def get_equipment_stats(
             "manufacture_date": equipment.manufacture_date.strftime("%Y-%m-%d") if equipment.manufacture_date else None,
             "manufacturer": equipment.manufacturer or "",
             "calibration_method": equipment.calibration_method or "",
-            "verification_result": equipment.verification_result or "",
             "installation_location": equipment.installation_location or "",
             "accuracy_level": equipment.accuracy_level or "",
             "measurement_range": equipment.measurement_range or "",
@@ -672,7 +671,7 @@ async def get_calibration_records(
             "department_name": equipment.department.name if equipment.department else "未知部门",
             "category_name": equipment.category.name if equipment.category else "其他",
             "calibration_date": equipment.calibration_date.strftime("%Y-%m-%d") if equipment.calibration_date else None,
-            "calibration_result": equipment.verification_result or "未知",
+            "calibration_result": "未知",
             "valid_until": equipment.valid_until.strftime("%Y-%m-%d") if equipment.valid_until else None,
             "status": equipment.status
         })
@@ -733,7 +732,6 @@ async def export_reports(
                 "所属部门": equipment.department.name if equipment.department else "未知部门",
                 "设备类别": equipment.category.name if equipment.category else "其他",
                 "检定日期": equipment.calibration_date.strftime("%Y-%m-%d") if equipment.calibration_date else "",
-                "检定结果": equipment.verification_result or "未知",
                 "有效期至": equipment.valid_until.strftime("%Y-%m-%d") if equipment.valid_until else "",
                 "设备状态": equipment.status or "",
                 "检定机构": equipment.verification_agency or "",

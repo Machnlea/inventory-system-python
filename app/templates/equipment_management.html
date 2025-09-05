@@ -3700,7 +3700,6 @@
                     if (requestData.notes) formData.append('notes', requestData.notes);
                     if (requestData.certificate_number) formData.append('certificate_number', requestData.certificate_number);
                     if (requestData.certificate_form) formData.append('certificate_form', requestData.certificate_form);
-                    if (requestData.verification_result) formData.append('verification_result', requestData.verification_result);
                     if (requestData.verification_agency) formData.append('verification_agency', requestData.verification_agency);
                     if (requestData.status_change_date) formData.append('status_change_date', requestData.status_change_date);
                     if (requestData.disposal_reason) formData.append('disposal_reason', requestData.disposal_reason);
@@ -3905,7 +3904,6 @@
                         const agency = document.getElementById('batchVerificationAgency').value.trim();
                         if (agency) {
                             updateData.verification_agency = agency;
-                            updateData.verification_result = '检定合格'; // 有检定机构时的默认值
                         }
                     }
                     

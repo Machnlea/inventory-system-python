@@ -144,7 +144,6 @@ class EquipmentBase(BaseModel):
     
     # 外检相关字段
     certificate_number: Optional[str] = None
-    verification_result: Optional[str] = None
     verification_agency: Optional[str] = None
     certificate_form: Optional[str] = None
     internal_id: Optional[str] = None  # 内部编号 (自动生成)
@@ -178,8 +177,7 @@ class EquipmentBase(BaseModel):
                 raise ValueError("证书形式必须是'校准证书'或'检定证书'")
             if not self.certificate_number:
                 raise ValueError("外检设备必须填写证书编号")
-            if not self.verification_result:
-                raise ValueError("外检设备必须填写检定结果")
+            # 移除检定结果的必填验证，按用户要求设为可选
             if not self.verification_agency:
                 raise ValueError("外检设备必须填写检定机构")
         
@@ -202,7 +200,6 @@ class EquipmentUpdate(BaseModel):
     calibration_date: Optional[date] = None
     calibration_method: Optional[str] = None
     certificate_number: Optional[str] = None
-    verification_result: Optional[str] = None
     verification_agency: Optional[str] = None
     certificate_form: Optional[str] = None
     internal_id: Optional[str] = None  # 内部编号 (自动生成)
@@ -237,8 +234,7 @@ class EquipmentUpdate(BaseModel):
                 raise ValueError("证书形式必须是'校准证书'或'检定证书'")
             if not self.certificate_number:
                 raise ValueError("外检设备必须填写证书编号")
-            if not self.verification_result:
-                raise ValueError("外检设备必须填写检定结果")
+            # 移除检定结果的必填验证，按用户要求设为可选
             if not self.verification_agency:
                 raise ValueError("外检设备必须填写检定机构")
         

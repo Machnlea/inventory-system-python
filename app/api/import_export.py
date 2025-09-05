@@ -71,7 +71,6 @@ def generate_export_data(equipments, db: Session) -> tuple:
         if eq.calibration_method == '外检':
             has_external_inspection = True
             row_data['证书编号'] = eq.certificate_number or ''
-            row_data['检定结果'] = eq.verification_result or ''
             row_data['检定机构'] = eq.verification_agency or ''
             row_data['证书形式'] = eq.certificate_form or ''
         
@@ -484,7 +483,6 @@ async def import_equipment_data(
                     status=equipment_status,
                     status_change_date=status_change_date,
                     certificate_number=str(row.get('证书编号', '')) if calibration_method == '外检' and pd.notna(row.get('证书编号')) else '',
-                    verification_result=str(row.get('检定结果', '')) if calibration_method == '外检' and pd.notna(row.get('检定结果')) else '',
                     verification_agency=str(row.get('检定机构', '')) if calibration_method == '外检' and pd.notna(row.get('检定机构')) else '',
                     certificate_form=str(row.get('证书形式', '')) if calibration_method == '外检' and pd.notna(row.get('证书形式')) else '',
                     notes=str(row.get('备注', '')) if pd.notna(row.get('备注')) else ''
@@ -530,7 +528,6 @@ async def import_equipment_data(
                             status=equipment_data.status,
                             status_change_date=equipment_data.status_change_date,
                             certificate_number=equipment_data.certificate_number,
-                            verification_result=equipment_data.verification_result,
                             verification_agency=equipment_data.verification_agency,
                             certificate_form=equipment_data.certificate_form,
                             notes=equipment_data.notes

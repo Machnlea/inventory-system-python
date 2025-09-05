@@ -90,7 +90,6 @@ def create_calibration_history(
         calibration_result=calibration_history.calibration_result,
         certificate_number=calibration_history.certificate_number,
         certificate_form=calibration_history.certificate_form,
-        verification_result=calibration_history.verification_result,
         verification_agency=calibration_history.verification_agency,
         notes=calibration_history.notes,
         created_by=created_by_user_id
@@ -209,7 +208,6 @@ def batch_create_calibration_histories(
             calibration_result=calibration_history.calibration_result,
             certificate_number=calibration_history.certificate_number,
             certificate_form=calibration_history.certificate_form,
-            verification_result=calibration_history.verification_result,
             verification_agency=calibration_history.verification_agency,
             notes=calibration_history.notes,
             created_by=created_by_user_id

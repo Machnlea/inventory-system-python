@@ -113,7 +113,6 @@ class Equipment(Base):
     
     # 外检相关字段
     certificate_number = Column(String(100))  # 证书编号
-    verification_result = Column(String(100))  # 检定结果
     verification_agency = Column(String(100))  # 检定机构
     certificate_form = Column(String(50))  # 证书形式
     
@@ -220,7 +219,6 @@ class CalibrationHistory(Base):
     calibration_result = Column(String(20), nullable=False)  # 本次检定结果（合格/不合格）
     certificate_number = Column(String(100))  # 证书编号
     certificate_form = Column(String(50))  # 证书形式（检定证书/校准证书）
-    verification_result = Column(String(100))  # 检定结果描述
     verification_agency = Column(String(100))  # 检定机构
     notes = Column(Text)  # 检定备注
     created_at = Column(DateTime(timezone=True), server_default=func.now())

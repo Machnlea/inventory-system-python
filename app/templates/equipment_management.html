@@ -190,8 +190,7 @@
                         <div class="flex items-center">
                             <i class="fas fa-user-circle text-white text-xl mr-3"></i>
                             <div>
-                                <p class="text-white text-sm font-medium" id="current-user"></p>
-                                <p class="text-white/70 text-xs">在线</p>
+                                <p class="text-white text-base font-medium" id="current-user"></p>
                             </div>
                         </div>
                         <button class="text-white/70 hover:text-white transition-colors" id="logout-btn">
@@ -1263,6 +1262,17 @@
 
         // 页面加载完成后初始化
         document.addEventListener('DOMContentLoaded', async function() {
+            // 立即显示用户信息，避免闪现
+            const userInfo = sessionStorage.getItem('user_info') || localStorage.getItem('user_info');
+            if (userInfo) {
+                const user = JSON.parse(userInfo);
+                const currentUserElement = document.getElementById('current-user');
+                if (currentUserElement) {
+                    currentUserElement.textContent = user.username || '用户';
+                    currentUserElement.style.visibility = 'visible'; // 显示用户信息
+                }
+            }
+            
             try {
                 // 检查是否有刷新参数，如果有则清除并准备强制刷新
                 const urlParams = new URLSearchParams(window.location.search);
@@ -2567,17 +2577,6 @@
                         }
                     }
                 });
-            }
-            
-            // 检查登录状态
-            const userInfo = sessionStorage.getItem('user_info') || localStorage.getItem('user_info');
-            if (userInfo) {
-                const user = JSON.parse(userInfo);
-                const currentUserElement = document.getElementById('current-user');
-                if (currentUserElement) {
-                    currentUserElement.textContent = user.username || '用户';
-                    currentUserElement.style.visibility = 'visible'; // 显示用户信息
-                }
             }
         }
 

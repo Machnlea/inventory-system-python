@@ -121,6 +121,18 @@
                 </div>
             </div>
 
+            <!-- 记住密码选项 -->
+            <div class="flex items-center justify-between">
+                <label class="flex items-center text-white/80 hover:text-white cursor-pointer">
+                    <input
+                        type="checkbox"
+                        id="rememberPassword"
+                        class="w-4 h-4 text-blue-600 bg-white/10 border-white/20 rounded focus:ring-blue-500 focus:ring-2 mr-2"
+                    >
+                    <span class="text-sm">记住密码</span>
+                </label>
+            </div>
+
             <button
                 type="submit"
                 id="loginBtn"
@@ -272,6 +284,38 @@
             }, duration);
         }
 
+        // 记住密码功能
+        function saveCredentials(username, password, remember) {
+            if (remember) {
+                localStorage.setItem('department_username', username);
+                localStorage.setItem('department_password', btoa(password)); // 简单编码
+                localStorage.setItem('department_remember', 'true');
+            } else {
+                localStorage.removeItem('department_username');
+                localStorage.removeItem('department_password');
+                localStorage.removeItem('department_remember');
+            }
+        }
+
+        function loadCredentials() {
+            const remember = localStorage.getItem('department_remember') === 'true';
+            const username = localStorage.getItem('department_username');
+            const password = localStorage.getItem('department_password');
+            
+            if (remember && username && password) {
+                document.getElementById('username').value = username;
+                document.getElementById('password').value = atob(password); // 解码
+                document.getElementById('rememberPassword').checked = true;
+            }
+        }
+
+        // 清除记住的凭证
+        function clearCredentials() {
+            localStorage.removeItem('department_username');
+            localStorage.removeItem('department_password');
+            localStorage.removeItem('department_remember');
+        }
+
         // 密码显示/隐藏切换功能
         function setupPasswordToggle(toggleId, inputId, iconId) {
             document.getElementById(toggleId).addEventListener('click', function() {
@@ -347,6 +391,7 @@
             
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
+            const rememberPassword = document.getElementById('rememberPassword').checked;
             const loginBtn = document.getElementById('loginBtn');
             
             // 禁用登录按钮
@@ -365,6 +410,9 @@
                 const data = await response.json();
                 
                 if (response.ok) {
+                    // 保存凭证（如果选择了记住密码）
+                    saveCredentials(username, password, rememberPassword);
+                    
                     // 保存token
                     sessionStorage.setItem('department_access_token', data.access_token);
                     sessionStorage.setItem('department_user_info', JSON.stringify({ username, user_type: 'department_user' }));
@@ -485,6 +533,9 @@
 
         // 页面加载完成时检查是否已登录和密码修改状态
         document.addEventListener('DOMContentLoaded', function() {
+            // 加载记住的凭证
+            loadCredentials();
+            
             const token = sessionStorage.getItem('department_access_token');
             const userInfo = sessionStorage.getItem('department_user_info');
             const requiresPasswordChange = sessionStorage.getItem('requires_password_change');

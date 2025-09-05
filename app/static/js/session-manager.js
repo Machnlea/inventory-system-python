@@ -32,6 +32,7 @@ class SessionManager {
             const currentUserElement = document.getElementById('current-user');
             if (currentUserElement) {
                 currentUserElement.textContent = this.currentUser.username || '用户';
+                currentUserElement.style.visibility = 'visible'; // 显示用户信息
             }
         }
     }

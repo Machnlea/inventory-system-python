@@ -3,6 +3,11 @@ body {
     font-family: 'Microsoft YaHei', Arial, sans-serif;
 }
 
+/* 用户显示防闪烁样式 */
+#current-user {
+    visibility: hidden; /* 默认隐藏，JavaScript加载后再显示 */
+}
+
 /* 导航栏样式 */
 .navbar-brand {
     font-weight: bold;

@@ -185,7 +185,7 @@
                         <div class="flex items-center">
                             <i class="fas fa-user-circle text-white text-xl mr-3"></i>
                             <div>
-                                <p class="text-white text-sm font-medium" id="current-user">用户</p>
+                                <p class="text-white text-sm font-medium" id="current-user"></p>
                                 <p class="text-white/70 text-xs">在线</p>
                             </div>
                         </div>
@@ -410,7 +410,11 @@
             const userInfo = sessionStorage.getItem('user_info') || localStorage.getItem('user_info');
             if (userInfo) {
                 currentUser = JSON.parse(userInfo);
-                document.getElementById('current-user').textContent = currentUser.username;
+                const currentUserElement = document.getElementById('current-user');
+                if (currentUserElement) {
+                    currentUserElement.textContent = currentUser.username || '用户';
+                    currentUserElement.style.visibility = 'visible'; // 显示用户信息
+                }
             }
 
             // 不设置默认日期范围，显示所有日志

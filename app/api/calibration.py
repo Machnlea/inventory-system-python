@@ -80,11 +80,6 @@ async def update_equipment_calibration(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="外检设备的证书编号为必填项"
             )
-        if not calibration_data.verification_result:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="外检设备的检定结果描述为必填项"
-            )
         if not calibration_data.verification_agency:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -232,11 +227,6 @@ async def update_equipment_calibration_with_files(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="外检设备的证书编号为必填项"
-            )
-        if not verification_result:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="外检设备的检定结果描述为必填项"
             )
         if not verification_agency:
             raise HTTPException(

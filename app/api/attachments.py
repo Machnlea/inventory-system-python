@@ -157,7 +157,7 @@ def update_attachment(
     create_audit_log(
         db=db,
         user_id=current_user.id,
-        equipment_id=int(attachment.equipment_id),
+        equipment_id=attachment.equipment_id,
         action="更新附件",
         description=f"更新附件信息: {attachment.original_filename or 'unknown'}"
     )
@@ -177,7 +177,7 @@ def delete_attachment(
     if not attachment:
         raise HTTPException(status_code=404, detail="附件不存在")
     
-    equipment_id = int(attachment.equipment_id)
+    equipment_id = attachment.equipment_id
     filename = attachment.original_filename or 'unknown'
     
     success = crud_attachments.delete_equipment_attachment(db=db, attachment_id=attachment_id)
@@ -218,14 +218,14 @@ def download_attachment(
     create_audit_log(
         db=db,
         user_id=current_user.id,
-        equipment_id=int(attachment.equipment_id),
+        equipment_id=attachment.equipment_id,
         action="下载附件",
         description=f"下载附件: {attachment.original_filename or 'unknown'}"
     )
     
     # 返回文件
-    original_filename = attachment.original_filename or "attachment"
-    encoded_filename = quote(str(original_filename), safe='')
+    original_filename = str(attachment.original_filename or "attachment")
+    encoded_filename = quote(original_filename, safe='')
     return FileResponse(
         path=str(attachment.file_path),
         filename=original_filename,
@@ -258,7 +258,7 @@ def preview_attachment(
     create_audit_log(
         db=db,
         user_id=current_user.id,
-        equipment_id=int(attachment.equipment_id),
+        equipment_id=attachment.equipment_id,
         action="预览附件",
         description=f"预览附件: {attachment.original_filename or 'unknown'}"
     )

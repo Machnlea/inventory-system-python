@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import and_, or_, func, select, cast, String
-from app.models.models import Equipment, UserCategory, UserEquipmentPermission, Department, EquipmentCategory
+from sqlalchemy import and_, or_, select, cast, String
+from app.models.models import Equipment, UserEquipmentPermission, Department, EquipmentCategory
 from app.schemas.schemas import EquipmentCreate, EquipmentUpdate, EquipmentFilter, EquipmentSearch
-from datetime import date, timedelta, datetime
+from datetime import date, timedelta
 from typing import List, Optional
 
 def get_equipments_for_external_api(
@@ -41,7 +41,7 @@ def get_equipments_by_category(db: Session, category_id: int) -> List[Equipment]
     """获取指定类别下的所有设备"""
     return db.query(Equipment).filter(Equipment.category_id == category_id).all()
 
-def calculate_valid_until(calibration_date: date, calibration_cycle: str) -> date:
+def calculate_valid_until(calibration_date: date, calibration_cycle: str) -> date | None:
     """计算有效期至"""
     if calibration_cycle == "随坏随换":
         return None  # 随坏随换不需要计算有效期
@@ -163,7 +163,7 @@ def create_equipment(db: Session, equipment: EquipmentCreate):
         )
     
     # 准备设备数据
-    equipment_data = equipment.dict()
+    equipment_data = equipment.model_dump()
     equipment_data["valid_until"] = valid_until
     
     # 处理管理级别：如果检定方式为外检，管理级别设为"-"
@@ -190,7 +190,7 @@ def update_equipment(db: Session, equipment_id: int, equipment_update: Equipment
     
     db_equipment = db.query(Equipment).filter(Equipment.id == equipment_id).first()
     if db_equipment:
-        update_data = equipment_update.dict(exclude_unset=True)
+        update_data = equipment_update.model_dump(exclude_unset=True)
         
         # 如果更新了设备名称或类别，需要重新生成内部编号
         if "name" in update_data or "category_id" in update_data:
@@ -232,7 +232,7 @@ def update_equipment(db: Session, equipment_id: int, equipment_update: Equipment
                 # 如果提供了状态变更时间，使用提供的时间
                 if "status_change_date" in update_data and update_data["status_change_date"]:
                     pass  # 使用提供的日期
-                elif db_equipment.status == "在用":
+                elif str(db_equipment.status) == "在用":
                     # 只有当设备原本是在用状态且没有提供状态变更时间时，才使用当前日期
                     update_data["status_change_date"] = date.today()
                 # 如果设备原本就是停用或报废状态且没有提供新的状态变更时间，保留原有时间
@@ -258,8 +258,9 @@ def delete_equipment(db: Session, equipment_id: int):
         for attachment in attachments:
             try:
                 # 删除物理文件
-                if os.path.exists(attachment.file_path):
-                    os.remove(attachment.file_path)
+                file_path = str(attachment.file_path)  # 确保是字符串类型
+                if os.path.exists(file_path):
+                    os.remove(file_path)
             except Exception as e:
                 # 文件删除失败不影响数据库操作，只记录日志
                 print(f"删除附件文件失败: {attachment.file_path}, 错误: {e}")

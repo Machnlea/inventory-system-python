@@ -52,7 +52,7 @@ async def department_user_login(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    if not user.is_active:
+    if not bool(user.is_active):
         raise HTTPException(
             status_code=http_status.HTTP_401_UNAUTHORIZED,
             detail="账户已被禁用",
@@ -70,10 +70,10 @@ async def department_user_login(
         user_agent = request.headers.get("user-agent", "")
         department_users.create_department_user_log(
             db=db,
-            user_id=user.id,
+            user_id=int(user.id),
             action="login",
             description=f"部门用户 {user.username} 成功登录",
-            ip_address=ip_address,
+            ip_address=str(ip_address) if ip_address else "",
             user_agent=user_agent
         )
     except Exception as e:
@@ -97,7 +97,7 @@ async def change_department_user_password(
     - 首次登录必须修改密码
     - 验证当前密码
     """
-    if current_user.user_type != "department_user":
+    if str(current_user.user_type) != "department_user":
         raise HTTPException(
             status_code=http_status.HTTP_403_FORBIDDEN,
             detail="权限不足"
@@ -106,7 +106,7 @@ async def change_department_user_password(
     try:
         department_users.change_department_user_password(
             db,
-            current_user.id,
+            int(current_user.id),
             password_data.current_password,
             password_data.new_password
         )
@@ -117,10 +117,10 @@ async def change_department_user_password(
             user_agent = request.headers.get("user-agent", "")
             department_users.create_department_user_log(
                 db=db,
-                user_id=current_user.id,
+                user_id=int(current_user.id),
                 action="password_change",
                 description=f"部门用户 {current_user.username} 修改了密码",
-                ip_address=ip_address,
+                ip_address=str(ip_address) if ip_address else "",
                 user_agent=user_agent
             )
         except Exception as e:
@@ -139,13 +139,13 @@ async def get_department_user_profile(
     db: Session = Depends(get_db)
 ):
     """获取当前登录的部门用户信息"""
-    if current_user.user_type != "department_user":
+    if str(current_user.user_type) != "department_user":
         raise HTTPException(
             status_code=http_status.HTTP_403_FORBIDDEN,
             detail="权限不足"
         )
     
-    user = department_users.get_department_user_by_id(db, current_user.id)
+    user = department_users.get_department_user_by_id(db, int(current_user.id))
     if not user:
         raise HTTPException(
             status_code=http_status.HTTP_404_NOT_FOUND,
@@ -162,13 +162,13 @@ async def get_department_equipment_statistics(
     db: Session = Depends(get_db)
 ):
     """获取部门设备统计信息"""
-    if current_user.user_type != "department_user":
+    if str(current_user.user_type) != "department_user":
         raise HTTPException(
             status_code=http_status.HTTP_403_FORBIDDEN,
             detail="权限不足"
         )
     
-    stats = department_users.get_department_equipment_stats(db, current_user.department_id)
+    stats = department_users.get_department_equipment_stats(db, int(current_user.department_id))
     return stats
 
 @router.get("/equipment/list", response_model=PaginatedDepartmentEquipment, summary="获取部门设备列表")
@@ -188,7 +188,7 @@ async def get_department_equipment_list(
     - 支持按设备名称、状态筛选
     - 支持按名称搜索
     """
-    if current_user.user_type != "department_user":
+    if str(current_user.user_type) != "department_user":
         raise HTTPException(
             status_code=http_status.HTTP_403_FORBIDDEN,
             detail="权限不足"
@@ -203,7 +203,7 @@ async def get_department_equipment_list(
     
     result = department_users.get_department_equipment_list(
         db,
-        current_user.department_id,
+        int(current_user.department_id),
         skip=skip,
         limit=limit,
         filters=filters
@@ -224,10 +224,10 @@ async def get_department_equipment_list(
             
             department_users.create_department_user_log(
                 db=db,
-                user_id=current_user.id,
+                user_id=int(current_user.id),
                 action="view_equipment_list",
                 description=f"部门用户 {current_user.username} 查看了设备列表{filter_info}",
-                ip_address=ip_address,
+                ip_address=str(ip_address) if ip_address else "",
                 user_agent=user_agent
             )
         except Exception as e:
@@ -241,13 +241,13 @@ async def get_department_equipment_names(
     db: Session = Depends(get_db)
 ):
     """获取部门拥有的设备名称列表（用于筛选）"""
-    if current_user.user_type != "department_user":
+    if str(current_user.user_type) != "department_user":
         raise HTTPException(
             status_code=http_status.HTTP_403_FORBIDDEN,
             detail="权限不足"
         )
     
-    equipment_names = department_users.get_department_equipment_names(db, current_user.department_id)
+    equipment_names = department_users.get_department_equipment_names(db, int(current_user.department_id))
     return equipment_names
 
 @router.get("/categories", summary="获取部门设备类别列表")
@@ -256,13 +256,13 @@ async def get_department_categories(
     db: Session = Depends(get_db)
 ):
     """获取部门拥有的设备类别列表（用于筛选）"""
-    if current_user.user_type != "department_user":
+    if str(current_user.user_type) != "department_user":
         raise HTTPException(
             status_code=http_status.HTTP_403_FORBIDDEN,
             detail="权限不足"
         )
     
-    categories = department_users.get_department_categories(db, current_user.department_id)
+    categories = department_users.get_department_categories(db, int(current_user.department_id))
     return categories
 
 @router.get("/equipment/export", summary="导出部门设备清单")
@@ -285,7 +285,7 @@ async def export_department_equipment(
     print(f"Export API called with: status={status}, equipment_name={equipment_name}, search={search}")
     print(f"Current user: {current_user.username}, type: {current_user.user_type}")
     
-    if current_user.user_type != "department_user":
+    if str(current_user.user_type) != "department_user":
         raise HTTPException(
             status_code=http_status.HTTP_403_FORBIDDEN,
             detail="权限不足"
@@ -303,7 +303,7 @@ async def export_department_equipment(
         # 获取所有符合条件的设备（不分页，不筛选状态）
         result = department_users.get_department_equipment_list(
             db,
-            current_user.department_id,
+            int(current_user.department_id),
             skip=0,
             limit=10000,  # 大数值获取全部
             filters=filters
@@ -387,10 +387,10 @@ async def export_department_equipment(
             
             department_users.create_department_user_log(
                 db=db,
-                user_id=current_user.id,
+                user_id=int(current_user.id),
                 action="export_equipment",
                 description=f"部门用户 {current_user.username} 导出了设备清单({len(data)}条记录){filter_info}",
-                ip_address=ip_address,
+                ip_address=str(ip_address) if ip_address else "",
                 user_agent=user_agent
             )
         except Exception as e:
@@ -421,14 +421,14 @@ async def get_department_equipment_detail(
     db: Session = Depends(get_db)
 ):
     """获取部门设备详情"""
-    if current_user.user_type != "department_user":
+    if str(current_user.user_type) != "department_user":
         raise HTTPException(
             status_code=http_status.HTTP_403_FORBIDDEN,
             detail="权限不足"
         )
     
     equipment = department_users.get_department_equipment_by_id(
-        db, equipment_id, current_user.department_id
+        db, equipment_id, int(current_user.department_id)
     )
     if not equipment:
         raise HTTPException(
@@ -449,7 +449,7 @@ async def admin_create_department_user(
     db: Session = Depends(get_db)
 ):
     """管理员为部门创建用户账户"""
-    if not current_user.is_admin:
+    if not bool(current_user.is_admin):
         raise HTTPException(
             status_code=http_status.HTTP_403_FORBIDDEN,
             detail="权限不足，需要管理员权限"
@@ -464,10 +464,10 @@ async def admin_create_department_user(
             user_agent = request.headers.get("user-agent", "")
             department_users.create_department_user_log(
                 db=db,
-                user_id=user.id,
+                user_id=int(user.id),
                 action="user_created",
                 description=f"管理员 {current_user.username} 创建了部门用户 {user.username}",
-                ip_address=ip_address,
+                ip_address=str(ip_address) if ip_address else "",
                 user_agent=user_agent
             )
         except Exception as e:
@@ -488,7 +488,7 @@ async def admin_reset_department_user_password(
     db: Session = Depends(get_db)
 ):
     """管理员重置部门用户密码"""
-    if not current_user.is_admin:
+    if not bool(current_user.is_admin):
         raise HTTPException(
             status_code=http_status.HTTP_403_FORBIDDEN,
             detail="权限不足，需要管理员权限"
@@ -516,7 +516,7 @@ async def admin_reset_department_user_password(
                 user_id=reset_data.user_id,
                 action="password_reset",
                 description=f"管理员 {current_user.username} 重置了部门用户 {target_user.username} 的密码",
-                ip_address=ip_address,
+                ip_address=str(ip_address) if ip_address else "",
                 user_agent=user_agent
             )
         except Exception as e:
@@ -538,7 +538,7 @@ async def admin_update_department_user_status(
     db: Session = Depends(get_db)
 ):
     """管理员启用或禁用部门用户"""
-    if not current_user.is_admin:
+    if not bool(current_user.is_admin):
         raise HTTPException(
             status_code=http_status.HTTP_403_FORBIDDEN,
             detail="权限不足，需要管理员权限"
@@ -554,10 +554,10 @@ async def admin_update_department_user_status(
             user_agent = request.headers.get("user-agent", "")
             department_users.create_department_user_log(
                 db=db,
-                user_id=user.id,
+                user_id=int(user.id),
                 action="status_change",
                 description=f"管理员 {current_user.username} {action}了部门用户 {user.username}",
-                ip_address=ip_address,
+                ip_address=str(ip_address) if ip_address else "",
                 user_agent=user_agent
             )
         except Exception as e:
@@ -567,11 +567,11 @@ async def admin_update_department_user_status(
             "success": True,
             "message": f"用户{action}成功",
             "user": {
-                "id": user.id,
+                "id": int(user.id),
                 "username": user.username,
-                "is_active": user.is_active,
-                "user_type": user.user_type,
-                "department_id": user.department_id,
+                "is_active": bool(user.is_active),
+                "user_type": str(user.user_type),
+                "department_id": int(user.department_id),
                 "first_login": user.first_login,
                 "last_login": user.last_login,
                 "created_at": user.created_at
@@ -591,7 +591,7 @@ async def admin_get_all_department_users(
     db: Session = Depends(get_db)
 ):
     """管理员获取所有部门用户列表"""
-    if not current_user.is_admin:
+    if not bool(current_user.is_admin):
         raise HTTPException(
             status_code=http_status.HTTP_403_FORBIDDEN,
             detail="权限不足，需要管理员权限"
@@ -607,7 +607,7 @@ async def admin_delete_department_user(
     db: Session = Depends(get_db)
 ):
     """管理员删除部门用户"""
-    if not current_user.is_admin:
+    if not bool(current_user.is_admin):
         raise HTTPException(
             status_code=http_status.HTTP_403_FORBIDDEN,
             detail="权限不足，需要管理员权限"
@@ -630,7 +630,7 @@ async def admin_get_department_user_logs(
     db: Session = Depends(get_db)
 ):
     """管理员获取部门用户的操作日志"""
-    if not current_user.is_admin:
+    if not bool(current_user.is_admin):
         raise HTTPException(
             status_code=http_status.HTTP_403_FORBIDDEN,
             detail="权限不足，需要管理员权限"

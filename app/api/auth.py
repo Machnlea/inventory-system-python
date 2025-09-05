@@ -79,7 +79,7 @@ async def login_json(login_request: LoginRequest, request: Request, db: Session 
     ip_address = request.client.host if request.client else ""
     
     # 检查是否有活跃会话
-    active_sessions = session_manager.get_user_active_sessions(user.id)
+    active_sessions = session_manager.get_user_active_sessions(int(user.id))
     
     if active_sessions and not login_request.force:
         # 有活跃会话且未强制登录，返回冲突信息
@@ -105,13 +105,13 @@ async def login_json(login_request: LoginRequest, request: Request, db: Session 
     
     # 如果强制登录，先清除其他会话
     if login_request.force and active_sessions:
-        invalidated_count = session_manager.invalidate_user_sessions(user.id)
+        invalidated_count = session_manager.invalidate_user_sessions(int(user.id))
         print(f"强制登录：已清除 {invalidated_count} 个会话")
     
     # 创建新会话
     session_id = session_manager.create_session(
-        user_id=user.id,
-        username=user.username,
+        user_id=int(user.id),
+        username=str(user.username),
         user_agent=user_agent,
         ip_address=ip_address
     )
@@ -156,7 +156,7 @@ async def logout(request: Request, current_user: User = Depends(get_current_user
         try:
             from app.core.security import decode_token
             payload = decode_token(token)
-            session_id = payload.get("session_id")
+            session_id = payload.get("session_id") if payload else None
             
             if session_id:
                 session_manager.invalidate_session(session_id)
@@ -169,7 +169,7 @@ async def logout(request: Request, current_user: User = Depends(get_current_user
 @router.get("/sessions")
 async def get_user_sessions(current_user: User = Depends(get_current_user)):
     """获取用户的活跃会话"""
-    active_sessions = session_manager.get_user_active_sessions(current_user.id)
+    active_sessions = session_manager.get_user_active_sessions(int(current_user.id))
     
     sessions_info = []
     for session in active_sessions:
@@ -212,8 +212,16 @@ async def change_password(
     db: Session = Depends(get_db)
 ):
     """用户修改密码"""
+    # 获取数据库中的用户信息
+    db_user = users.get_user(db, current_user.id)
+    if not db_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="用户不存在"
+        )
+    
     # 验证当前密码
-    if not users.verify_password(request.current_password, current_user.hashed_password):
+    if not users.verify_password(request.current_password, str(db_user.hashed_password)):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="当前密码错误"

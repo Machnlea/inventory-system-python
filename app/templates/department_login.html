@@ -394,7 +394,18 @@
                         }
                     }
                 } else {
-                    showNotification(data.detail || '登录失败，请检查部门名称和密码', 'error');
+                    // 处理登录错误
+                    let errorMessage = '登录失败，请检查部门名称和密码';
+                    if (data.detail) {
+                        if (typeof data.detail === 'string') {
+                            errorMessage = data.detail;
+                        } else if (Array.isArray(data.detail)) {
+                            errorMessage = data.detail.map(err => err.msg).join(', ');
+                        } else if (typeof data.detail === 'object') {
+                            errorMessage = Object.values(data.detail).join(', ');
+                        }
+                    }
+                    showNotification(errorMessage, 'error');
                 }
             } catch (error) {
                 console.error('登录错误:', error);
@@ -451,7 +462,20 @@
                         window.location.href = '/department/dashboard';
                     }, 2000);
                 } else {
-                    showNotification(data.detail || '密码修改失败', 'error');
+                    // 处理 422 错误和其他验证错误
+                    let errorMessage = '密码修改失败';
+                    if (data.detail) {
+                        if (typeof data.detail === 'string') {
+                            errorMessage = data.detail;
+                        } else if (Array.isArray(data.detail)) {
+                            // 处理 FastAPI 的验证错误格式
+                            errorMessage = data.detail.map(err => err.msg).join(', ');
+                        } else if (typeof data.detail === 'object') {
+                            // 处理其他对象格式的错误
+                            errorMessage = Object.values(data.detail).join(', ');
+                        }
+                    }
+                    showNotification(errorMessage, 'error');
                 }
             } catch (error) {
                 console.error('密码修改错误:', error);

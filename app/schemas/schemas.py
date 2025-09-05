@@ -429,8 +429,6 @@ class DepartmentUserPasswordChange(BaseModel):
     def validate_password_match(self):
         if self.new_password != self.confirm_password:
             raise ValueError('新密码和确认密码不匹配')
-        if self.current_password == self.new_password:
-            raise ValueError('新密码不能与当前密码相同')
         return self
 
 # 管理员重置部门用户密码

@@ -745,32 +745,13 @@
                 
                 // 使用分页参数加载用户数据
                 const skip = (currentPage - 1) * itemsPerPage;
-                const response = await fetch(`/api/users/?skip=${skip}&limit=${itemsPerPage}`, {
-                    method: 'GET',
-                    headers: getAuthHeaders()
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-
-                const users = await response.json();
+                const users = await api.get(`/api/users/?skip=${skip}&limit=${itemsPerPage}`);
                 currentUsers = users;
                 
                 // 获取总用户数用于分页
-                const totalResponse = await fetch('/api/users/', {
-                    method: 'GET',
-                    headers: getAuthHeaders()
-                });
-                
-                if (totalResponse.ok) {
-                    const allUsers = await totalResponse.json();
-                    totalItems = allUsers.length;
-                    updateUsersStats(allUsers);
-                } else {
-                    totalItems = users.length;
-                    updateUsersStats(users);
-                }
+                const allUsers = await api.get('/api/users/');
+                totalItems = allUsers.length;
+                updateUsersStats(allUsers);
                 
                 renderUsersTable(users);
                 updatePagination();
@@ -792,16 +773,7 @@
         // 加载所有设备类别
         async function loadCategories() {
             try {
-                const response = await fetch('/api/categories/', {
-                    method: 'GET',
-                    headers: getAuthHeaders()
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-
-                allCategories = await response.json();
+                allCategories = await api.get('/api/categories/');
                 
             } catch (error) {
                 console.error('加载设备类别失败:', error);

@@ -307,18 +307,44 @@ def get_predefined_names(category_id: int,
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
     
-    # 普通用户权限检查：只能查看授权的类别
+    # 普通用户权限检查：只能查看授权的类别或有设备权限的类别
     if not current_user.is_admin:
-        from app.models.models import UserCategory
+        from app.models.models import UserCategory, UserEquipmentPermission, Equipment
         
+        # 检查类别权限
         user_category = db.query(UserCategory).filter(
             UserCategory.user_id == current_user.id,
             UserCategory.category_id == category_id
         ).first()
         
-        if not user_category:
-            raise HTTPException(status_code=403, detail="No permission to access this category")
+        # 如果有类别权限，返回所有预定义名称
+        if user_category:
+            return {"predefined_names": category.predefined_names or []}
+        
+        # 如果没有类别权限，检查是否有该类别下特定设备的权限
+        user_equipment_permissions = db.query(UserEquipmentPermission.equipment_name).filter(
+            UserEquipmentPermission.user_id == current_user.id
+        ).all()
+        
+        if user_equipment_permissions:
+            # 获取用户有权限的设备名称
+            user_equipment_names = [perm[0] for perm in user_equipment_permissions]
+            
+            # 检查这些设备名称是否在当前类别的预定义名称中
+            category_predefined_names = set(category.predefined_names or [])
+            authorized_equipment_names = [
+                name for name in user_equipment_names 
+                if name in category_predefined_names
+            ]
+            
+            if authorized_equipment_names:
+                # 返回用户有权限的所有设备名称（不管是否已有设备记录）
+                return {"predefined_names": authorized_equipment_names}
+        
+        # 如果既没有类别权限，也没有该类别下的设备权限
+        raise HTTPException(status_code=403, detail="No permission to access this category")
     
+    # 管理员可以看到所有预定义名称
     return {"predefined_names": category.predefined_names or []}
 
 @router.get("/{category_id}/equipment-usage")
@@ -326,7 +352,7 @@ def get_category_equipment_usage(category_id: int,
                                 db: Session = Depends(get_db),
                                 current_user = Depends(get_current_user)):
     """获取指定类别下预定义名称的设备使用情况和编号映射"""
-    from app.models.models import Equipment, EquipmentCategory, UserCategory
+    from app.models.models import Equipment, EquipmentCategory, UserCategory, UserEquipmentPermission
     from sqlalchemy import func
     from app.utils.predefined_name_manager import get_smart_name_mapping
     
@@ -335,27 +361,63 @@ def get_category_equipment_usage(category_id: int,
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
     
-    # 普通用户权限检查：只能查看授权的类别
+    # 普通用户权限检查：只能查看授权的类别或有设备权限的类别
+    authorized_equipment_names = []  # 用户有权限的设备名称列表
+    
     if not current_user.is_admin:
+        # 检查类别权限
         user_category = db.query(UserCategory).filter(
             UserCategory.user_id == current_user.id,
             UserCategory.category_id == category_id
         ).first()
         
-        if not user_category:
-            raise HTTPException(status_code=403, detail="No permission to access this category")
+        if user_category:
+            # 如果有类别权限，可以看到所有预定义名称
+            predefined_names = safe_get_list(category.predefined_names)
+        else:
+            # 如果没有类别权限，检查是否有该类别下特定设备的权限
+            user_equipment_permissions = db.query(UserEquipmentPermission.equipment_name).filter(
+                UserEquipmentPermission.user_id == current_user.id
+            ).all()
+            
+            if user_equipment_permissions:
+                # 获取用户有权限的设备名称
+                user_equipment_names = [perm[0] for perm in user_equipment_permissions]
+                
+                # 检查这些设备名称是否在当前类别的预定义名称中
+                category_predefined_names = set(safe_get_list(category.predefined_names))
+                authorized_equipment_names = [
+                    name for name in user_equipment_names 
+                    if name in category_predefined_names
+                ]
+                
+                if authorized_equipment_names:
+                    # 只处理用户有权限的设备名称（不管是否已有设备记录）
+                    predefined_names = authorized_equipment_names
+                else:
+                    raise HTTPException(status_code=403, detail="No permission to access this category")
+            else:
+                raise HTTPException(status_code=403, detail="No permission to access this category")
+    else:
+        # 管理员可以看到所有预定义名称
+        predefined_names = safe_get_list(category.predefined_names)
     
-    # 获取该类别下所有设备，按名称分组统计
-    equipment_stats = db.query(
+    # 获取该类别下设备，按名称分组统计，根据用户权限进行过滤
+    equipment_query = db.query(
         Equipment.name,
         func.count(Equipment.id).label('count')
     ).filter(
         Equipment.category_id == category_id
-    ).group_by(Equipment.name).all()
+    )
+    
+    # 如果用户只有特定设备权限，则只查询这些设备
+    if authorized_equipment_names:
+        equipment_query = equipment_query.filter(Equipment.name.in_(authorized_equipment_names))
+    
+    equipment_stats = equipment_query.group_by(Equipment.name).all()
     
     # 获取预定义名称的编号映射 - 使用智能编号管理
     category_code = str(category.code or "")
-    predefined_names = safe_get_list(category.predefined_names)
     name_mapping = get_smart_name_mapping(category_code, predefined_names)
     
     # 转换为字典格式，并清理名称（去除可能的引号）

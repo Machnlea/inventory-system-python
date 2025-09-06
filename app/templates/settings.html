@@ -222,6 +222,15 @@
                                     <p id="currentSecurityQuestion" class="text-gray-700 font-medium"></p>
                                 </div>
                                 
+                                <!-- 修改安全问题按钮（独立于表单外） -->
+                                <div id="updateSecurityQuestionBtn" class="hidden mb-4">
+                                    <button id="updateSecurityQuestion" onclick="showUpdateSecurityQuestion()" 
+                                            class="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors">
+                                        <i class="fas fa-edit mr-1"></i>
+                                        修改安全问题
+                                    </button>
+                                </div>
+                                
                                 <div id="securityQuestionForm" class="space-y-4">
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-2">安全问题</label>
@@ -238,11 +247,6 @@
                                                 class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
                                             <i class="fas fa-save mr-1"></i>
                                             <span id="saveSecurityQuestionText">设置安全问题</span>
-                                        </button>
-                                        <button id="updateSecurityQuestion" onclick="showUpdateSecurityQuestion()" 
-                                                class="hidden px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors">
-                                            <i class="fas fa-edit mr-1"></i>
-                                            修改安全问题
                                         </button>
                                     </div>
                                 </div>
@@ -489,11 +493,12 @@
 
                 if (response.ok) {
                     const data = await response.json();
+                    
                     const statusEl = document.getElementById('securityQuestionStatus');
                     const displayEl = document.getElementById('securityQuestionDisplay');
                     const questionEl = document.getElementById('currentSecurityQuestion');
                     const saveBtn = document.getElementById('saveSecurityQuestion');
-                    const updateBtn = document.getElementById('updateSecurityQuestion');
+                    const updateBtnContainer = document.getElementById('updateSecurityQuestionBtn');
                     const saveText = document.getElementById('saveSecurityQuestionText');
 
                     if (data.has_security_question) {
@@ -501,17 +506,18 @@
                         statusEl.className = 'px-2 py-1 text-xs rounded-full bg-green-100 text-green-700';
                         displayEl.classList.remove('hidden');
                         questionEl.textContent = data.security_question;
-                        saveBtn.classList.add('hidden');
-                        updateBtn.classList.remove('hidden');
                         
-                        // 隐藏表单输入框
+                        // 显示修改按钮，隐藏表单
+                        updateBtnContainer.classList.remove('hidden');
                         document.getElementById('securityQuestionForm').style.display = 'none';
                     } else {
                         statusEl.textContent = '未设置';
                         statusEl.className = 'px-2 py-1 text-xs rounded-full bg-red-100 text-red-700';
                         displayEl.classList.add('hidden');
-                        saveBtn.classList.remove('hidden');
-                        updateBtn.classList.add('hidden');
+                        
+                        // 隐藏修改按钮，显示设置表单
+                        updateBtnContainer.classList.add('hidden');
+                        document.getElementById('securityQuestionForm').style.display = 'block';
                         saveText.textContent = '设置安全问题';
                     }
                 }
@@ -571,13 +577,12 @@
         // 显示修改安全问题表单
         function showUpdateSecurityQuestion() {
             const formEl = document.getElementById('securityQuestionForm');
-            const saveBtn = document.getElementById('saveSecurityQuestion');
-            const updateBtn = document.getElementById('updateSecurityQuestion');
+            const updateBtnContainer = document.getElementById('updateSecurityQuestionBtn');
             const saveText = document.getElementById('saveSecurityQuestionText');
 
+            // 隐藏修改按钮，显示表单
+            updateBtnContainer.classList.add('hidden');
             formEl.style.display = 'block';
-            saveBtn.classList.remove('hidden');
-            updateBtn.classList.add('hidden');
             saveText.textContent = '更新安全问题';
             
             // 将现有问题填入表单

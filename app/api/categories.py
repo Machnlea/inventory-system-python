@@ -35,8 +35,8 @@ def read_categories(skip: int = 0, limit: int = 100,
         return categories.get_categories(db, skip=skip, limit=limit)
     
     # 普通用户只能看到有权限的设备所属的类别
-    from app.models.models import UserEquipmentPermission, Equipment, EquipmentCategory
-    from sqlalchemy import select, distinct
+    from app.models.models import UserEquipmentPermission, EquipmentCategory
+    from sqlalchemy import distinct
     
     # 获取用户有权限的设备名称
     authorized_equipment_names = db.query(UserEquipmentPermission.equipment_name).filter(
@@ -49,10 +49,12 @@ def read_categories(skip: int = 0, limit: int = 100,
     # 提取设备名称列表
     equipment_names = [item[0] for item in authorized_equipment_names]
     
-    # 通过设备名称找到对应的类别
+    # 通过用户权限记录直接找到对应的类别（不依赖现有设备）
     authorized_categories = db.query(EquipmentCategory).join(
-        Equipment, Equipment.category_id == EquipmentCategory.id
-    ).filter(Equipment.name.in_(equipment_names)).distinct().offset(skip).limit(limit).all()
+        UserEquipmentPermission, UserEquipmentPermission.category_id == EquipmentCategory.id
+    ).filter(
+        UserEquipmentPermission.user_id == current_user.id
+    ).distinct().offset(skip).limit(limit).all()
     
     return authorized_categories
 
@@ -78,18 +80,18 @@ def get_categories_with_counts(skip: int = 0, limit: int = 100,
     from app.models.models import UserEquipmentPermission, EquipmentCategory, Equipment
     from sqlalchemy import func, distinct
     
-    # 获取用户有权限的设备名称
-    authorized_equipment_names = db.query(UserEquipmentPermission.equipment_name).filter(
+    # 获取用户有权限的类别ID
+    authorized_category_ids = db.query(UserEquipmentPermission.category_id).filter(
         UserEquipmentPermission.user_id == current_user.id
-    ).all()
+    ).distinct().all()
     
-    if not authorized_equipment_names:
+    if not authorized_category_ids:
         return []  # 用户没有任何设备权限
     
-    # 提取设备名称列表
-    equipment_names = [item[0] for item in authorized_equipment_names]
+    # 提取类别ID列表
+    category_ids = [item[0] for item in authorized_category_ids]
     
-    # 查询用户有权限的设备所属的类别及其设备数量
+    # 查询用户有权限的类别及其设备数量
     result = db.query(
         EquipmentCategory.id,
         EquipmentCategory.name,
@@ -97,10 +99,10 @@ def get_categories_with_counts(skip: int = 0, limit: int = 100,
         EquipmentCategory.description,
         EquipmentCategory.predefined_names,
         func.count(Equipment.id).label('equipment_count')
-    ).join(
+    ).outerjoin(
         Equipment, EquipmentCategory.id == Equipment.category_id
     ).filter(
-        Equipment.name.in_(equipment_names)
+        EquipmentCategory.id.in_(category_ids)
     ).group_by(
         EquipmentCategory.id,
         EquipmentCategory.name,

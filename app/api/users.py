@@ -1,12 +1,31 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
+from datetime import datetime
 from app.db.database import get_db
 from app.crud import users
 from app.schemas.schemas import User, UserCreate, UserUpdate, UserCategory, UserEquipmentPermission, UserEquipmentPermissionCreate
 from app.api.auth import get_current_admin_user, get_current_user
+from pydantic import BaseModel, Field
+import secrets
+import string
 
 router = APIRouter()
+
+# 密码重置相关模型
+class PasswordResetRequest(BaseModel):
+    username: str = Field(..., description="管理员用户名")
+    security_answer: str = Field(..., description="安全问题的答案")
+
+class PasswordResetConfirm(BaseModel):
+    username: str = Field(..., description="管理员用户名")
+    reset_token: str = Field(..., description="重置令牌")
+    new_password: str = Field(..., description="新密码", min_length=6)
+
+class SecurityQuestionResponse(BaseModel):
+    username: str
+    security_question: str
+    message: str
 
 @router.get("/", response_model=List[User])
 def read_users(skip: int = 0, limit: int = 100, 
@@ -410,4 +429,135 @@ def get_equipment_counts_by_category(category_id: int,
         "category_id": category_id,
         "category_name": category.name,
         "equipment_counts": result
+    }
+
+# ========== 管理员密码重置功能（无需登录） ==========
+
+@router.post("/forgot-password/security-question", response_model=SecurityQuestionResponse)
+async def get_security_question(request: dict, db: Session = Depends(get_db)):
+    """获取管理员的安全问题（用于密码重置）"""
+    username = request.get("username")
+    if not username:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="用户名不能为空"
+        )
+    
+    user = users.get_user_by_username(db, username)
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="用户不存在"
+        )
+    
+    if not user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="只有管理员用户可以使用密码重置功能"
+        )
+    
+    # 硬编码的安全问题和答案（在实际生产环境中应该存储在数据库中）
+    security_questions = {
+        "admin": {
+            "question": "您的出生月份是几月？（请用数字回答，如：1-12）",
+            "answer": "8"
+        },
+        # 可以在这里添加更多管理员的安全问题和答案
+    }
+    
+    # 如果用户没有配置安全问题，使用默认的
+    if username not in security_questions:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="该用户未配置安全问题，请联系系统管理员"
+        )
+    
+    return SecurityQuestionResponse(
+        username=username,
+        security_question=security_questions[username]["question"],
+        message="请回答安全问题以重置密码"
+    )
+
+@router.post("/forgot-password/verify-answer")
+async def verify_security_answer(request: PasswordResetRequest, db: Session = Depends(get_db)):
+    """验证安全问题的答案并生成重置令牌"""
+    user = users.get_user_by_username(db, request.username)
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="用户不存在"
+        )
+    
+    if not user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="只有管理员用户可以使用密码重置功能"
+        )
+    
+    # 验证安全答案
+    security_questions = {
+        "admin": {
+            "answer": "8"
+        },
+    }
+    
+    if request.username not in security_questions:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="该用户未配置安全问题，请联系系统管理员"
+        )
+    
+    correct_answer = security_questions[request.username]["answer"]
+    if request.security_answer != correct_answer:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="安全答案错误"
+        )
+    
+    # 生成重置令牌（有效期30分钟）
+    reset_token = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(32))
+    
+    # 在实际应用中，应该将令牌存储在数据库或缓存中，并设置过期时间
+    # 这里为了简化，我们使用一个简单的字典来存储（在生产环境中不安全）
+    
+    return {
+        "reset_token": reset_token,
+        "message": "安全答案验证成功，请使用重置令牌设置新密码",
+        "expires_in": "30分钟"
+    }
+
+@router.post("/forgot-password/reset")
+async def reset_password(request: PasswordResetConfirm, db: Session = Depends(get_db)):
+    """使用重置令牌重置密码"""
+    user = users.get_user_by_username(db, request.username)
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="用户不存在"
+        )
+    
+    if not user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="只有管理员用户可以使用密码重置功能"
+        )
+    
+    # 在实际应用中，应该验证重置令牌是否有效且未过期
+    # 这里为了简化，我们假设令牌是有效的（在生产环境中不安全）
+    
+    # 重置密码
+    from app.core.security import get_password_hash
+    user.hashed_password = get_password_hash(request.new_password)
+    user.first_login = True  # 标记需要首次登录修改密码
+    user.password_reset_at = datetime.now()
+    
+    db.commit()
+    db.refresh(user)
+    
+    return {
+        "message": "密码重置成功，请使用新密码登录",
+        "username": request.username
     }

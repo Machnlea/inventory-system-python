@@ -134,6 +134,11 @@ async def department_login(request: Request):
 async def department_dashboard(request: Request):
     return templates.TemplateResponse("department_dashboard.html", {"request": request})
 
+# 管理员密码重置页面
+@app.get("/forgot-password", response_class=HTMLResponse)
+async def forgot_password(request: Request):
+    return templates.TemplateResponse("forgot_password.html", {"request": request})
+
 @app.get("/api", response_class=RedirectResponse)
 async def api_docs():
     return RedirectResponse(url="/docs")

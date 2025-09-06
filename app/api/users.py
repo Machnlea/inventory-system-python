@@ -27,6 +27,10 @@ class SecurityQuestionResponse(BaseModel):
     security_question: str
     message: str
 
+class SecurityQuestionSetup(BaseModel):
+    security_question: str = Field(..., description="安全问题", min_length=5, max_length=200)
+    security_answer: str = Field(..., description="安全答案", min_length=1, max_length=100)
+
 @router.get("/", response_model=List[User])
 def read_users(skip: int = 0, limit: int = 100, 
                db: Session = Depends(get_db),
@@ -457,25 +461,16 @@ async def get_security_question(request: dict, db: Session = Depends(get_db)):
             detail="只有管理员用户可以使用密码重置功能"
         )
     
-    # 硬编码的安全问题和答案（在实际生产环境中应该存储在数据库中）
-    security_questions = {
-        "admin": {
-            "question": "您的出生月份是几月？（请用数字回答，如：1-12）",
-            "answer": "8"
-        },
-        # 可以在这里添加更多管理员的安全问题和答案
-    }
-    
-    # 如果用户没有配置安全问题，使用默认的
-    if username not in security_questions:
+    # 检查用户是否设置了安全问题
+    if not user.security_question or not user.security_answer_hash:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="该用户未配置安全问题，请联系系统管理员"
+            detail="该用户未配置安全问题，请先登录系统设置安全问题"
         )
     
     return SecurityQuestionResponse(
         username=username,
-        security_question=security_questions[username]["question"],
+        security_question=user.security_question,
         message="请回答安全问题以重置密码"
     )
 
@@ -497,20 +492,15 @@ async def verify_security_answer(request: PasswordResetRequest, db: Session = De
         )
     
     # 验证安全答案
-    security_questions = {
-        "admin": {
-            "answer": "8"
-        },
-    }
-    
-    if request.username not in security_questions:
+    if not user.security_question or not user.security_answer_hash:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="该用户未配置安全问题，请联系系统管理员"
+            detail="该用户未配置安全问题，请先登录系统设置安全问题"
         )
     
-    correct_answer = security_questions[request.username]["answer"]
-    if request.security_answer != correct_answer:
+    from app.core.security import verify_password
+    # 验证答案（大小写不敏感）
+    if not verify_password(request.security_answer.lower().strip(), user.security_answer_hash):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="安全答案错误"
@@ -560,4 +550,68 @@ async def reset_password(request: PasswordResetConfirm, db: Session = Depends(ge
     return {
         "message": "密码重置成功，请使用新密码登录",
         "username": request.username
+    }
+
+# ========== 安全问题设置功能（需要登录） ==========
+
+@router.post("/security-question/setup")
+async def setup_security_question(
+    setup_data: SecurityQuestionSetup, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    """管理员设置安全问题和答案"""
+    from app.core.security import get_password_hash
+    
+    # 加密安全答案
+    hashed_answer = get_password_hash(setup_data.security_answer.lower().strip())
+    
+    # 更新用户的安全问题和答案
+    current_user.security_question = setup_data.security_question
+    current_user.security_answer_hash = hashed_answer
+    
+    db.commit()
+    db.refresh(current_user)
+    
+    return {
+        "message": "安全问题设置成功",
+        "security_question": setup_data.security_question
+    }
+
+@router.get("/security-question/status")
+async def get_security_question_status(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    """获取当前管理员的安全问题设置状态"""
+    has_security_question = bool(current_user.security_question and current_user.security_answer_hash)
+    
+    return {
+        "has_security_question": has_security_question,
+        "security_question": current_user.security_question if has_security_question else None,
+        "message": "已设置安全问题" if has_security_question else "尚未设置安全问题"
+    }
+
+@router.put("/security-question/update")
+async def update_security_question(
+    setup_data: SecurityQuestionSetup,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    """更新管理员的安全问题和答案"""
+    from app.core.security import get_password_hash
+    
+    # 加密新的安全答案
+    hashed_answer = get_password_hash(setup_data.security_answer.lower().strip())
+    
+    # 更新安全问题和答案
+    current_user.security_question = setup_data.security_question
+    current_user.security_answer_hash = hashed_answer
+    
+    db.commit()
+    db.refresh(current_user)
+    
+    return {
+        "message": "安全问题更新成功",
+        "security_question": setup_data.security_question
     }

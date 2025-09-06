@@ -16,6 +16,8 @@ class User(Base):
     is_active = Column(Boolean, default=True)  # 账户状态
     last_login = Column(DateTime(timezone=True), nullable=True)  # 最后登录时间
     password_reset_at = Column(DateTime(timezone=True), nullable=True)  # 密码重置时间
+    security_question = Column(String(200), nullable=True)  # 安全问题
+    security_answer_hash = Column(String(100), nullable=True)  # 安全答案的哈希值
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # 用户权限关联

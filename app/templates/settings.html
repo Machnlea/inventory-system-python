@@ -210,6 +210,58 @@
                             </h3>
                         </div>
                         <div class="p-6">
+                            <!-- 安全问题设置 -->
+                            <div class="mb-6">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h4 class="text-md font-semibold text-gray-800">密码重置安全问题</h4>
+                                    <span id="securityQuestionStatus" class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-600">未设置</span>
+                                </div>
+                                
+                                <div id="securityQuestionDisplay" class="hidden mb-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
+                                    <p class="text-sm text-blue-700 mb-2">当前安全问题：</p>
+                                    <p id="currentSecurityQuestion" class="text-gray-700 font-medium"></p>
+                                </div>
+                                
+                                <div id="securityQuestionForm" class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">安全问题</label>
+                                        <input type="text" id="securityQuestion" placeholder="请输入您的安全问题，例如：您的出生地是哪里？"
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">安全答案</label>
+                                        <input type="text" id="securityAnswer" placeholder="请输入安全问题的答案"
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    </div>
+                                    <div class="flex space-x-3">
+                                        <button id="saveSecurityQuestion" onclick="saveSecurityQuestion()" 
+                                                class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
+                                            <i class="fas fa-save mr-1"></i>
+                                            <span id="saveSecurityQuestionText">设置安全问题</span>
+                                        </button>
+                                        <button id="updateSecurityQuestion" onclick="showUpdateSecurityQuestion()" 
+                                                class="hidden px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors">
+                                            <i class="fas fa-edit mr-1"></i>
+                                            修改安全问题
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                                    <div class="flex">
+                                        <i class="fas fa-exclamation-triangle text-yellow-600 mr-2 mt-0.5"></i>
+                                        <div class="text-sm text-yellow-700">
+                                            <p class="font-medium">重要提醒：</p>
+                                            <ul class="mt-1 list-disc list-inside">
+                                                <li>安全问题用于管理员忘记密码时的身份验证</li>
+                                                <li>请设置只有您知道答案的问题</li>
+                                                <li>答案不区分大小写，但请记住准确内容</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">会话超时时间（小时）</label>
@@ -424,6 +476,117 @@
             setTimeout(() => notification.classList.add('hidden'), 300);
         }
 
+        // 加载安全问题状态
+        async function loadSecurityQuestionStatus() {
+            try {
+                const response = await fetch('/api/users/security-question/status', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${sessionStorage.getItem('access_token')}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const statusEl = document.getElementById('securityQuestionStatus');
+                    const displayEl = document.getElementById('securityQuestionDisplay');
+                    const questionEl = document.getElementById('currentSecurityQuestion');
+                    const saveBtn = document.getElementById('saveSecurityQuestion');
+                    const updateBtn = document.getElementById('updateSecurityQuestion');
+                    const saveText = document.getElementById('saveSecurityQuestionText');
+
+                    if (data.has_security_question) {
+                        statusEl.textContent = '已设置';
+                        statusEl.className = 'px-2 py-1 text-xs rounded-full bg-green-100 text-green-700';
+                        displayEl.classList.remove('hidden');
+                        questionEl.textContent = data.security_question;
+                        saveBtn.classList.add('hidden');
+                        updateBtn.classList.remove('hidden');
+                        
+                        // 隐藏表单输入框
+                        document.getElementById('securityQuestionForm').style.display = 'none';
+                    } else {
+                        statusEl.textContent = '未设置';
+                        statusEl.className = 'px-2 py-1 text-xs rounded-full bg-red-100 text-red-700';
+                        displayEl.classList.add('hidden');
+                        saveBtn.classList.remove('hidden');
+                        updateBtn.classList.add('hidden');
+                        saveText.textContent = '设置安全问题';
+                    }
+                }
+            } catch (error) {
+                console.error('加载安全问题状态失败:', error);
+            }
+        }
+
+        // 保存安全问题
+        async function saveSecurityQuestion() {
+            const question = document.getElementById('securityQuestion').value.trim();
+            const answer = document.getElementById('securityAnswer').value.trim();
+
+            if (!question || !answer) {
+                showNotification('请填写安全问题和答案', 'error');
+                return;
+            }
+
+            if (question.length < 5) {
+                showNotification('安全问题至少需要5个字符', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/users/security-question/setup', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${sessionStorage.getItem('access_token')}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        security_question: question,
+                        security_answer: answer
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    showNotification(data.message, 'success');
+                    
+                    // 清空输入框
+                    document.getElementById('securityQuestion').value = '';
+                    document.getElementById('securityAnswer').value = '';
+                    
+                    // 重新加载状态
+                    await loadSecurityQuestionStatus();
+                } else {
+                    const errorData = await response.json();
+                    showNotification(errorData.detail || '设置安全问题失败', 'error');
+                }
+            } catch (error) {
+                console.error('设置安全问题失败:', error);
+                showNotification('网络错误，请稍后再试', 'error');
+            }
+        }
+
+        // 显示修改安全问题表单
+        function showUpdateSecurityQuestion() {
+            const formEl = document.getElementById('securityQuestionForm');
+            const saveBtn = document.getElementById('saveSecurityQuestion');
+            const updateBtn = document.getElementById('updateSecurityQuestion');
+            const saveText = document.getElementById('saveSecurityQuestionText');
+
+            formEl.style.display = 'block';
+            saveBtn.classList.remove('hidden');
+            updateBtn.classList.add('hidden');
+            saveText.textContent = '更新安全问题';
+            
+            // 将现有问题填入表单
+            const currentQuestion = document.getElementById('currentSecurityQuestion').textContent;
+            document.getElementById('securityQuestion').value = currentQuestion;
+            document.getElementById('securityAnswer').value = '';
+            document.getElementById('securityAnswer').focus();
+        }
+
         // 加载设置
         async function loadSettings() {
             try {
@@ -583,6 +746,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             addInputValidation();
             loadSettings();
+            loadSecurityQuestionStatus();
             setupSidebarNavigation();
             setCurrentPageActive();
         });

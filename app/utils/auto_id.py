@@ -118,7 +118,7 @@ def generate_internal_id(db: Session, category_id: int, equipment_name: Optional
             simplified_type_code = "99"
     
     # 查询该类别-设备类型组合下的最大序列号
-    pattern = f"{cat_code}-{simplified_type_code}-(\\d{{3}})"
+    pattern = f"{cat_code}-{simplified_type_code}-(\\d+)"
     
     # 构建查询条件，排除当前编辑的设备（如果是编辑模式）
     query = db.query(Equipment).filter(
@@ -148,12 +148,11 @@ def generate_internal_id(db: Session, category_id: int, equipment_name: Optional
     if existing_numbers:
         next_number = max(existing_numbers) + 1
     
-    # 确保序列号不超过999
-    if next_number > 999:
-        raise ValueError(f"类别 {cat_code}-{simplified_type_code} 下的设备数量已达到上限(999)")
-    
-    # 格式化序列号为3位数字
-    sequence = f"{next_number:03d}"
+    # 格式化序列号：999以内保持3位数，超过999后使用实际数字
+    if next_number <= 999:
+        sequence = f"{next_number:03d}"
+    else:
+        sequence = str(next_number)
     
     # 返回完整的内部编号
     return f"{cat_code}-{simplified_type_code}-{sequence}"
@@ -161,14 +160,15 @@ def generate_internal_id(db: Session, category_id: int, equipment_name: Optional
 def validate_internal_id(internal_id: str) -> bool:
     """
     验证内部编号格式是否正确
-    新格式: CC-TT-NNN (如: TIM-1-001)
+    新格式: CC-TT-NNN (如: TIM-1-001)，超过999后为 CC-TT-1000
     """
-    pattern = r'^[A-Z0-9]{3}-[A-Z0-9]+-\d{3}$'
+    pattern = r'^[A-Z0-9]{3}-[A-Z0-9]+-\d{3,}$'
     return bool(re.match(pattern, internal_id))
 
 def parse_internal_id(internal_id: str) -> dict:
     """
     解析内部编号，返回类别代码、设备类型编号和序列号
+    支持超过999的序列号（如 TEM-1-1000）
     """
     if not validate_internal_id(internal_id):
         raise ValueError("内部编号格式不正确")
@@ -187,7 +187,7 @@ def get_next_sequence_number(db: Session, department_code: str, category_code: s
     """
     获取指定部门-类别组合下的下一个序列号
     """
-    pattern = f"{department_code}-{category_code}-(\\d{{3}})"
+    pattern = f"{department_code}-{category_code}-(\\d+)"
     result = db.query(Equipment).filter(
         Equipment.internal_id.like(f"{department_code}-{category_code}-%")
     ).all()

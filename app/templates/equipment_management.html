@@ -1311,6 +1311,13 @@
                 }
                 
                 await initializePage();
+                
+                // 设置默认显示正常设备（在用状态）
+                const statusFilter = document.getElementById('status-filter');
+                if (statusFilter) {
+                    statusFilter.value = '在用';
+                }
+                
                 await loadEquipmentData();
                 setupEventListeners();
                 

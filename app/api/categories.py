@@ -219,10 +219,49 @@ def remove_predefined_name(category_id: int,
                          current_user = Depends(get_current_admin_user)):
     """从指定类别移除预定义器具名称"""
     try:
-        category = categories.remove_predefined_name(db, category_id, name)
+        from app.utils.predefined_name_manager import remove_predefined_name_with_equipment_check
+        from app.models.models import Equipment
+        
+        # 获取类别信息
+        category = categories.get_category(db, category_id)
         if not category:
             raise HTTPException(status_code=404, detail="Category not found")
-        return {"message": "Predefined name removed successfully", "category": category}
+        
+        # 获取该类别下所有设备的名称和internal_id
+        equipment_data = db.query(Equipment.name, Equipment.internal_id).filter(
+            Equipment.category_id == category_id
+        ).all()
+        existing_equipment_names = [item[0] for item in equipment_data]
+        equipment_internal_ids = {item[0]: item[1] for item in equipment_data}
+        
+        # 获取当前预定义名称列表
+        current_names = safe_get_list(category.predefined_names)
+        category_code = str(category.code or "")
+        
+        # 使用智能删除逻辑
+        new_names_list, new_mapping = remove_predefined_name_with_equipment_check(
+            category_code, current_names, name, existing_equipment_names, equipment_internal_ids
+        )
+        
+        # 更新数据库
+        import json
+        from sqlalchemy import text
+        updated_json = json.dumps(new_names_list, ensure_ascii=False)
+        
+        db.execute(
+            text("UPDATE equipment_categories SET predefined_names = :names WHERE id = :id"),
+            {"names": updated_json, "id": category_id}
+        )
+        db.commit()
+        
+        # 重新获取更新后的类别信息
+        updated_category = categories.get_category(db, category_id)
+        
+        return {
+            "message": "Predefined name removed successfully", 
+            "category": updated_category,
+            "name_mapping": new_mapping
+        }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -420,7 +459,15 @@ def get_category_equipment_usage(category_id: int,
     
     # 获取预定义名称的编号映射 - 使用智能编号管理
     category_code = str(category.code or "")
-    name_mapping = get_smart_name_mapping(category_code, predefined_names)
+    
+    # 获取该类别下所有设备的名称和internal_id，用于智能编号
+    all_equipment_data = db.query(Equipment.name, Equipment.internal_id).filter(
+        Equipment.category_id == category_id
+    ).all()
+    existing_equipment_names = [item[0] for item in all_equipment_data]
+    equipment_internal_ids = {item[0]: item[1] for item in all_equipment_data}
+    
+    name_mapping = get_smart_name_mapping(category_code, predefined_names, existing_equipment_names, equipment_internal_ids)
     
     # 转换为字典格式，并清理名称（去除可能的引号）
     usage_stats = {}

@@ -185,20 +185,22 @@ EQUIPMENT_TYPE_MAPPING = {
 def get_equipment_type_code(category_code: str, equipment_name: str) -> str:
     """
     根据类别代码和设备名称获取设备类型编号
+    现在优先使用智能编号系统
     """
-    if category_code in EQUIPMENT_TYPE_MAPPING:
-        category_mapping = EQUIPMENT_TYPE_MAPPING[category_code]
-        if equipment_name in category_mapping:
-            return category_mapping[equipment_name]
-    
-    # 如果没有找到映射，使用智能编号管理
+    # 优先使用智能编号系统
     try:
         from app.utils.predefined_name_manager import get_smart_name_mapping_for_name
         smart_number = get_smart_name_mapping_for_name(category_code, equipment_name)
-        return f"{category_code}-{smart_number}"
+        return smart_number
     except Exception as e:
-        # 如果智能编号管理失败，使用默认编号
-        return f"{category_code}-99"
+        # 如果智能编号管理失败，回退到映射表
+        if category_code in EQUIPMENT_TYPE_MAPPING:
+            category_mapping = EQUIPMENT_TYPE_MAPPING[category_code]
+            if equipment_name in category_mapping:
+                return category_mapping[equipment_name]
+        
+        # 最后的备用方案
+        return "99"
 
 def get_equipment_sequence_number(category_code: str, equipment_name: str) -> str:
     """

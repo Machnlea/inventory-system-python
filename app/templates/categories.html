@@ -1597,13 +1597,45 @@
         }
 
         // 管理预定义器具名称
-        function managePredefinedNames(categoryId, categoryName, names) {
+        async function managePredefinedNames(categoryId, categoryName, names) {
             
             currentPredefinedNamesCategoryId = categoryId;
             currentPredefinedNamesCategoryName = categoryName;
             
             document.getElementById('predefinedNamesCategoryName').textContent = categoryName;
-            updatePredefinedNamesList(names);
+            
+            // 总是从API获取最新的预定义名称和智能编号映射
+            try {
+                if (typeof CategoryAPI.getEquipmentUsage !== 'function') {
+                    console.log('手动添加 getEquipmentUsage 方法');
+                    CategoryAPI.getEquipmentUsage = async function(categoryId) {
+                        const response = await fetch(`/api/categories/${categoryId}/equipment-usage`, {
+                            method: 'GET',
+                            headers: {
+                                'Authorization': `Bearer ${sessionStorage.getItem('access_token') || localStorage.getItem('access_token')}`,
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return await response.json();
+                    };
+                }
+                
+                const usageData = await CategoryAPI.getEquipmentUsage(categoryId);
+                console.log('获取到的使用数据:', usageData);
+                
+                // 从usageData中提取预定义名称
+                const latestNames = Object.keys(usageData.name_mapping || {});
+                
+                updatePredefinedNamesList(latestNames);
+            } catch (error) {
+                console.error('获取最新预定义名称失败:', error);
+                // 如果获取失败，使用传入的names
+                updatePredefinedNamesList(names);
+            }
+            
             document.getElementById('predefinedNamesModal').classList.add('show');
             
             console.log('模态框已显示，当前类别ID设置为:', currentPredefinedNamesCategoryId);

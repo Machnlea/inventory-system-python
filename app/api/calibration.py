@@ -29,6 +29,53 @@ from app.utils.audit import log_audit
 router = APIRouter(prefix="/calibration", tags=["calibration"])
 
 
+@router.get("/equipment/{equipment_id}/last-external-info")
+async def get_equipment_last_external_calibration_info(
+    equipment_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    获取设备上次外检信息，用于更新时预填充
+    
+    - **equipment_id**: 设备ID
+    - **returns**: 上次外检信息（检定机构、证书形式）
+    """
+    
+    # 验证设备存在
+    equipment = crud_equipment.get_equipment(db, equipment_id)
+    if not equipment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="设备不存在"
+        )
+    
+    # 权限检查（管理员或设备管理者）
+    if not current_user.is_admin and current_user.user_type != "manager":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="无权限查看设备外检信息"
+        )
+    
+    # 获取上次外检信息
+    last_external_info = get_last_external_calibration_info(db, equipment_id)
+    
+    if last_external_info:
+        return {
+            "success": True,
+            "verification_agency": last_external_info["verification_agency"],
+            "certificate_form": last_external_info["certificate_form"],
+            "message": "成功获取上次外检信息"
+        }
+    else:
+        return {
+            "success": False,
+            "verification_agency": None,
+            "certificate_form": None,
+            "message": "暂无外检历史记录"
+        }
+
+
 @router.post("/equipment/{equipment_id}/update", response_model=CalibrationHistoryResponse)
 async def update_equipment_calibration(
     equipment_id: int,
@@ -73,22 +120,35 @@ async def update_equipment_calibration(
             detail="已报废设备不允许更新检定信息"
         )
     
-    # 外检字段验证
+    # 外检字段验证和自动填充
     if equipment.calibration_method == "外检":
         if not calibration_data.certificate_number:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="外检设备的证书编号为必填项"
             )
+        
+        # 如果检定机构或证书形式未提供，尝试从上次外检记录中获取
+        if not calibration_data.verification_agency or not calibration_data.certificate_form:
+            last_external_info = get_last_external_calibration_info(db, equipment_id)
+            
+            if last_external_info:
+                # 自动填充上次的外检信息
+                if not calibration_data.verification_agency:
+                    calibration_data.verification_agency = last_external_info["verification_agency"]
+                if not calibration_data.certificate_form:
+                    calibration_data.certificate_form = last_external_info["certificate_form"]
+        
+        # 验证必填字段（经过自动填充后）
         if not calibration_data.verification_agency:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="外检设备的检定机构为必填项"
+                detail="外检设备的检定机构为必填项，且无历史记录可自动填充"
             )
         if not calibration_data.certificate_form:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="外检设备的证书形式为必填项"
+                detail="外检设备的证书形式为必填项，且无历史记录可自动填充"
             )
     
     try:
@@ -218,22 +278,35 @@ async def update_equipment_calibration_with_files(
             detail="日期格式错误，请使用YYYY-MM-DD格式"
         )
     
-    # 外检字段验证
+    # 外检字段验证和自动填充
     if equipment.calibration_method == "外检":
         if not certificate_number:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="外检设备的证书编号为必填项"
             )
+        
+        # 如果检定机构或证书形式未提供，尝试从上次外检记录中获取
+        if not verification_agency or not certificate_form:
+            last_external_info = get_last_external_calibration_info(db, equipment_id)
+            
+            if last_external_info:
+                # 自动填充上次的外检信息
+                if not verification_agency:
+                    verification_agency = last_external_info["verification_agency"]
+                if not certificate_form:
+                    certificate_form = last_external_info["certificate_form"]
+        
+        # 验证必填字段（经过自动填充后）
         if not verification_agency:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="外检设备的检定机构为必填项"
+                detail="外检设备的检定机构为必填项，且无历史记录可自动填充"
             )
         if not certificate_form:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="外检设备的证书形式为必填项"
+                detail="外检设备的证书形式为必填项，且无历史记录可自动填充"
             )
     
     try:
@@ -657,6 +730,32 @@ async def upload_calibration_certificate(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"上传检定证书失败: {str(e)}"
         )
+
+
+def get_last_external_calibration_info(db: Session, equipment_id: int) -> Optional[dict]:
+    """
+    获取设备上次外检信息
+    
+    - **equipment_id**: 设备ID
+    - **returns**: 上次外检信息字典，如果没有则返回None
+    """
+    try:
+        # 查询该设备的上次外检记录
+        last_calibration = db.query(CalibrationHistory).filter(
+            CalibrationHistory.equipment_id == equipment_id,
+            CalibrationHistory.calibration_method == "外检",
+            CalibrationHistory.certificate_number.isnot(None),
+            CalibrationHistory.certificate_number != ""
+        ).order_by(desc(CalibrationHistory.calibration_date)).first()
+        
+        if last_calibration:
+            return {
+                "verification_agency": last_calibration.verification_agency,
+                "certificate_form": last_calibration.certificate_form
+            }
+        return None
+    except Exception:
+        return None
 
 
 def calculate_valid_until(calibration_date: date, calibration_cycle: str) -> date:

@@ -3513,6 +3513,35 @@
                 // 重置表单
                 resetCalibrationForm();
                 
+                // 如果是外检设备，获取上次的外检信息并自动填充
+                if (calibrationMethod === '外检') {
+                    try {
+                        const response = await fetch(`/api/calibration/equipment/${equipmentId}/last-external-info`, {
+                            method: 'GET',
+                            headers: {
+                                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            const lastExternalInfo = await response.json();
+                            if (lastExternalInfo.success) {
+                                // 自动填充上次的外检信息（证书编号除外，因为每次都要新的）
+                                document.getElementById('singleVerificationAgency').value = lastExternalInfo.verification_agency || '';
+                                document.getElementById('singleCertificateForm').value = lastExternalInfo.certificate_form || '';
+                                
+                                // 显示提示信息
+                                if (lastExternalInfo.verification_agency || lastExternalInfo.certificate_form) {
+                                    showNotification('已自动填充上次外检的检定机构和证书形式', 'info');
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        console.warn('获取上次外检信息失败:', error);
+                        // 获取失败不影响正常流程，只是无法自动填充
+                    }
+                }
+                
                 // 添加实时验证
                 setupRealTimeValidation();
                 

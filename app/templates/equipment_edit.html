@@ -250,6 +250,14 @@
                             </select>
                         </div>
 
+                        <div class="form-group">
+                            <label class="form-label required-field" for="calibrationResult">检定结果</label>
+                            <select id="calibrationResult" name="calibrationResult" class="form-select" required onchange="updateStatusBasedOnCalibrationResult()">
+                                <option value="合格" selected>合格</option>
+                                <option value="不合格">不合格</option>
+                            </select>
+                        </div>
+
                         <!-- 外检专属字段 -->
                         <div id="externalFields" class="col-span-1 md:col-span-2 conditional-field">
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
@@ -542,6 +550,7 @@
             document.getElementById('calibrationPeriod').value = equipment.calibration_cycle;
             document.getElementById('calibrationDate').value = equipment.calibration_date;
             document.getElementById('calibrationMethod').value = equipment.calibration_method;
+            document.getElementById('calibrationResult').value = equipment.current_calibration_result || '合格';
 
             // 外检字段
             document.getElementById('certificateNumber').value = equipment.certificate_number || '';
@@ -566,6 +575,9 @@
             
             // 初始化状态变更时间显示
             toggleStatusChangeDate();
+            
+            // 初始化检定结果与设备状态的联动
+            updateStatusBasedOnCalibrationResult();
         }
 
         // 初始化页面模式
@@ -612,6 +624,7 @@
                     toggleExternalFields();
                     toggleStatusChangeDate();
                     calculateValidDate();
+                    updateStatusBasedOnCalibrationResult();
                 }, 100);
             } else {
                 pageTitle.textContent = '编辑设备信息';
@@ -732,6 +745,7 @@
                 calibration_cycle: calibrationPeriod,
                 calibration_date: calibrationDate || null, // 随坏随换设备也可以有检定日期
                 calibration_method: calibrationMethod,
+                current_calibration_result: document.getElementById('calibrationResult').value,
                 internal_id: document.getElementById('equipmentCode').value,
                 installation_location: document.getElementById('installLocation').value || null,
                 manufacturer_id: document.getElementById('manufacturerId').value || null,
@@ -786,16 +800,27 @@
             // 外检时验证外检字段
             const calibrationMethod = document.getElementById('calibrationMethod').value;
             if (calibrationMethod === '外检') {
-                const externalFields = ['certificateNumber', 'calibrationOrg'];
+                const externalFields = ['certificateNumber', 'calibrationOrg', 'certificateType'];
+                let firstInvalidField = null;
+                
                 externalFields.forEach(fieldId => {
                     const field = document.getElementById(fieldId);
                     if (!field.value.trim()) {
                         field.style.borderColor = '#ef4444';
                         isValid = false;
+                        if (!firstInvalidField) {
+                            firstInvalidField = field;
+                        }
                     } else {
                         field.style.borderColor = '#d1d5db';
                     }
                 });
+                
+                // 如果有验证失败的字段，跳转到第一个错误字段
+                if (firstInvalidField) {
+                    firstInvalidField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    firstInvalidField.focus();
+                }
             }
 
             // 验证计量编号格式
@@ -806,7 +831,25 @@
             }
 
             if (!isValid) {
-                showNotification('请填写所有必填字段', 'error');
+                // 检查是否是外检字段验证失败
+                if (calibrationMethod === '外检') {
+                    const certificateType = document.getElementById('certificateType');
+                    const certificateNumber = document.getElementById('certificateNumber');
+                    const calibrationOrg = document.getElementById('calibrationOrg');
+                    
+                    let missingFields = [];
+                    if (!certificateType.value.trim()) missingFields.push('证书形式');
+                    if (!certificateNumber.value.trim()) missingFields.push('证书编号');
+                    if (!calibrationOrg.value.trim()) missingFields.push('检定机构');
+                    
+                    if (missingFields.length > 0) {
+                        showNotification(`外检设备必须填写：${missingFields.join('、')}`, 'error');
+                    } else {
+                        showNotification('请填写所有必填字段', 'error');
+                    }
+                } else {
+                    showNotification('请填写所有必填字段', 'error');
+                }
             }
 
             return isValid;
@@ -971,6 +1014,45 @@
                 if (managementLevelSelect) {
                     managementLevelSelect.disabled = false;
                 }
+            }
+        }
+
+        // 根据检定结果更新设备状态
+        function updateStatusBasedOnCalibrationResult() {
+            const calibrationResult = document.getElementById('calibrationResult').value;
+            const equipmentStatus = document.getElementById('equipmentStatus');
+            
+            if (calibrationResult === '合格') {
+                // 检定结果为合格时，默认设置为在用，允许选择在用或停用
+                if (!equipmentStatus.value || equipmentStatus.value === '报废') {
+                    equipmentStatus.value = '在用';
+                }
+                // 启用状态选择
+                equipmentStatus.disabled = false;
+                // 只允许选择在用或停用
+                const options = equipmentStatus.options;
+                for (let i = 0; i < options.length; i++) {
+                    if (options[i].value === '报废') {
+                        options[i].disabled = true;
+                    } else {
+                        options[i].disabled = false;
+                    }
+                }
+            } else if (calibrationResult === '不合格') {
+                // 检定结果为不合格时，强制设置为报废，不可修改
+                equipmentStatus.value = '报废';
+                equipmentStatus.disabled = true;
+                // 禁用所有选项，只保留报废
+                const options = equipmentStatus.options;
+                for (let i = 0; i < options.length; i++) {
+                    if (options[i].value === '报废') {
+                        options[i].disabled = false;
+                    } else {
+                        options[i].disabled = true;
+                    }
+                }
+                // 触发状态变更时间显示
+                toggleStatusChangeDate();
             }
         }
 

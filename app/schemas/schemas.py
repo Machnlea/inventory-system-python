@@ -141,6 +141,7 @@ class EquipmentBase(BaseModel):
     calibration_cycle: str  # "6个月", "12个月", "24个月", "36个月" 或 "随坏随换"
     calibration_date: Optional[date] = None  # 当检定周期不是"随坏随换"时必填
     calibration_method: str
+    current_calibration_result: str = "合格"  # 检定结果，默认为合格
     
     # 外检相关字段
     certificate_number: Optional[str] = None
@@ -168,6 +169,18 @@ class EquipmentBase(BaseModel):
         # 验证检定日期：当检定周期不是"随坏随换"时必填
         if self.calibration_cycle != "随坏随换" and not self.calibration_date:
             raise ValueError("当检定周期不是'随坏随换'时，检定日期为必填项")
+        
+        # 验证检定结果
+        if self.current_calibration_result not in ["合格", "不合格"]:
+            raise ValueError("检定结果必须是'合格'或'不合格'")
+        
+        # 验证检定结果与设备状态的联动
+        if self.current_calibration_result == "合格":
+            if self.status not in ["在用", "停用"]:
+                raise ValueError("检定结果为合格时，设备状态只能是'在用'或'停用'")
+        elif self.current_calibration_result == "不合格":
+            if self.status != "报废":
+                raise ValueError("检定结果为不合格时，设备状态必须是'报废'")
         
         # 验证外检字段：当检定方式为"外检"时必填
         if self.calibration_method == "外检":
@@ -199,6 +212,7 @@ class EquipmentUpdate(BaseModel):
     calibration_cycle: Optional[str] = None
     calibration_date: Optional[date] = None
     calibration_method: Optional[str] = None
+    current_calibration_result: Optional[str] = None
     certificate_number: Optional[str] = None
     verification_agency: Optional[str] = None
     certificate_form: Optional[str] = None
@@ -225,6 +239,19 @@ class EquipmentUpdate(BaseModel):
         # 验证检定日期：当检定周期不是"随坏随换"时必填
         if self.calibration_cycle and self.calibration_cycle != "随坏随换" and not self.calibration_date:
             raise ValueError("当检定周期不是'随坏随换'时，检定日期为必填项")
+        
+        # 验证检定结果（如果提供）
+        if self.current_calibration_result and self.current_calibration_result not in ["合格", "不合格"]:
+            raise ValueError("检定结果必须是'合格'或'不合格'")
+        
+        # 验证检定结果与设备状态的联动（如果都提供了）
+        if self.current_calibration_result and self.status:
+            if self.current_calibration_result == "合格":
+                if self.status not in ["在用", "停用"]:
+                    raise ValueError("检定结果为合格时，设备状态只能是'在用'或'停用'")
+            elif self.current_calibration_result == "不合格":
+                if self.status != "报废":
+                    raise ValueError("检定结果为不合格时，设备状态必须是'报废'")
         
         # 验证外检字段：当检定方式为"外检"时必填
         if self.calibration_method == "外检":

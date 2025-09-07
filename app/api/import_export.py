@@ -31,7 +31,7 @@ def generate_export_data(equipments, db: Session) -> tuple:
     base_columns = [
         '序号', '使用部门', '设备类别', '计量器具名称', '型号/规格', '准确度等级', 
         '测量范围', '内部编号', '出厂编号', '检定周期', '检定(校准)日期', '有效期至', '安装地点', 
-        '分度值', '制造厂家', '出厂日期', '检定方式', '管理级别', '原值/元', '设备状态', '备注'
+        '分度值', '制造厂家', '出厂日期', '检定方式', '检定结果', '管理级别', '原值/元', '设备状态', '备注'
     ]
     
     # 动态列
@@ -56,6 +56,7 @@ def generate_export_data(equipments, db: Session) -> tuple:
             '制造厂家': eq.manufacturer,
             '出厂日期': eq.manufacture_date.strftime('%Y-%m-%d') if eq.manufacture_date else '',
             '检定方式': eq.calibration_method,
+            '检定结果': eq.current_calibration_result or '合格',
             '管理级别': eq.management_level or '',
             '原值/元': eq.original_value or '',
             '设备状态': eq.status,
@@ -94,7 +95,7 @@ def generate_export_data(equipments, db: Session) -> tuple:
         dynamic_columns.append('状态变更时间')
     
     if has_external_inspection:
-        external_columns = ['证书编号', '检定结果', '检定机构', '证书形式']
+        external_columns = ['证书编号', '检定机构', '证书形式']
         final_columns.extend(external_columns)
         dynamic_columns.extend(external_columns)
     
@@ -134,12 +135,12 @@ def download_import_template():
         '制造厂家': ['上海仪表厂', '北京玻璃厂', '深圳仪表厂', '上海仪表厂', '日本工具'],
         '出厂日期': ['2023-12-01', '2023-11-15', '2023-10-20', '2024-08-01', '2023-05-01'],
         '检定方式': ['内检', '外检', '内检', '外检', '内检'],
+        '检定结果': ['合格', '合格', '合格', '不合格', '合格'],
         '管理级别': ['A级', '-', 'C级', '-', 'C级'],
         '原值/元': [1500.00, 800.00, 1200.00, 2000.00, 500.00],
-        '设备状态': ['在用', '在用', '在用', '在用', '在用'],
+        '设备状态': ['在用', '在用', '在用', '报废', '在用'],
         '状态变更时间': ['', '', '', '', ''],
         '证书编号': ['', 'CERT001', '', 'CERT002', ''],
-        '检定结果': ['', '合格', '', '合格', ''],
         '检定机构': ['', '国家计量院', '', '省计量院', ''],
         '证书形式': ['', '校准证书', '', '检定证书', ''],
         '备注': ['正常使用', '新购设备', '半年检定周期示例', '三年检定周期', '随坏随换设备无需定期检定']
@@ -160,14 +161,14 @@ def download_import_template():
             '字段名': [
                 '使用部门', '设备类别', '计量器具名称', '型号/规格', '准确度等级', '测量范围',
                 '出厂编号', '检定周期', '检定(校准)日期', '安装地点', '分度值', '制造厂家', 
-                '出厂日期', '检定方式', '管理级别', '原值/元', '设备状态', '状态变更时间', '证书编号', 
-                '检定结果', '检定机构', '证书形式', '备注'
+                '出厂日期', '检定方式', '检定结果', '管理级别', '原值/元', '设备状态', '状态变更时间', '证书编号', 
+                '检定机构', '证书形式', '备注'
             ],
             '是否必填': [
                 '是', '是', '是', '是', '是', '否',
                 '是', '否', '否', '否', '否', '否', 
-                '否', '是', '否', '否', '否', '否', 
-                '否', '否', '否', '否', '否'
+                '否', '是', '是', '否', '否', '否', '否', 
+                '否', '否', '否', '否'
             ],
             '说明': [
                 '必须是系统中已存在的部门名称',
@@ -184,12 +185,12 @@ def download_import_template():
                 '设备制造厂家',
                 '设备出厂日期，格式：YYYY-MM-DD',
                 '检定方式：内检/外检',
+                '检定结果：合格/不合格（所有设备必填）',
                 '管理级别：A级/B级/C级',
                 '设备原值，单位：元（支持小数）',
                 '设备状态：在用/停用/报废',
                 '状态变更时间：设备状态为停用或报废时填写，格式：YYYY-MM-DD（选填）',
                 '证书编号（外检时必填）',
-                '检定结果（外检时必填）',
                 '检定机构（外检时必填）',
                 '证书形式（外检时必填）：校准证书/检定证书',
                 '备注信息'
@@ -238,7 +239,7 @@ async def import_equipment_data(
         # 验证必需的列（内部编号由系统自动生成，出厂编号为可选）
         required_columns = [
             '使用部门', '设备类别', '计量器具名称', '型号/规格', '准确度等级',
-            '检定周期', '检定(校准)日期', '检定方式'
+            '检定周期', '检定(校准)日期', '检定方式', '检定结果'
         ]
         
         missing_columns = [col for col in required_columns if col not in df.columns]
@@ -315,11 +316,19 @@ async def import_equipment_data(
                     error_count += 1
                     continue
                 
+                # 验证检定结果（所有设备必填）
+                calibration_result = str(row['检定结果'])
+                if calibration_result not in ['合格', '不合格']:
+                    result["status"] = "失败"
+                    result["message"] = "检定结果必须是'合格'或'不合格'"
+                    detailed_results.append(result)
+                    error_count += 1
+                    continue
+                
                 # 验证外检必填字段
                 if calibration_method == '外检':
                     external_fields = {
                         '证书编号': row.get('证书编号', ''),
-                        '检定结果': row.get('检定结果', ''),
                         '检定机构': row.get('检定机构', ''),
                         '证书形式': row.get('证书形式', '')
                     }
@@ -472,6 +481,7 @@ async def import_equipment_data(
                     calibration_cycle=calibration_cycle,
                     calibration_date=calibration_date,
                     calibration_method=calibration_method,
+                    current_calibration_result=calibration_result,
                     internal_id=generated_internal_id,
                     manufacturer_id=str(row.get('出厂编号', '')) if pd.notna(row.get('出厂编号')) else None,
                     installation_location=str(row.get('安装地点', '')) if pd.notna(row.get('安装地点')) else '',
@@ -631,7 +641,6 @@ def export_all_equipments(
                     '负责人: 负责此设备类别的器具负责人账号名',
                     '状态变更时间: 设备状态为停用或报废时显示',
                     '证书编号: 检定方式为外检时显示',
-                    '检定结果: 检定方式为外检时显示',
                     '检定机构: 检定方式为外检时显示',
                     '证书形式: 检定方式为外检时显示'
                 ][:len(dynamic_columns)]
@@ -719,7 +728,6 @@ def export_filtered_equipments(
                     '负责人: 负责此设备类别的器具负责人账号名',
                     '状态变更时间: 设备状态为停用或报废时显示',
                     '证书编号: 检定方式为外检时显示',
-                    '检定结果: 检定方式为外检时显示',
                     '检定机构: 检定方式为外检时显示',
                     '证书形式: 检定方式为外检时显示'
                 ][:len(dynamic_columns)]

@@ -74,22 +74,14 @@
             height: 100%;
             background-color: rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(4px);
+            opacity: 0;
+            transition: opacity 0.1s ease-in-out;
         }
         .modal.show {
             display: flex;
             align-items: center;
             justify-content: center;
-            animation: modalSlideIn 0.3s ease-out;
-        }
-        @keyframes modalSlideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-20px) scale(0.95);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
+            opacity: 1;
         }
         
         .equipment-row {
@@ -3519,116 +3511,121 @@
         // 打开单个设备检定日期更新模态框
         async function openSingleCalibrationModal(equipmentId) {
             try {
-                // 获取设备详细信息
-                const equipment = await EquipmentAPI.getEquipment(equipmentId);
+                // 立即显示模态框，提升用户体验
+                const modal = document.getElementById('singleCalibrationModal');
+                modal.classList.add('show');
                 
-                // 填充设备信息显示区域
-                document.getElementById('singleCalibrationEquipmentName').textContent = equipment.name;
-                document.getElementById('singleCalibrationMethod').textContent = equipment.calibration_method || '内检';
-                document.getElementById('singleCalibrationInternalId').textContent = equipment.internal_id || '-';
-                document.getElementById('singleCalibrationManufacturerId').textContent = equipment.manufacturer_id || '-';
-                document.getElementById('singleCalibrationEquipmentModel').textContent = equipment.model;
-                document.getElementById('singleCalibrationCycle').textContent = equipment.calibration_cycle;
-                
-                // 设置默认日期为今天
+                // 设置默认值
                 const today = new Date().toISOString().split('T')[0];
                 document.getElementById('singleCalibrationDate').value = today;
                 document.getElementById('singleCalibrationResult').value = '合格';
-                
-                // 根据检定方式显示/隐藏相关字段
-                const calibrationMethod = equipment.calibration_method || '内检';
-                toggleCalibrationFields(calibrationMethod);
-                
-                // 重置表单
-                resetCalibrationForm();
-                
-                // 添加实时验证
-                setupRealTimeValidation();
-                
-                // 设置状态变更日期默认值
                 document.getElementById('singleStatusChangeDate').value = today;
                 
-                // 设置文件上传事件监听器
-                setupFileUploadListeners();
-                
-                // 设置证书信息相互依赖验证
-                setupCertificateFieldsValidation();
-                
-                // 如果是外检设备，获取上次的外检信息并自动填充（必须在重置表单之后执行）
-                if (calibrationMethod === '外检') {
-                    try {
-                        // 使用统一的认证处理方式
-                        const token = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
-                        if (!token) {
-                            console.warn('未找到认证token，无法获取上次外检信息');
-                            return;
-                        }
-                        
-                        const response = await fetch(`/api/calibration/equipment/${equipmentId}/last-external-info`, {
-                            method: 'GET',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${token}`
-                            }
-                        });
-                        
-                        console.log('获取上次外检信息响应状态:', response.status);
-                        
-                        if (response.ok) {
-                            const lastExternalInfo = await response.json();
-                            console.log('获取到的上次外检信息:', lastExternalInfo);
-                            
-                            if (lastExternalInfo.success) {
-                                // 自动填充上次的外检信息（证书编号除外，因为每次都要新的）
-                                const verificationAgencyField = document.getElementById('singleVerificationAgency');
-                                const certificateFormField = document.getElementById('singleCertificateForm');
-                                
-                                if (verificationAgencyField && lastExternalInfo.verification_agency) {
-                                    verificationAgencyField.value = lastExternalInfo.verification_agency;
-                                    console.log('✅ 自动填充检定机构:', lastExternalInfo.verification_agency);
-                                }
-                                
-                                if (certificateFormField && lastExternalInfo.certificate_form) {
-                                    certificateFormField.value = lastExternalInfo.certificate_form;
-                                    console.log('✅ 自动填充证书形式:', lastExternalInfo.certificate_form);
-                                }
-                                
-                                // 显示提示信息（包含来源）
-                                if (lastExternalInfo.verification_agency || lastExternalInfo.certificate_form) {
-                                    const sourceText = lastExternalInfo.source === 'history' ? '历史记录' : '设备信息';
-                                    showNotification(`已自动填充外检信息（来源：${sourceText}）`, 'info');
-                                }
-                            } else {
-                                console.log('该设备暂无外检信息记录:', lastExternalInfo.message);
-                                // 对于没有外检信息的情况，可以提供一些默认选项
-                                const certificateFormField = document.getElementById('singleCertificateForm');
-                                if (certificateFormField && !certificateFormField.value) {
-                                    // 如果设备是外检但没有证书形式，可以设置一个常见的默认值
-                                    certificateFormField.value = '检定证书';
-                                    console.log('⚠️  设置默认证书形式为：检定证书');
-                                }
-                            }
-                        } else {
-                            const errorText = await response.text();
-                            console.error('获取上次外检信息失败:', response.status, errorText);
-                        }
-                    } catch (error) {
-                        console.warn('获取上次外检信息失败:', error);
-                        // 获取失败不影响正常流程，只是无法自动填充
-                    }
-                }
-                
-                // 显示模态框
-                document.getElementById('singleCalibrationBtn').disabled = false;
-                document.getElementById('singleCalibrationModal').classList.add('show');
-                
-                // 存储设备ID和设备信息
+                // 存储设备ID
                 window.singleCalibrationEquipmentId = equipmentId;
-                window.singleCalibrationEquipmentData = equipment;
+                
+                // 异步获取设备信息并填充
+                setTimeout(async () => {
+                    try {
+                        const equipment = await EquipmentAPI.getEquipment(equipmentId);
+                        
+                        // 填充设备信息显示区域
+                        document.getElementById('singleCalibrationEquipmentName').textContent = equipment.name;
+                        document.getElementById('singleCalibrationMethod').textContent = equipment.calibration_method || '内检';
+                        document.getElementById('singleCalibrationInternalId').textContent = equipment.internal_id || '-';
+                        document.getElementById('singleCalibrationManufacturerId').textContent = equipment.manufacturer_id || '-';
+                        document.getElementById('singleCalibrationEquipmentModel').textContent = equipment.model;
+                        document.getElementById('singleCalibrationCycle').textContent = equipment.calibration_cycle;
+                        
+                        // 存储设备数据
+                        window.singleCalibrationEquipmentData = equipment;
+                        
+                        // 根据检定方式显示/隐藏相关字段
+                        const calibrationMethod = equipment.calibration_method || '内检';
+                        toggleCalibrationFields(calibrationMethod);
+                        
+                        // 重置表单和设置验证
+                        resetCalibrationForm();
+                        setupRealTimeValidation();
+                        setupFileUploadListeners();
+                        setupCertificateFieldsValidation();
+                        
+                        // 如果是外检设备，获取上次的外检信息并自动填充
+                        if (calibrationMethod === '外检') {
+                            try {
+                                const token = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
+                                if (!token) {
+                                    console.warn('未找到认证token，无法获取上次外检信息');
+                                    return;
+                                }
+                                
+                                const response = await fetch(`/api/calibration/equipment/${equipmentId}/last-external-info`, {
+                                    method: 'GET',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': `Bearer ${token}`
+                                    }
+                                });
+                                
+                                console.log('获取上次外检信息响应状态:', response.status);
+                                
+                                if (response.ok) {
+                                    const lastExternalInfo = await response.json();
+                                    console.log('获取到的上次外检信息:', lastExternalInfo);
+                                    
+                                    if (lastExternalInfo.success) {
+                                        // 自动填充上次的外检信息（证书编号除外，因为每次都要新的）
+                                        const verificationAgencyField = document.getElementById('singleVerificationAgency');
+                                        const certificateFormField = document.getElementById('singleCertificateForm');
+                                        
+                                        if (verificationAgencyField && lastExternalInfo.verification_agency) {
+                                            verificationAgencyField.value = lastExternalInfo.verification_agency;
+                                            console.log('✅ 自动填充检定机构:', lastExternalInfo.verification_agency);
+                                        }
+                                        
+                                        if (certificateFormField && lastExternalInfo.certificate_form) {
+                                            certificateFormField.value = lastExternalInfo.certificate_form;
+                                            console.log('✅ 自动填充证书形式:', lastExternalInfo.certificate_form);
+                                        }
+                                        
+                                        // 显示提示信息（包含来源）
+                                        if (lastExternalInfo.verification_agency || lastExternalInfo.certificate_form) {
+                                            const sourceText = lastExternalInfo.source === 'history' ? '历史记录' : '设备信息';
+                                            showNotification(`已自动填充外检信息（来源：${sourceText}）`, 'info');
+                                        }
+                                    } else {
+                                        console.log('该设备暂无外检信息记录:', lastExternalInfo.message);
+                                        // 对于没有外检信息的情况，可以提供一些默认选项
+                                        const certificateFormField = document.getElementById('singleCertificateForm');
+                                        if (certificateFormField && !certificateFormField.value) {
+                                            // 如果设备是外检但没有证书形式，可以设置一个常见的默认值
+                                            certificateFormField.value = '检定证书';
+                                            console.log('⚠️  设置默认证书形式为：检定证书');
+                                        }
+                                    }
+                                } else {
+                                    const errorText = await response.text();
+                                    console.error('获取上次外检信息失败:', response.status, errorText);
+                                }
+                            } catch (error) {
+                                console.warn('获取上次外检信息失败:', error);
+                                // 获取失败不影响正常流程，只是无法自动填充
+                            }
+                        }
+                        
+                        // 启用提交按钮
+                        document.getElementById('singleCalibrationBtn').disabled = false;
+                        
+                    } catch (error) {
+                        console.error('获取设备信息失败:', error);
+                        showNotification('获取设备信息失败: ' + error.message, 'error');
+                        // 即使获取设备信息失败，也要保持模态框打开
+                    }
+                }, 50); // 50ms延迟，确保模态框已经完全显示
                 
             } catch (error) {
-                console.error('获取设备信息失败:', error);
-                showNotification('获取设备信息失败: ' + error.message, 'error');
+                console.error('打开模态框失败:', error);
+                showNotification('打开模态框失败: ' + error.message, 'error');
             }
         }
 

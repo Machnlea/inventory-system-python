@@ -8,6 +8,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="/static/js/session-manager.js?v=2"></script>
     <script src="/static/js/api-client.js?v=20240816-2"></script>
+    <script src="/static/js/notification-manager.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body {
@@ -47,40 +48,10 @@
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1000;
-            min-width: 300px;
-            transform: translateX(400px);
-            transition: transform 0.3s ease;
-        }
-        .notification.show {
-            transform: translateX(0);
-        }
-    </style>
+      </style>
 </head>
 <body class="bg-gray-50">
-    <!-- 通知组件 -->
-    <div id="notification" class="notification hidden">
-        <div class="bg-white rounded-lg shadow-lg border-l-4 p-4">
-            <div class="flex items-center">
-                <div class="flex-shrink-0">
-                    <i id="notification-icon" class="text-xl"></i>
-                </div>
-                <div class="ml-3">
-                    <p id="notification-message" class="text-sm font-medium text-gray-900"></p>
-                </div>
-                <div class="ml-auto pl-3">
-                    <button onclick="hideNotification()" class="text-gray-400 hover:text-gray-600">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
+    
     <!-- 主容器 -->
     <div class="flex h-screen">
         <!-- 左侧导航栏 -->
@@ -442,44 +413,90 @@
     </div>
 
     <script>
-        // 显示通知
+        // 显示通知 - 使用统一通知管理器
         function showNotification(message, type = 'info') {
-            const notification = document.getElementById('notification');
-            const icon = document.getElementById('notification-icon');
-            const messageEl = document.getElementById('notification-message');
+            // 优先使用全局通知管理器
+            if (window.notificationManager) {
+                window.notificationManager.show(message, type);
+                return;
+            }
             
-            messageEl.textContent = message;
+            // 备用实现：如果通知管理器未加载
+            const container = document.getElementById('notification-container');
+            if (!container) {
+                const newContainer = document.createElement('div');
+                newContainer.id = 'notification-container';
+                newContainer.className = 'fixed top-4 right-4 z-[9999] space-y-2 max-w-md';
+                document.body.appendChild(newContainer);
+            }
             
-            // 设置图标和颜色
+            const notification = document.createElement('div');
+            
+            // 设置颜色方案 - 基于统一样式设计
             const colors = {
-                success: 'text-green-600',
-                error: 'text-red-600',
-                warning: 'text-yellow-600',
-                info: 'text-blue-600'
+                success: {
+                    bg: 'bg-white',
+                    border: 'border-l-green-500',
+                    icon: 'fas fa-check-circle text-green-600',
+                    text: 'text-green-900'
+                },
+                error: {
+                    bg: 'bg-white',
+                    border: 'border-l-red-500',
+                    icon: 'fas fa-exclamation-circle text-red-600',
+                    text: 'text-red-900'
+                },
+                warning: {
+                    bg: 'bg-white',
+                    border: 'border-l-yellow-500',
+                    icon: 'fas fa-exclamation-triangle text-yellow-600',
+                    text: 'text-yellow-900'
+                },
+                info: {
+                    bg: 'bg-white',
+                    border: 'border-l-blue-500',
+                    icon: 'fas fa-info-circle text-blue-600',
+                    text: 'text-blue-900'
+                }
             };
             
-            const icons = {
-                success: 'fas fa-check-circle',
-                error: 'fas fa-exclamation-circle',
-                warning: 'fas fa-exclamation-triangle',
-                info: 'fas fa-info-circle'
-            };
+            const colorScheme = colors[type] || colors.info;
             
-            icon.className = `${icons[type]} ${colors[type]} text-xl`;
-            notification.classList.remove('hidden');
-            setTimeout(() => notification.classList.add('show'), 100);
+            notification.className = `${colorScheme.bg} ${colorScheme.border} border-l-4 px-6 py-4 rounded-lg shadow-lg transform transition-all duration-300 translate-x-full`;
+            notification.style.marginBottom = '12px';
             
-            // 3秒后自动隐藏
-            setTimeout(() => hideNotification(), 3000);
+            notification.innerHTML = `
+                <div class="flex items-center">
+                    <i class="${colorScheme.icon} text-xl mr-3"></i>
+                    <span class="${colorScheme.text} font-medium">${message}</span>
+                    <div class="ml-auto pl-3">
+                        <button onclick="this.closest('.transform').remove()" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            const targetContainer = document.getElementById('notification-container');
+            targetContainer.appendChild(notification);
+            
+            // 触发动画
+            setTimeout(() => {
+                notification.classList.remove('translate-x-full');
+            }, 100);
+            
+            // 3秒后自动消失
+            setTimeout(() => {
+                notification.classList.add('translate-x-full');
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
         }
 
-        // 隐藏通知
-        function hideNotification() {
-            const notification = document.getElementById('notification');
-            notification.classList.remove('show');
-            setTimeout(() => notification.classList.add('hidden'), 300);
-        }
-
+        
         // 加载安全问题状态
         async function loadSecurityQuestionStatus() {
             try {

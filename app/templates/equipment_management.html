@@ -3513,7 +3513,19 @@
                 // 重置表单
                 resetCalibrationForm();
                 
-                // 如果是外检设备，获取上次的外检信息并自动填充
+                // 添加实时验证
+                setupRealTimeValidation();
+                
+                // 设置状态变更日期默认值
+                document.getElementById('singleStatusChangeDate').value = today;
+                
+                // 设置文件上传事件监听器
+                setupFileUploadListeners();
+                
+                // 设置证书信息相互依赖验证
+                setupCertificateFieldsValidation();
+                
+                // 如果是外检设备，获取上次的外检信息并自动填充（必须在重置表单之后执行）
                 if (calibrationMethod === '外检') {
                     try {
                         const response = await fetch(`/api/calibration/equipment/${equipmentId}/last-external-info`, {
@@ -3527,8 +3539,18 @@
                             const lastExternalInfo = await response.json();
                             if (lastExternalInfo.success) {
                                 // 自动填充上次的外检信息（证书编号除外，因为每次都要新的）
-                                document.getElementById('singleVerificationAgency').value = lastExternalInfo.verification_agency || '';
-                                document.getElementById('singleCertificateForm').value = lastExternalInfo.certificate_form || '';
+                                const verificationAgencyField = document.getElementById('singleVerificationAgency');
+                                const certificateFormField = document.getElementById('singleCertificateForm');
+                                
+                                if (verificationAgencyField && lastExternalInfo.verification_agency) {
+                                    verificationAgencyField.value = lastExternalInfo.verification_agency;
+                                    console.log('自动填充检定机构:', lastExternalInfo.verification_agency);
+                                }
+                                
+                                if (certificateFormField && lastExternalInfo.certificate_form) {
+                                    certificateFormField.value = lastExternalInfo.certificate_form;
+                                    console.log('自动填充证书形式:', lastExternalInfo.certificate_form);
+                                }
                                 
                                 // 显示提示信息
                                 if (lastExternalInfo.verification_agency || lastExternalInfo.certificate_form) {
@@ -3541,18 +3563,6 @@
                         // 获取失败不影响正常流程，只是无法自动填充
                     }
                 }
-                
-                // 添加实时验证
-                setupRealTimeValidation();
-                
-                // 设置状态变更日期默认值
-                document.getElementById('singleStatusChangeDate').value = today;
-                
-                // 设置文件上传事件监听器
-                setupFileUploadListeners();
-                
-                // 设置证书信息相互依赖验证
-                setupCertificateFieldsValidation();
                 
                 // 显示模态框
                 document.getElementById('singleCalibrationBtn').disabled = false;

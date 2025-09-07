@@ -61,18 +61,21 @@ async def get_equipment_last_external_calibration_info(
     last_external_info = get_last_external_calibration_info(db, equipment_id)
     
     if last_external_info:
+        source_text = "检定历史记录" if last_external_info.get("source") == "history" else "设备基本信息"
         return {
             "success": True,
             "verification_agency": last_external_info["verification_agency"],
             "certificate_form": last_external_info["certificate_form"],
-            "message": "成功获取上次外检信息"
+            "source": last_external_info.get("source"),
+            "message": f"成功获取上次外检信息（来源：{source_text}）"
         }
     else:
         return {
             "success": False,
             "verification_agency": None,
             "certificate_form": None,
-            "message": "暂无外检历史记录"
+            "source": None,
+            "message": "暂无外检信息记录"
         }
 
 
@@ -736,25 +739,51 @@ def get_last_external_calibration_info(db: Session, equipment_id: int) -> Option
     """
     获取设备上次外检信息
     
+    优先从检定历史记录中获取最新的外检记录，如果没有则从设备基本信息中获取首次录入的信息
+    
     - **equipment_id**: 设备ID
     - **returns**: 上次外检信息字典，如果没有则返回None
     """
     try:
-        # 查询该设备的上次外检记录
+        # 首先查询检定历史记录，获取最新的外检记录
+        # 如果检定日期相同，则按创建时间降序排列，确保获取到最新的记录
         last_calibration = db.query(CalibrationHistory).filter(
             CalibrationHistory.equipment_id == equipment_id,
-            CalibrationHistory.calibration_method == "外检",
-            CalibrationHistory.certificate_number.isnot(None),
-            CalibrationHistory.certificate_number != ""
-        ).order_by(desc(CalibrationHistory.calibration_date)).first()
+            CalibrationHistory.calibration_method == "外检"
+        ).order_by(desc(CalibrationHistory.calibration_date), desc(CalibrationHistory.created_at)).first()
         
         if last_calibration:
+            print(f"DEBUG: 找到检定历史记录 - 设备ID: {equipment_id}")
+            print(f"  检定日期: {last_calibration.calibration_date}")
+            print(f"  创建时间: {last_calibration.created_at}")
+            print(f"  检定机构: {last_calibration.verification_agency}")
+            print(f"  证书形式: {last_calibration.certificate_form}")
+            print(f"  证书编号: {last_calibration.certificate_number}")
+            print(f"  检定结果: {last_calibration.calibration_result}")
             return {
                 "verification_agency": last_calibration.verification_agency,
-                "certificate_form": last_calibration.certificate_form
+                "certificate_form": last_calibration.certificate_form,
+                "source": "history"  # 标记来源为历史记录
             }
+        
+        # 如果没有历史记录，尝试从设备基本信息中获取首次录入的信息
+        equipment = db.query(Equipment).filter(Equipment.id == equipment_id).first()
+        if equipment and equipment.calibration_method == "外检":
+            # 检查设备基本信息中是否有外检信息
+            if equipment.verification_agency or equipment.certificate_form:
+                print(f"DEBUG: 从设备基本信息获取 - 设备ID: {equipment_id}, 检定机构: {equipment.verification_agency}, 证书形式: {equipment.certificate_form}")
+                return {
+                    "verification_agency": equipment.verification_agency,
+                    "certificate_form": equipment.certificate_form,
+                    "source": "equipment"  # 标记来源为设备基本信息
+                }
+            else:
+                print(f"DEBUG: 设备基本信息中无外检信息 - 设备ID: {equipment_id}")
+        
+        print(f"DEBUG: 无任何外检信息 - 设备ID: {equipment_id}")
         return None
-    except Exception:
+    except Exception as e:
+        print(f"DEBUG: 获取外检信息异常 - 设备ID: {equipment_id}, 错误: {str(e)}")
         return None
 
 

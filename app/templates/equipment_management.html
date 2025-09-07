@@ -1580,7 +1580,7 @@
         // 加载设备数据
         async function loadEquipmentData() {
             try {
-                showNotification('正在加载设备数据...', 'info');
+                // 移除加载中的通知，直接加载数据
                 
                 // 构建筛选条件
                 const filters = buildFilters();

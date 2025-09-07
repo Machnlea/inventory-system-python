@@ -611,36 +611,62 @@ const ImportExportAPI = {
     }
 };
 
-// 通知工具
+// 通知工具 - 使用统一通知管理器
+// 如果通知管理器已加载，使用它；否则使用简化版本
 function showNotification(message, type = 'info') {
+    // 优先使用全局通知管理器
+    if (window.notificationManager) {
+        window.notificationManager.show(message, type);
+        return;
+    }
+    
+    // 备用实现：如果通知管理器未加载
     const container = document.getElementById('notification-container') || 
                      document.body;
     
     const notification = document.createElement('div');
     
-    const bgColor = type === 'success' ? 'bg-green-500' : 
-                   type === 'error' ? 'bg-red-500' : 
-                   type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500';
+    // 设置颜色方案 - 基于设置页面的设计
+    const colors = {
+        success: {
+            bg: 'bg-white',
+            border: 'border-l-green-500',
+            icon: 'fas fa-check-circle text-green-600',
+            text: 'text-green-900'
+        },
+        error: {
+            bg: 'bg-white',
+            border: 'border-l-red-500',
+            icon: 'fas fa-exclamation-circle text-red-600',
+            text: 'text-red-900'
+        },
+        warning: {
+            bg: 'bg-white',
+            border: 'border-l-yellow-500',
+            icon: 'fas fa-exclamation-triangle text-yellow-600',
+            text: 'text-yellow-900'
+        },
+        info: {
+            bg: 'bg-white',
+            border: 'border-l-blue-500',
+            icon: 'fas fa-info-circle text-blue-600',
+            text: 'text-blue-900'
+        }
+    };
     
-    const icon = type === 'success' ? 'check-circle' : 
-                type === 'error' ? 'exclamation-circle' : 
-                type === 'warning' ? 'exclamation-triangle' : 'info-circle';
+    const colorScheme = colors[type] || colors.info;
     
-    notification.className = `${bgColor} text-white px-6 py-4 rounded-lg shadow-lg transform transition-all duration-300 translate-x-full fixed right-4 z-[99999] max-w-md`;
-    notification.style.marginBottom = '8px'; // 通知之间的间距
+    notification.className = `${colorScheme.bg} ${colorScheme.border} border-l-4 px-6 py-4 rounded-lg shadow-lg transform transition-all duration-300 translate-x-full fixed right-4 z-[99999] max-w-md`;
+    notification.style.marginBottom = '12px';
     
     notification.innerHTML = `
         <div class="flex items-center">
-            <i class="fas fa-${icon} mr-3"></i>
-            <span>${message}</span>
+            <i class="${colorScheme.icon} text-xl mr-3"></i>
+            <span class="${colorScheme.text} font-medium">${message}</span>
         </div>
     `;
     
-    // 将通知添加到容器中
     container.appendChild(notification);
-    
-    // 重新排列所有通知的位置
-    repositionNotifications();
     
     // 触发动画
     setTimeout(() => {
@@ -653,24 +679,9 @@ function showNotification(message, type = 'info') {
         setTimeout(() => {
             if (notification.parentNode) {
                 notification.parentNode.removeChild(notification);
-                // 重新计算剩余通知的位置
-                repositionNotifications();
             }
         }, 300);
     }, 3000);
-}
-
-// 重新计算通知位置
-function repositionNotifications() {
-    const container = document.getElementById('notification-container') || document.body;
-    const notifications = Array.from(container.querySelectorAll('.fixed.right-4.z-\\[99999\\]')).reverse();
-    
-    let topPosition = 16; // 初始位置距离顶部16px
-    
-    notifications.forEach((notification, index) => {
-        notification.style.top = `${topPosition}px`;
-        topPosition += 88; // 每个通知高度80px + 间距8px
-    });
 }
 
 // 网络状态监听

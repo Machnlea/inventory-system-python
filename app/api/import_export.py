@@ -156,6 +156,11 @@ def download_import_template():
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, sheet_name='设备台账模板', index=False)
         
+        # 获取工作表对象并移除保护
+        worksheet = writer.sheets['设备台账模板']
+        worksheet.protection.sheet = False
+        worksheet.protection.autoFilter = False
+        
         # 添加说明工作表
         explanation_data = {
             '字段名': [
@@ -201,6 +206,10 @@ def download_import_template():
         # 替换NaN值为空字符串
         explanation_df = explanation_df.fillna('')
         explanation_df.to_excel(writer, sheet_name='填写说明', index=False)
+        
+        # 移除说明工作表的保护
+        explanation_worksheet = writer.sheets['填写说明']
+        explanation_worksheet.protection.sheet = False
     
     output.seek(0)
     
@@ -633,6 +642,11 @@ def export_all_equipments(
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, sheet_name='设备台账', index=False)
         
+        # 获取工作表对象并移除保护
+        worksheet = writer.sheets['设备台账']
+        worksheet.protection.sheet = False
+        worksheet.protection.autoFilter = False
+        
         # 添加动态列说明工作表
         if dynamic_columns:
             explanation_data = {
@@ -649,6 +663,10 @@ def export_all_equipments(
             # 替换NaN值为空字符串
             explanation_df = explanation_df.fillna('')
             explanation_df.to_excel(writer, sheet_name='动态列说明', index=False)
+            
+            # 移除动态列说明工作表的保护
+            explanation_worksheet = writer.sheets['动态列说明']
+            explanation_worksheet.protection.sheet = False
     
     output.seek(0)
     
@@ -736,6 +754,10 @@ def export_filtered_equipments(
             # 替换NaN值为空字符串
             explanation_df = explanation_df.fillna('')
             explanation_df.to_excel(writer, sheet_name='动态列说明', index=False)
+            
+            # 移除动态列说明工作表的保护
+            explanation_worksheet = writer.sheets['动态列说明']
+            explanation_worksheet.protection.sheet = False
     
     output.seek(0)
     

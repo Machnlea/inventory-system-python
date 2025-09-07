@@ -6,6 +6,7 @@ from pathlib import Path
 
 from app.api.auth import get_current_user
 from app.models.models import User
+from app.core.permissions import get_current_admin_user
 
 router = APIRouter()
 
@@ -71,7 +72,7 @@ def save_settings(settings_data: Dict[str, Any]) -> bool:
         return False
 
 @router.get("/")
-async def get_settings(current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
+async def get_settings(current_user: User = Depends(get_current_admin_user)) -> Dict[str, Any]:
     """获取系统设置"""
     try:
         settings_data = load_settings()
@@ -82,7 +83,7 @@ async def get_settings(current_user: User = Depends(get_current_user)) -> Dict[s
 @router.put("/")
 async def update_settings(
     settings_data: Dict[str, Any], 
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_admin_user)
 ) -> Dict[str, Any]:
     """更新系统设置"""
     try:
@@ -157,7 +158,7 @@ async def update_settings(
         raise HTTPException(status_code=500, detail=f"更新系统设置失败: {str(e)}")
 
 @router.post("/reset")
-async def reset_settings(current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
+async def reset_settings(current_user: User = Depends(get_current_admin_user)) -> Dict[str, Any]:
     """重置系统设置为默认值"""
     try:
         default_settings = DEFAULT_SETTINGS.copy()

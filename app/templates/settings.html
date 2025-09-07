@@ -215,7 +215,8 @@
                                 <i class="fas fa-history mr-3"></i>
                                 <span>操作日志</span>
                             </a>
-                            <a href="/settings" class="sidebar-item flex items-center px-4 py-2 text-white rounded-lg text-sm" id="settings-link">
+                            <!-- 系统设置 - 仅管理员可见 -->
+                            <a href="/settings" class="sidebar-item flex items-center px-4 py-2 text-white rounded-lg text-sm" id="settings-link" style="display: none;">
                                 <i class="fas fa-cog mr-3"></i>
                                 <span>系统设置</span>
                             </a>
@@ -821,12 +822,45 @@
 
         // 页面加载时初始化
         document.addEventListener('DOMContentLoaded', function() {
+            // 首先检查用户权限
+            const userInfo = sessionStorage.getItem('user_info') || localStorage.getItem('user_info');
+            if (userInfo) {
+                const user = JSON.parse(userInfo);
+                
+                // 如果不是管理员，重定向到仪表盘
+                if (!user.is_admin) {
+                    window.location.href = '/dashboard';
+                    return;
+                }
+            } else {
+                // 如果未登录，重定向到登录页面
+                window.location.href = '/login';
+                return;
+            }
+            
+            checkUserPermissions(); // 检查用户权限
             addInputValidation();
             loadSettings();
             loadSecurityQuestionStatus();
             setupSidebarNavigation();
             setCurrentPageActive();
         });
+
+        // 检查用户权限并显示/隐藏系统设置菜单
+        function checkUserPermissions() {
+            const userInfo = sessionStorage.getItem('user_info') || localStorage.getItem('user_info');
+            if (userInfo) {
+                const user = JSON.parse(userInfo);
+                const settingsLink = document.getElementById('settings-link');
+                
+                // 仅当用户是管理员时显示系统设置菜单
+                if (user.is_admin && settingsLink) {
+                    settingsLink.style.display = 'flex';
+                } else if (settingsLink) {
+                    settingsLink.style.display = 'none';
+                }
+            }
+        }
 
         // 设置侧边栏导航
         function setupSidebarNavigation() {

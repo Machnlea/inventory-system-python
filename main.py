@@ -99,6 +99,8 @@ async def audit(request: Request):
 
 @app.get("/settings", response_class=HTMLResponse)
 async def settings(request: Request):
+    # 对于页面访问，我们使用前端JavaScript进行权限控制
+    # 后端只负责API的权限验证
     return templates.TemplateResponse("settings.html", {"request": request})
 
 @app.get("/reports", response_class=HTMLResponse)

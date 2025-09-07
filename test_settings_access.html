@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统设置权限测试</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen p-8">
+        <div class="max-w-4xl mx-auto">
+            <h1 class="text-3xl font-bold text-gray-900 mb-8">系统设置权限测试</h1>
+            
+            <!-- 测试用户信息输入 -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-xl font-semibold mb-4">模拟用户登录</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">用户名</label>
+                        <input type="text" id="username" class="w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="输入用户名" value="测试用户">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">用户类型</label>
+                        <select id="userType" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                            <option value="admin">管理员</option>
+                            <option value="manager">普通用户</option>
+                            <option value="department_user">部门用户</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mt-4 space-x-2">
+                    <button onclick="simulateLogin()" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                        模拟登录
+                    </button>
+                    <button onclick="testSettingsAccess()" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
+                        测试访问系统设置
+                    </button>
+                    <button onclick="clearUserInfo()" class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">
+                        清除用户信息
+                    </button>
+                </div>
+            </div>
+
+            <!-- 侧边栏预览 -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-xl font-semibold mb-4">侧边栏预览</h2>
+                <div class="w-64 bg-gray-800 rounded-lg p-4">
+                    <div class="text-white text-lg font-bold mb-4">设备台账管理系统</div>
+                    <nav class="space-y-2">
+                        <a href="#" class="flex items-center px-3 py-2 text-white/90 rounded">
+                            <i class="fas fa-home mr-3"></i>
+                            <span>仪表盘</span>
+                        </a>
+                        <a href="#" class="flex items-center px-3 py-2 text-white/90 rounded">
+                            <i class="fas fa-cogs mr-3"></i>
+                            <span>设备管理</span>
+                        </a>
+                        <a href="#" class="flex items-center px-3 py-2 text-white/90 rounded">
+                            <i class="fas fa-chart-bar mr-3"></i>
+                            <span>统计报表</span>
+                        </a>
+                        
+                        <!-- 系统管理下拉菜单 -->
+                        <div class="relative">
+                            <button class="flex items-center justify-between w-full px-3 py-2 text-white/90 rounded">
+                                <div class="flex items-center">
+                                    <i class="fas fa-cog mr-3"></i>
+                                    <span>系统管理</span>
+                                </div>
+                                <i class="fas fa-chevron-down text-sm"></i>
+                            </button>
+                            <div class="ml-4 mt-1 space-y-1">
+                                <a href="#" class="flex items-center px-3 py-2 text-white/80 rounded text-sm">
+                                    <i class="fas fa-tags mr-3"></i>
+                                    <span>设备类别</span>
+                                </a>
+                                <a href="#" class="flex items-center px-3 py-2 text-white/80 rounded text-sm">
+                                    <i class="fas fa-building mr-3"></i>
+                                    <span>部门管理</span>
+                                </a>
+                                <a href="#" class="flex items-center px-3 py-2 text-white/80 rounded text-sm">
+                                    <i class="fas fa-users mr-3"></i>
+                                    <span>用户管理</span>
+                                </a>
+                                <a href="#" class="flex items-center px-3 py-2 text-white/80 rounded text-sm">
+                                    <i class="fas fa-history mr-3"></i>
+                                    <span>操作日志</span>
+                                </a>
+                                <!-- 系统设置 - 仅管理员可见 -->
+                                <a href="/settings" class="flex items-center px-3 py-2 text-white rounded text-sm" id="settings-link" style="display: none;">
+                                    <i class="fas fa-cog mr-3"></i>
+                                    <span>系统设置</span>
+                                </a>
+                            </div>
+                        </div>
+                    </nav>
+                </div>
+            </div>
+
+            <!-- 当前用户状态 -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">当前用户状态</h2>
+                <div id="userStatus" class="text-gray-600">
+                    尚未登录
+                </div>
+            </div>
+
+            <!-- 测试日志 -->
+            <div class="bg-white rounded-lg shadow-md p-6 mt-6">
+                <h2 class="text-xl font-semibold mb-4">测试日志</h2>
+                <div id="testLog" class="text-sm text-gray-600 max-h-40 overflow-y-auto">
+                    等待测试...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let testLog = [];
+
+        function addLog(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            testLog.unshift(`[${timestamp}] ${message}`);
+            updateTestLog();
+        }
+
+        function updateTestLog() {
+            document.getElementById('testLog').innerHTML = testLog.join('<br>');
+        }
+
+        // 检查用户权限并显示/隐藏系统设置菜单
+        function checkUserPermissions() {
+            const userInfo = sessionStorage.getItem('user_info') || localStorage.getItem('user_info');
+            if (userInfo) {
+                const user = JSON.parse(userInfo);
+                const settingsLink = document.getElementById('settings-link');
+                
+                // 仅当用户是管理员时显示系统设置菜单
+                if (user.is_admin && settingsLink) {
+                    settingsLink.style.display = 'flex';
+                    addLog(`✅ 管理员用户 ${user.username} 可以看到系统设置菜单`);
+                } else if (settingsLink) {
+                    settingsLink.style.display = 'none';
+                    addLog(`❌ 非管理员用户 ${user.username} 看不到系统设置菜单`);
+                }
+                
+                // 更新状态显示
+                document.getElementById('userStatus').innerHTML = `
+                    <div class="space-y-2">
+                        <p><strong>用户名:</strong> ${user.username}</p>
+                        <p><strong>用户类型:</strong> ${user.user_type}</p>
+                        <p><strong>是否管理员:</strong> ${user.is_admin ? '是' : '否'}</p>
+                        <p><strong>系统设置菜单:</strong> ${user.is_admin ? '可见' : '隐藏'}</p>
+                    </div>
+                `;
+            } else {
+                document.getElementById('userStatus').innerHTML = '<p class="text-gray-600">尚未登录</p>';
+                const settingsLink = document.getElementById('settings-link');
+                if (settingsLink) {
+                    settingsLink.style.display = 'none';
+                }
+                addLog('⚠️ 用户未登录，系统设置菜单已隐藏');
+            }
+        }
+
+        // 模拟登录
+        function simulateLogin() {
+            const username = document.getElementById('username').value || '测试用户';
+            const userType = document.getElementById('userType').value;
+            
+            const userInfo = {
+                id: 1,
+                username: username,
+                user_type: userType,
+                is_admin: userType === 'admin',
+                department_id: null,
+                first_login: false,
+                is_active: true
+            };
+            
+            // 保存用户信息
+            sessionStorage.setItem('user_info', JSON.stringify(userInfo));
+            localStorage.setItem('user_info', JSON.stringify(userInfo));
+            
+            // 检查权限
+            checkUserPermissions();
+            
+            addLog(`🔓 模拟登录成功！用户：${username}，类型：${userType}`);
+        }
+
+        // 测试访问系统设置
+        function testSettingsAccess() {
+            const userInfo = sessionStorage.getItem('user_info') || localStorage.getItem('user_info');
+            if (!userInfo) {
+                addLog('❌ 请先登录');
+                return;
+            }
+
+            const user = JSON.parse(userInfo);
+            
+            if (user.is_admin) {
+                addLog('🔓 管理员用户，正在跳转到系统设置页面...');
+                // 在实际环境中，这里会跳转到 /settings
+                addLog('✅ 跳转到 /settings (模拟)');
+            } else {
+                addLog('🚫 非管理员用户，无法访问系统设置');
+                addLog('🔄 正在重定向到仪表盘... (模拟)');
+                // 在实际环境中，这里会重定向到 /dashboard
+            }
+        }
+
+        // 清除用户信息
+        function clearUserInfo() {
+            sessionStorage.removeItem('user_info');
+            localStorage.removeItem('user_info');
+            checkUserPermissions();
+            addLog('🗑️ 用户信息已清除');
+        }
+
+        // 页面加载时检查权限
+        document.addEventListener('DOMContentLoaded', function() {
+            checkUserPermissions();
+            addLog('📄 页面加载完成，权限检查已执行');
+        });
+    </script>
+</body>
+</html>

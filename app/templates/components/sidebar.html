@@ -1,0 +1,111 @@
+<!-- 侧边栏导航组件 -->
+{% macro render_sidebar() %}
+<!-- 左侧导航栏 -->
+<div class="w-64 gradient-bg shadow-xl fixed left-0 top-0 h-full z-10">
+    <div class="flex flex-col h-full">
+        <!-- Logo和标题 -->
+        <div class="flex items-center justify-center h-16 px-4 border-b border-white/20">
+            <div class="flex items-center">
+                <i class="fas fa-clipboard-list text-white text-2xl mr-3"></i>
+                <h1 class="text-white text-lg font-bold">设备台账管理系统</h1>
+            </div>
+        </div>
+
+        <!-- 导航菜单 -->
+        <nav class="flex-1 px-4 py-6 space-y-2">
+            <a href="/dashboard" class="sidebar-item flex items-center px-4 py-3 text-white/90 rounded-lg">
+                <i class="fas fa-home mr-3 text-lg"></i>
+                <span>仪表盘</span>
+            </a>
+            <a href="/equipment" class="sidebar-item flex items-center px-4 py-3 text-white/90 rounded-lg">
+                <i class="fas fa-cogs mr-3 text-lg"></i>
+                <span>设备管理</span>
+            </a>
+            <a href="/reports" class="sidebar-item flex items-center px-4 py-3 text-white/90 rounded-lg" id="reports-link">
+                <i class="fas fa-chart-bar mr-3 text-lg"></i>
+                <span>统计报表</span>
+            </a>
+            
+            <!-- 系统管理下拉菜单 - 仅管理员可见 -->
+            <div id="admin-menu" style="display: none;">
+                <div class="relative">
+                    <button class="sidebar-item flex items-center justify-between w-full px-4 py-3 text-white/90 rounded-lg" id="system-menu-btn" aria-label="展开系统管理菜单" aria-expanded="false">
+                        <div class="flex items-center">
+                            <i class="fas fa-cog mr-3 text-lg"></i>
+                            <span>系统管理</span>
+                        </div>
+                        <i class="fas fa-chevron-down text-sm transition-transform duration-200" id="system-menu-arrow"></i>
+                    </button>
+                    <div class="ml-4 mt-1 space-y-1 hidden" id="system-submenu">
+                        <a href="/categories" class="sidebar-item flex items-center px-4 py-2 text-white/80 rounded-lg text-sm" id="categories-link">
+                            <i class="fas fa-tags mr-3"></i>
+                            <span>设备类别</span>
+                        </a>
+                        <a href="/departments" class="sidebar-item flex items-center px-4 py-2 text-white/80 rounded-lg text-sm">
+                            <i class="fas fa-building mr-3"></i>
+                            <span>部门管理</span>
+                        </a>
+                        <a href="/users" class="sidebar-item flex items-center px-4 py-2 text-white/80 rounded-lg text-sm">
+                            <i class="fas fa-users mr-3"></i>
+                            <span>用户管理</span>
+                        </a>
+                        <a href="/audit" class="sidebar-item flex items-center px-4 py-2 text-white/80 rounded-lg text-sm" id="audit-link">
+                            <i class="fas fa-history mr-3"></i>
+                            <span>操作日志</span>
+                        </a>
+                        <a href="/settings" class="sidebar-item flex items-center px-4 py-2 text-white rounded-lg text-sm" id="settings-link">
+                            <i class="fas fa-cog mr-3"></i>
+                            <span>系统设置</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 用户信息 -->
+        <div class="border-t border-white/20 p-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <i class="fas fa-user-circle text-white text-xl mr-3"></i>
+                    <div>
+                        <p class="text-white text-base font-medium" id="current-user"></p>
+                    </div>
+                </div>
+                <button class="text-white/70 hover:text-white transition-colors" id="logout-btn" aria-label="退出登录">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 检查用户权限并显示/隐藏管理员菜单
+function checkUserPermissions() {
+    const userInfo = sessionStorage.getItem('user_info') || localStorage.getItem('user_info');
+    if (userInfo) {
+        const user = JSON.parse(userInfo);
+        const adminMenu = document.getElementById('admin-menu');
+        
+        // 仅当用户是管理员时显示系统管理菜单
+        if (user.is_admin) {
+            adminMenu.style.display = 'block';
+        } else {
+            adminMenu.style.display = 'none';
+        }
+    }
+}
+
+// 页面加载时检查权限
+document.addEventListener('DOMContentLoaded', function() {
+    checkUserPermissions();
+});
+
+// 监听用户信息变化（例如登录后）
+window.addEventListener('storage', function(e) {
+    if (e.key === 'user_info') {
+        checkUserPermissions();
+    }
+});
+</script>
+{% endmacro %}

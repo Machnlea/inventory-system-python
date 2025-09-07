@@ -1415,13 +1415,66 @@
 
         // 设置统计卡片点击事件
         function setupStatCardClickHandlers() {
+            // 防抖机制：避免快速重复点击
+            let isProcessing = false;
+            let lastClickedCard = null;
+            let notificationTimeout = null;
+            
+            // 卡片视觉反馈函数
+            function addCardFeedback(card) {
+                card.style.transform = 'scale(0.95)';
+                card.style.boxShadow = '0 5px 15px rgba(0,0,0,0.2)';
+                setTimeout(() => {
+                    card.style.transform = '';
+                    card.style.boxShadow = '';
+                }, 150);
+            }
+            
+            // 显示简洁通知的函数
+            function showBriefNotification(message, type = 'info') {
+                // 清除之前的通知
+                if (notificationTimeout) {
+                    clearTimeout(notificationTimeout);
+                }
+                
+                // 只在切换不同筛选条件时显示通知
+                if (message !== lastClickedCard) {
+                    showNotification(message, type);
+                    lastClickedCard = message;
+                    
+                    // 3秒后重置记忆
+                    notificationTimeout = setTimeout(() => {
+                        lastClickedCard = null;
+                    }, 3000);
+                }
+            }
+            
+            // 防抖点击处理函数
+            function handleCardClick(card, action) {
+                if (isProcessing) return;
+                
+                isProcessing = true;
+                addCardFeedback(card);
+                
+                try {
+                    action();
+                } finally {
+                    setTimeout(() => {
+                        isProcessing = false;
+                    }, 300);
+                }
+            }
+            
             // 设备总数卡片
             const totalCard = document.getElementById('card-total');
             if (totalCard) {
                 totalCard.addEventListener('click', function() {
-                    // 重置所有筛选条件
-                    resetAllFilters();
-                    showNotification('显示所有设备', 'info');
+                    handleCardClick(totalCard, () => {
+                        resetAllFilters();
+                        currentPage = 1;
+                        loadEquipmentData();
+                        showBriefNotification('显示所有设备', 'info');
+                    });
                 });
             }
             
@@ -1429,15 +1482,16 @@
             const activeCard = document.getElementById('card-active');
             if (activeCard) {
                 activeCard.addEventListener('click', function() {
-                    resetAllFilters();
-                    // 设置状态筛选为"在用"
-                    const statusFilter = document.getElementById('status-filter');
-                    if (statusFilter) {
-                        statusFilter.value = '在用';
-                        currentPage = 1;
-                        loadEquipmentData();
-                        showNotification('显示正常（在用）设备', 'info');
-                    }
+                    handleCardClick(activeCard, () => {
+                        resetAllFilters();
+                        const statusFilter = document.getElementById('status-filter');
+                        if (statusFilter) {
+                            statusFilter.value = '在用';
+                            currentPage = 1;
+                            loadEquipmentData();
+                            showBriefNotification('显示正常设备', 'info');
+                        }
+                    });
                 });
             }
             
@@ -1445,20 +1499,21 @@
             const monthlyDueCard = document.getElementById('card-monthly-due');
             if (monthlyDueCard) {
                 monthlyDueCard.addEventListener('click', function() {
-                    resetAllFilters();
-                    // 设置待检设备筛选条件
-                    const today = new Date();
-                    const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, today.getDate());
-                    const startDateFilter = document.getElementById('start-date-filter');
-                    const endDateFilter = document.getElementById('end-date-filter');
-                    
-                    if (startDateFilter && endDateFilter) {
-                        startDateFilter.value = today.toISOString().split('T')[0];
-                        endDateFilter.value = nextMonth.toISOString().split('T')[0];
-                        currentPage = 1;
-                        loadEquipmentData();
-                        showNotification('显示待检设备', 'info');
-                    }
+                    handleCardClick(monthlyDueCard, () => {
+                        resetAllFilters();
+                        const today = new Date();
+                        const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, today.getDate());
+                        const startDateFilter = document.getElementById('start-date-filter');
+                        const endDateFilter = document.getElementById('end-date-filter');
+                        
+                        if (startDateFilter && endDateFilter) {
+                            startDateFilter.value = today.toISOString().split('T')[0];
+                            endDateFilter.value = nextMonth.toISOString().split('T')[0];
+                            currentPage = 1;
+                            loadEquipmentData();
+                            showBriefNotification('显示待检设备', 'info');
+                        }
+                    });
                 });
             }
             
@@ -1466,18 +1521,19 @@
             const overdueCard = document.getElementById('card-overdue');
             if (overdueCard) {
                 overdueCard.addEventListener('click', function() {
-                    resetAllFilters();
-                    // 设置超期设备筛选条件
-                    const today = new Date();
-                    const startDateFilter = document.getElementById('start-date-filter');
-                    const endDateFilter = document.getElementById('end-date-filter');
-                    
-                    if (startDateFilter && endDateFilter) {
-                        endDateFilter.value = today.toISOString().split('T')[0];
-                        currentPage = 1;
-                        loadEquipmentData();
-                        showNotification('显示超期设备', 'info');
-                    }
+                    handleCardClick(overdueCard, () => {
+                        resetAllFilters();
+                        const today = new Date();
+                        const startDateFilter = document.getElementById('start-date-filter');
+                        const endDateFilter = document.getElementById('end-date-filter');
+                        
+                        if (startDateFilter && endDateFilter) {
+                            endDateFilter.value = today.toISOString().split('T')[0];
+                            currentPage = 1;
+                            loadEquipmentData();
+                            showBriefNotification('显示超期设备', 'info');
+                        }
+                    });
                 });
             }
             
@@ -1485,26 +1541,24 @@
             const inactiveCard = document.getElementById('card-inactive');
             if (inactiveCard) {
                 inactiveCard.addEventListener('click', function() {
-                    resetAllFilters();
-                    // 设置状态筛选为"停用"和"报废"
-                    const statusFilter = document.getElementById('status-filter');
-                    if (statusFilter) {
-                        // 由于HTML select只能单选，我们这里先设置为"停用"
-                        statusFilter.value = '停用';
-                        currentPage = 1;
-                        loadEquipmentData();
-                        showNotification('显示停用设备，点击再次查看报废设备', 'info');
-                        
-                        // 可以在这里添加逻辑来循环显示停用和报废设备
-                        let lastStatus = '停用';
-                        inactiveCard.clickCount = (inactiveCard.clickCount || 0) + 1;
-                        
-                        if (inactiveCard.clickCount % 2 === 0) {
-                            statusFilter.value = '报废';
-                            loadEquipmentData();
-                            showNotification('显示报废设备', 'info');
+                    handleCardClick(inactiveCard, () => {
+                        resetAllFilters();
+                        const statusFilter = document.getElementById('status-filter');
+                        if (statusFilter) {
+                            // 重置点击计数，实现停用和报废的循环切换
+                            inactiveCard.clickCount = (inactiveCard.clickCount || 0) + 1;
+                            
+                            if (inactiveCard.clickCount % 2 === 1) {
+                                statusFilter.value = '停用';
+                                loadEquipmentData();
+                                showBriefNotification('显示停用设备', 'info');
+                            } else {
+                                statusFilter.value = '报废';
+                                loadEquipmentData();
+                                showBriefNotification('显示报废设备', 'info');
+                            }
                         }
-                    }
+                    });
                 });
             }
         }

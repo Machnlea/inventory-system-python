@@ -3528,15 +3528,27 @@
                 // 如果是外检设备，获取上次的外检信息并自动填充（必须在重置表单之后执行）
                 if (calibrationMethod === '外检') {
                     try {
+                        // 使用统一的认证处理方式
+                        const token = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
+                        if (!token) {
+                            console.warn('未找到认证token，无法获取上次外检信息');
+                            return;
+                        }
+                        
                         const response = await fetch(`/api/calibration/equipment/${equipmentId}/last-external-info`, {
                             method: 'GET',
                             headers: {
-                                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
                             }
                         });
                         
+                        console.log('获取上次外检信息响应状态:', response.status);
+                        
                         if (response.ok) {
                             const lastExternalInfo = await response.json();
+                            console.log('获取到的上次外检信息:', lastExternalInfo);
+                            
                             if (lastExternalInfo.success) {
                                 // 自动填充上次的外检信息（证书编号除外，因为每次都要新的）
                                 const verificationAgencyField = document.getElementById('singleVerificationAgency');
@@ -3544,19 +3556,24 @@
                                 
                                 if (verificationAgencyField && lastExternalInfo.verification_agency) {
                                     verificationAgencyField.value = lastExternalInfo.verification_agency;
-                                    console.log('自动填充检定机构:', lastExternalInfo.verification_agency);
+                                    console.log('✅ 自动填充检定机构:', lastExternalInfo.verification_agency);
                                 }
                                 
                                 if (certificateFormField && lastExternalInfo.certificate_form) {
                                     certificateFormField.value = lastExternalInfo.certificate_form;
-                                    console.log('自动填充证书形式:', lastExternalInfo.certificate_form);
+                                    console.log('✅ 自动填充证书形式:', lastExternalInfo.certificate_form);
                                 }
                                 
                                 // 显示提示信息
                                 if (lastExternalInfo.verification_agency || lastExternalInfo.certificate_form) {
                                     showNotification('已自动填充上次外检的检定机构和证书形式', 'info');
                                 }
+                            } else {
+                                console.log('该设备暂无外检历史记录:', lastExternalInfo.message);
                             }
+                        } else {
+                            const errorText = await response.text();
+                            console.error('获取上次外检信息失败:', response.status, errorText);
                         }
                     } catch (error) {
                         console.warn('获取上次外检信息失败:', error);

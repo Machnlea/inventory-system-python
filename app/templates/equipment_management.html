@@ -241,16 +241,7 @@
                             <i class="fas fa-tags absolute left-2 top-1/2 transform -translate-y-1/2 text-green-600"></i>
                         </div>
                         
-                        <div class="relative">
-                            <select id="status-filter" class="pl-8 pr-6 py-3 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-purple-50 text-purple-900">
-                                <option value="">全部状态</option>
-                                <option value="在用" selected>在用</option>
-                                <option value="停用">停用</option>
-                                <option value="报废">报废</option>
-                            </select>
-                            <i class="fas fa-info-circle absolute left-2 top-1/2 transform -translate-y-1/2 text-purple-600"></i>
-                        </div>
-                        
+                          
                         <!-- 开始日期筛选器 -->
                         <div class="relative">
                             <input type="date" id="start-date-filter" placeholder="开始日期" 
@@ -264,6 +255,14 @@
                                    class="pl-8 pr-2 py-3 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-red-50 text-red-900">
                             <i class="fas fa-calendar-alt absolute left-2 top-1/2 transform -translate-y-1/2 text-red-600"></i>
                         </div>
+                        
+                        <!-- 隐藏的状态筛选器，供JavaScript使用 -->
+                        <select id="status-filter" class="hidden">
+                            <option value="">全部状态</option>
+                            <option value="在用">在用</option>
+                            <option value="停用">停用</option>
+                            <option value="报废">报废</option>
+                        </select>
                     </div>
                 </div>
                 
@@ -313,7 +312,10 @@
 
             <!-- 信息概览卡片 -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-                <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                <div class="bg-white rounded-xl shadow-md p-6 card-hover cursor-pointer hover:shadow-lg hover:scale-105 transition-all duration-200" 
+                     id="card-total" 
+                     data-status="all" 
+                     title="点击查看所有设备">
                     <div class="flex items-center">
                         <div class="p-3 rounded-full bg-blue-100">
                             <i class="fas fa-cogs text-2xl text-blue-600"></i>
@@ -324,7 +326,10 @@
                         </div>
                     </div>
                 </div>
-                <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                <div class="bg-white rounded-xl shadow-md p-6 card-hover cursor-pointer hover:shadow-lg hover:scale-105 transition-all duration-200" 
+                     id="card-active" 
+                     data-status="在用" 
+                     title="点击查看正常设备">
                     <div class="flex items-center">
                         <div class="p-3 rounded-full bg-green-100">
                             <i class="fas fa-check-circle text-2xl text-green-600"></i>
@@ -335,7 +340,10 @@
                         </div>
                     </div>
                 </div>
-                <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                <div class="bg-white rounded-xl shadow-md p-6 card-hover cursor-pointer hover:shadow-lg hover:scale-105 transition-all duration-200" 
+                     id="card-monthly-due" 
+                     data-status="monthly_due" 
+                     title="点击查看待检设备">
                     <div class="flex items-center">
                         <div class="p-3 rounded-full bg-yellow-100">
                             <i class="fas fa-exclamation-triangle text-2xl text-yellow-600"></i>
@@ -346,7 +354,10 @@
                         </div>
                     </div>
                 </div>
-                <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                <div class="bg-white rounded-xl shadow-md p-6 card-hover cursor-pointer hover:shadow-lg hover:scale-105 transition-all duration-200" 
+                     id="card-overdue" 
+                     data-status="overdue" 
+                     title="点击查看超期设备">
                     <div class="flex items-center">
                         <div class="p-3 rounded-full bg-red-100">
                             <i class="fas fa-times-circle text-2xl text-red-600"></i>
@@ -357,7 +368,10 @@
                         </div>
                     </div>
                 </div>
-                <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                <div class="bg-white rounded-xl shadow-md p-6 card-hover cursor-pointer hover:shadow-lg hover:scale-105 transition-all duration-200" 
+                     id="card-inactive" 
+                     data-status="inactive" 
+                     title="点击查看停用报废设备">
                     <div class="flex items-center">
                         <div class="p-3 rounded-full bg-gray-100">
                             <i class="fas fa-ban text-2xl text-gray-600"></i>
@@ -1399,6 +1413,119 @@
             }
         }
 
+        // 设置统计卡片点击事件
+        function setupStatCardClickHandlers() {
+            // 设备总数卡片
+            const totalCard = document.getElementById('card-total');
+            if (totalCard) {
+                totalCard.addEventListener('click', function() {
+                    // 重置所有筛选条件
+                    resetAllFilters();
+                    showNotification('显示所有设备', 'info');
+                });
+            }
+            
+            // 正常设备卡片
+            const activeCard = document.getElementById('card-active');
+            if (activeCard) {
+                activeCard.addEventListener('click', function() {
+                    resetAllFilters();
+                    // 设置状态筛选为"在用"
+                    const statusFilter = document.getElementById('status-filter');
+                    if (statusFilter) {
+                        statusFilter.value = '在用';
+                        currentPage = 1;
+                        loadEquipmentData();
+                        showNotification('显示正常（在用）设备', 'info');
+                    }
+                });
+            }
+            
+            // 待检设备卡片
+            const monthlyDueCard = document.getElementById('card-monthly-due');
+            if (monthlyDueCard) {
+                monthlyDueCard.addEventListener('click', function() {
+                    resetAllFilters();
+                    // 设置待检设备筛选条件
+                    const today = new Date();
+                    const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, today.getDate());
+                    const startDateFilter = document.getElementById('start-date-filter');
+                    const endDateFilter = document.getElementById('end-date-filter');
+                    
+                    if (startDateFilter && endDateFilter) {
+                        startDateFilter.value = today.toISOString().split('T')[0];
+                        endDateFilter.value = nextMonth.toISOString().split('T')[0];
+                        currentPage = 1;
+                        loadEquipmentData();
+                        showNotification('显示待检设备', 'info');
+                    }
+                });
+            }
+            
+            // 超期设备卡片
+            const overdueCard = document.getElementById('card-overdue');
+            if (overdueCard) {
+                overdueCard.addEventListener('click', function() {
+                    resetAllFilters();
+                    // 设置超期设备筛选条件
+                    const today = new Date();
+                    const startDateFilter = document.getElementById('start-date-filter');
+                    const endDateFilter = document.getElementById('end-date-filter');
+                    
+                    if (startDateFilter && endDateFilter) {
+                        endDateFilter.value = today.toISOString().split('T')[0];
+                        currentPage = 1;
+                        loadEquipmentData();
+                        showNotification('显示超期设备', 'info');
+                    }
+                });
+            }
+            
+            // 停用报废设备卡片
+            const inactiveCard = document.getElementById('card-inactive');
+            if (inactiveCard) {
+                inactiveCard.addEventListener('click', function() {
+                    resetAllFilters();
+                    // 设置状态筛选为"停用"和"报废"
+                    const statusFilter = document.getElementById('status-filter');
+                    if (statusFilter) {
+                        // 由于HTML select只能单选，我们这里先设置为"停用"
+                        statusFilter.value = '停用';
+                        currentPage = 1;
+                        loadEquipmentData();
+                        showNotification('显示停用设备，点击再次查看报废设备', 'info');
+                        
+                        // 可以在这里添加逻辑来循环显示停用和报废设备
+                        let lastStatus = '停用';
+                        inactiveCard.clickCount = (inactiveCard.clickCount || 0) + 1;
+                        
+                        if (inactiveCard.clickCount % 2 === 0) {
+                            statusFilter.value = '报废';
+                            loadEquipmentData();
+                            showNotification('显示报废设备', 'info');
+                        }
+                    }
+                });
+            }
+        }
+        
+        // 重置所有筛选条件
+        function resetAllFilters() {
+            const filters = ['department-filter', 'category-filter', 'start-date-filter', 'end-date-filter'];
+            filters.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.value = '';
+                }
+            });
+            
+            // 重置状态筛选器
+            const statusFilter = document.getElementById('status-filter');
+            if (statusFilter) {
+                statusFilter.value = '';
+            }
+        }
+
         // 加载设备数据
         async function loadEquipmentData() {
             try {
@@ -1491,10 +1618,13 @@
             
             const departmentId = document.getElementById('department-filter').value;
             const categoryId = document.getElementById('category-filter').value;
-            const status = document.getElementById('status-filter').value;
             const searchQuery = document.getElementById('search-input').value.trim();
             const startDate = document.getElementById('start-date-filter').value;
             const endDate = document.getElementById('end-date-filter').value;
+            
+            // 获取状态筛选器（可能不存在，因为已经从HTML中移除）
+            const statusFilter = document.getElementById('status-filter');
+            const status = statusFilter ? statusFilter.value : '';
             
             console.log('筛选器原始值:');
             console.log('- 部门ID:', departmentId);
@@ -2475,7 +2605,7 @@
             });
             
             // 筛选器
-            ['department-filter', 'category-filter', 'status-filter', 'start-date-filter', 'end-date-filter'].forEach(id => {
+            ['department-filter', 'category-filter', 'start-date-filter', 'end-date-filter'].forEach(id => {
                 document.getElementById(id).addEventListener('change', function() {
                     currentPage = 1;
                     loadEquipmentData();
@@ -2510,6 +2640,9 @@
             
             // 侧边栏导航
             setupSidebarNavigation();
+            
+            // 统计卡片点击事件
+            setupStatCardClickHandlers();
         }
 
         // 设置侧边栏导航

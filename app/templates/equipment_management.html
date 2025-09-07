@@ -808,6 +808,14 @@
                             <span id="singleCalibrationMethod" class="ml-2 text-gray-900">-</span>
                         </div>
                         <div>
+                            <span class="font-medium text-gray-700">内部编号:</span>
+                            <span id="singleCalibrationInternalId" class="ml-2 text-gray-900">-</span>
+                        </div>
+                        <div>
+                            <span class="font-medium text-gray-700">出厂编号:</span>
+                            <span id="singleCalibrationManufacturerId" class="ml-2 text-gray-900">-</span>
+                        </div>
+                        <div>
                             <span class="font-medium text-gray-700">设备型号:</span>
                             <span id="singleCalibrationEquipmentModel" class="ml-2 text-gray-900">-</span>
                         </div>
@@ -2846,9 +2854,28 @@
         }
 
         // 更新检定
-        function updateCalibrationDate(equipmentId) {
-            // 打开单个设备检定日期更新模态框
-            openSingleCalibrationModal(equipmentId);
+        async function updateCalibrationDate(equipmentId) {
+            try {
+                // 获取设备信息用于通知
+                const equipment = await EquipmentAPI.getEquipment(equipmentId);
+                
+                // 构建通知消息
+                let notificationMessage = `正在处理 ${equipment.name}`;
+                if (equipment.internal_id && equipment.internal_id !== '-') {
+                    notificationMessage += `（${equipment.internal_id}）`;
+                }
+                notificationMessage += ' 的检定...';
+                
+                showNotification(notificationMessage, 'info');
+                
+                // 打开单个设备检定日期更新模态框
+                openSingleCalibrationModal(equipmentId);
+                
+            } catch (error) {
+                console.error('获取设备信息失败:', error);
+                // 即使获取设备信息失败，也要打开模态框
+                openSingleCalibrationModal(equipmentId);
+            }
         }
 
         // 删除设备
@@ -3498,6 +3525,8 @@
                 // 填充设备信息显示区域
                 document.getElementById('singleCalibrationEquipmentName').textContent = equipment.name;
                 document.getElementById('singleCalibrationMethod').textContent = equipment.calibration_method || '内检';
+                document.getElementById('singleCalibrationInternalId').textContent = equipment.internal_id || '-';
+                document.getElementById('singleCalibrationManufacturerId').textContent = equipment.manufacturer_id || '-';
                 document.getElementById('singleCalibrationEquipmentModel').textContent = equipment.model;
                 document.getElementById('singleCalibrationCycle').textContent = equipment.calibration_cycle;
                 

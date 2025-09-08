@@ -3,15 +3,15 @@ chcp 65001 >nul
 setlocal enabledelayedexpansion
 
 :: 设置窗口标题和颜色
-title 库存管理系统服务
+title 计量器具台账系统服务
 color 0A
 
 :: 显示欢迎信息
 echo.
 echo     ╔══════════════════════════════════════════════════════════════╗
 echo     ║                                                              ║
-echo     ║                      库存管理系统                             ║
-echo     ║                    Inventory Management System                 ║
+echo     ║                    计量器具台账系统                          ║
+echo     ║              Measuring Equipment Ledger System                ║
 echo     ║                                                              ║
 echo     ╚══════════════════════════════════════════════════════════════╝
 echo.
@@ -48,5 +48,5 @@ uv run python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 echo.
 echo [信息] 服务已停止
 echo.
-echo 感谢使用库存管理系统！
+echo 感谢使用计量器具台账系统！
 pause

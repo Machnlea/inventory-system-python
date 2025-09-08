@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-title 库存管理系统启动脚本
+title 计量器具台账系统启动脚本
 
 :: 设置颜色
 color 0A
@@ -9,9 +9,9 @@ color 0A
 echo.
 echo     ╔══════════════════════════════════════════════════════════════╗
 echo     ║                                                              ║
-echo     ║            库存管理系统 - Windows 启动脚本                   ║
+echo     ║          计量器具台账系统 - Windows 启动脚本                ║
 echo     ║                                                              ║
-echo     ║                    Inventory Management System               ║
+echo     ║              Measuring Equipment Ledger System                ║
 echo     ║                                                              ║
 echo     ╚══════════════════════════════════════════════════════════════╝
 echo.
@@ -58,7 +58,7 @@ set PYTHONUTF8=1
 
 :: 显示启动信息
 echo.
-echo [信息] 启动库存管理系统...
+echo [信息] 启动计量器具台账系统...
 echo [信息] 服务地址：http://localhost:8000
 echo [信息] API文档：http://localhost:8000/docs
 echo [信息] 按Ctrl+C停止服务

@@ -3,15 +3,15 @@ chcp 65001 >nul
 setlocal enabledelayedexpansion
 
 :: 设置窗口标题和颜色
-title 库存管理系统 - 完整启动脚本
+title 计量器具台账系统 - 完整启动脚本
 color 0A
 
 :: 显示欢迎信息
 echo.
 echo     ╔══════════════════════════════════════════════════════════════╗
 echo     ║                                                              ║
-echo     ║                库存管理系统 - 完整启动脚本                      ║
-echo     ║               Inventory Management System                    ║
+echo     ║              计量器具台账系统 - 完整启动脚本                  ║
+echo     ║           Measuring Equipment Ledger System                   ║
 echo     ║                                                              ║
 echo     ╚══════════════════════════════════════════════════════════════╝
 echo.
@@ -67,7 +67,7 @@ set PYTHONUTF8=1
 
 :: 显示启动信息
 echo.
-echo [启动] 库存管理系统正在启动...
+echo [启动] 计量器具台账系统正在启动...
 echo [信息] 服务地址：http://localhost:8000
 echo [信息] API文档：http://localhost:8000/docs
 echo [信息] 按Ctrl+C停止服务
@@ -81,5 +81,5 @@ uv run python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 echo.
 echo [信息] 服务已停止
 echo.
-echo 感谢使用库存管理系统！
+echo 感谢使用计量器具台账系统！
 pause

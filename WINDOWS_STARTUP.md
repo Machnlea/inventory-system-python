@@ -1,14 +1,30 @@
 # Windows 启动脚本使用说明
 
-本项目提供了多个Windows启动脚本，适用于不同的使用场景。
+本项目提供了多个Windows启动脚本，适用于不同的使用场景。所有脚本都使用 `uv` 工具链来管理Python环境和依赖。
+
+## 系统要求
+
+- **uv** - Python包管理器和环境管理器
+- Windows 7/8/10/11
+- 至少100MB可用磁盘空间
+- 网络连接（用于安装依赖）
+
+## 安装uv
+
+如果尚未安装uv，请运行以下命令：
+```powershell
+powershell -c "irm https://astral.sh/uv/install.sh | iex"
+```
+
+或者访问：https://docs.astral.sh/uv/getting-started/installation/
 
 ## 脚本文件说明
 
 ### 1. `start_simple.bat` - 简单启动脚本
-**适用场景**：环境已经配置完成，只需要快速启动服务
+**适用场景**：uv和项目依赖已安装，只需要快速启动服务
 
 **功能**：
-- 直接激活虚拟环境并启动服务器
+- 使用uv直接启动服务器
 - 最简洁的启动方式
 
 **使用方法**：
@@ -17,12 +33,12 @@ start_simple.bat
 ```
 
 ### 2. `start_server.bat` - 标准启动脚本
-**适用场景**：虚拟环境已存在，需要基本的错误检查
+**适用场景**：uv已安装，需要基本的错误检查
 
 **功能**：
-- 检查虚拟环境是否存在
+- 检查uv是否安装
 - 检查主程序文件是否存在
-- 激活虚拟环境并启动服务器
+- 使用uv启动服务器
 - 友好的用户界面
 
 **使用方法**：
@@ -34,9 +50,8 @@ start_server.bat
 **适用场景**：首次部署或需要完整的环境检查
 
 **功能**：
-- 检查Python环境
-- 自动创建虚拟环境（如不存在）
-- 自动安装项目依赖
+- 检查uv环境
+- 自动初始化项目依赖（使用 `uv sync`）
 - 自动初始化数据库（如不存在）
 - 设置环境变量
 - 启动服务器
@@ -52,6 +67,7 @@ start_complete.bat
 **功能**：
 - 完整的环境检查
 - 详细的进度提示
+- 使用uv管理依赖
 - 错误处理和解决方案提示
 - 美观的界面显示
 
@@ -63,9 +79,9 @@ start.bat
 ## 使用建议
 
 ### 首次使用
-1. 确保已安装Python 3.12或更高版本
+1. 确保已安装uv
 2. 使用 `start_complete.bat` 或 `start.bat` 进行首次启动
-3. 脚本会自动创建虚拟环境、安装依赖、初始化数据库
+3. 脚本会自动初始化依赖、初始化数据库
 
 ### 日常使用
 - 推荐使用 `start_server.bat` 或 `start_simple.bat`
@@ -75,45 +91,49 @@ start.bat
 - 使用 `start_complete.bat` 确保环境完整性
 - 可以考虑将脚本设置为Windows服务
 
-## 系统要求
-
-- Python 3.12或更高版本
-- Windows 7/8/10/11
-- 至少100MB可用磁盘空间
-- 网络连接（用于安装依赖）
-
 ## 常见问题
 
-### 1. Python未找到
-**错误**：`'python' 不是内部或外部命令`
-**解决**：确保Python已安装并添加到系统PATH中
+### 1. uv未找到
+**错误**：`'uv' 不是内部或外部命令`
+**解决**：
+- 安装uv：`powershell -c "irm https://astral.sh/uv/install.sh | iex"`
+- 确保uv已添加到系统PATH中
+- 重启命令行或PowerShell
 
-### 2. 虚拟环境创建失败
-**错误**：虚拟环境创建失败
-**解决**：检查Python安装是否完整，确保有创建虚拟环境的权限
-
-### 3. 依赖安装失败
-**错误**：pip install 失败
+### 2. 依赖初始化失败
+**错误**：`uv sync` 失败
 **解决**：
 - 检查网络连接
-- 尝试使用国内镜像：`pip install -e . -i https://pypi.tuna.tsinghua.edu.cn/simple/`
+- 确保有项目目录的写入权限
+- 尝试手动运行：`uv sync -i https://mirrors.aliyun.com/pypi/simple/`
 
-### 4. 数据库初始化失败
+### 3. 数据库初始化失败
 **错误**：数据库初始化失败
 **解决**：
 - 确保有data目录的写入权限
-- 检查main.py和init_db.py文件是否存在
+- 检查init_db.py文件是否存在
+- 尝试手动运行：`uv run python init_db.py`
+
+### 4. 服务器启动失败
+**错误**：服务器启动失败
+**解决**：
+- 检查端口8000是否被占用
+- 确保main.py文件存在
+- 查看错误日志获取详细信息
 
 ## 手动启动命令
 
 如果脚本启动失败，可以手动执行以下命令：
 
 ```cmd
-# 1. 激活虚拟环境
-.venv\Scripts\activate.bat
+# 1. 初始化项目依赖（首次运行）
+uv sync -i https://mirrors.aliyun.com/pypi/simple/
 
-# 2. 启动服务器
-python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+# 2. 初始化数据库（首次运行）
+uv run python init_db.py
+
+# 3. 启动服务器
+uv run python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 ## 服务信息

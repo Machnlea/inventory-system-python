@@ -16,12 +16,11 @@ echo     ║                                                              ║
 echo     ╚══════════════════════════════════════════════════════════════╝
 echo.
 
-:: 检查虚拟环境
-if not exist ".venv\Scripts\activate.bat" (
-    echo [错误] 虚拟环境不存在，请先创建虚拟环境
-    echo.
-    echo 创建命令：
-    echo   python -m venv .venv
+:: 检查uv是否安装
+uv --version >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [错误] 未检测到uv，请先安装uv
+    echo 安装命令：powershell -c "irm https://astral.sh/uv/install.sh | iex"
     echo.
     pause
     exit /b 1
@@ -35,15 +34,15 @@ if not exist "main.py" (
     exit /b 1
 )
 
-:: 激活虚拟环境并启动服务器
-echo [信息] 激活虚拟环境并启动服务器...
+:: 使用uv启动服务器
+echo [信息] 使用uv启动服务器...
 echo [信息] 服务地址：http://localhost:8000
 echo [信息] API文档：http://localhost:8000/docs
 echo [信息] 按Ctrl+C停止服务
 echo.
 
-:: 激活虚拟环境并启动服务
-call .venv\Scripts\activate.bat && python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+:: 使用uv启动服务
+uv run python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 :: 服务停止后的提示
 echo.

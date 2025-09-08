@@ -11,7 +11,7 @@ echo.
 echo     ╔══════════════════════════════════════════════════════════════╗
 echo     ║                                                              ║
 echo     ║                    计量器具台账系统                          ║
-echo     ║              Measuring Equipment Ledger System                ║
+echo     ║              Measuring Equipment Ledger System               ║
 echo     ║                                                              ║
 echo     ╚══════════════════════════════════════════════════════════════╝
 echo.

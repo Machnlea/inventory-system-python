@@ -120,7 +120,7 @@ uv run python init_db.py
 # 4. 启动服务
 uv run python main.py
 
-uv run python -m uvicorn main:app --workers 4 --host 0.0.0.0 --port 8080
+uv run python -m uvicorn main:app --workers 4 --host 0.0.0.0 --port 8000
 ```
 
 ### 🌐 访问地址
@@ -617,6 +617,5 @@ grep ERROR app.log
 
 [⭐ Star](https://github.com/Machnlea/inventory-system-python) | [🐛 报告问题](https://github.com/Machnlea/inventory-system-python/issues) | [📖 文档](https://github.com/Machnlea/inventory-system-python/wiki)
 
-Made with ❤️ by 设备台账管理团队
 
 </div>

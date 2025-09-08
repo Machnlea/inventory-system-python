@@ -54,17 +54,16 @@ def init_db():
             {
                 "name": "温度环境类", 
                 "category_code": "TEM", 
-                "description": "玻璃液体温度计、温湿度表、标准水银温度计",
+                "description": "Temperature and Environment 用于测量和监控温度、湿度等环境参数的设备，包括各类温度计、温湿度计。",
                 "predefined_names": [
                     "玻璃液体温度计", "温湿度表", 
-                    "工作用玻璃温度计", "迷你温湿度计", "数显温度计", 
-                     "双金属温度计"
+                    "工作用玻璃温度计", "数显温度计", "双金属温度计"
                 ]
             },
             {
                 "name": "长度/几何量类", 
                 "category_code": "DIM", 
-                "description": "钢直尺、外径千分尺、游标卡尺、杠杆千分尺",
+                "description": "Dimension Measurement用于测量物体几何尺寸、形状、位置的精密的长度测量工具和量仪。",
                 "predefined_names": [
                     "钢直尺", "外径千分尺", "游标卡尺", "杠杆千分尺", "钢卷尺", 
                     "深度千分尺", "刀口尺", "刀口直角尺", "高度游标卡尺", "塞尺", 
@@ -75,7 +74,7 @@ def init_db():
             {
                 "name": "质量称量类", 
                 "category_code": "MAS", 
-                "description": "电子台秤、工业天平、电子天平",
+                "description": "Mass Weighing 用于测量物体质量的称重设备和相关配件。",
                 "predefined_names": [
                     "案秤","电子秤","电子台秤", "工业天平", "电子天平", "电子计数秤", 
                     "防爆电子秤", "数字式电子汽车衡", "砝码"
@@ -84,13 +83,13 @@ def init_db():
             {
                 "name": "时间测量类", 
                 "category_code": "TIM", 
-                "description": "电子秒表",
+                "description": "Time Measurement 用于测量时间间隔的仪表。",
                 "predefined_names": ["电子秒表","机械秒表"]
             },
             {
                 "name": "容量测量类", 
                 "category_code": "VOL", 
-                "description": "分度吸量管、酸式滴定管、碱式滴定管、量杯",
+                "description": "Volume Measurement, 用于精密量取、测量或容纳液体体积的玻璃器皿和装置。",
                 "predefined_names": [
                     "分度吸量管", "酸式滴定管", "碱式滴定管", "量杯", "量筒", 
                     "单标线吸量管", "酸碱两用聚四氟滴定管", "单标线容量瓶", 
@@ -100,7 +99,7 @@ def init_db():
             {
                 "name": "压力测量类", 
                 "category_code": "PRE", 
-                "description": "乙炔压力表、氧压力表、氢气压力表、氩气压力表",
+                "description": "Pressure Measurement, 用于测量流体压力、真空度或压力差的仪表。",
                 "predefined_names": [
                     "压力表","电接点压力表","乙炔压力表", "氧压力表", "氢气压力表", "氩气压力表", "氮气压力表", 
                     "氦气压力表", "电接点压力表", "抗震压力表", "耐震压力表", "精密真空表", 
@@ -110,7 +109,7 @@ def init_db():
             {
                 "name": "电学测试类", 
                 "category_code": "ELE", 
-                "description": "耐压测试仪、绝缘电阻表、数字多用表、MT500P多路温度记录仪",
+                "description": "Electrical Testing, 用于测量电压、电流、电阻等电学参数的仪表。",
                 "predefined_names": [
                     "耐压测试仪", "绝缘电阻表", "数字多用表", "MT500P多路温度记录仪", 
                     "高绝缘电阻测试仪", "旋转式直流电阻箱", "转换开关", "表面电阻测试仪"
@@ -119,7 +118,7 @@ def init_db():
             {
                 "name": "光学测试类", 
                 "category_code": "OPT", 
-                "description": "色差仪、白度仪、标准光源对色灯箱、目视比色箱",
+                "description": "Optical Testing, 用于测量材料光学性能（如颜色、光泽、折射率、白度）的仪器和设备。",
                 "predefined_names": [
                     "色差仪", "白度仪", "标准光源对色灯箱", "目视比色箱", "黑白格玻璃板", 
                     "铁钴比色计", "光泽度仪", "阿贝折射仪", "反射率测定仪"
@@ -128,7 +127,7 @@ def init_db():
             {
                 "name": "环境试验类", 
                 "category_code": "CLT", 
-                "description": "氙灯老化试验箱、紫外老化试验箱、盐雾试验机",
+                "description": "Climatic Testing, 用于模拟极端环境条件（如温度、湿度、光照、腐蚀）以测试产品耐久性和可靠性的设备。",
                 "predefined_names": [
                     "氙灯老化试验箱", "紫外老化试验箱", "盐雾试验机", 
                     "高低温交变湿热实验箱", "紫外综合试验箱"
@@ -137,7 +136,7 @@ def init_db():
             {
                 "name": "化学分析类", 
                 "category_code": "CHE", 
-                "description": "气相色谱仪、紫外可见分光光度计、紫外分光光度计",
+                "description": "Chemical Analysis, 用于物质的定性分析、定量分析及物理化学参数测定的精密分析仪器。",
                 "predefined_names": [
                     "气相色谱仪", "紫外可见分光光度计", "紫外分光光度计", 
                     "原子吸收分光光度计", "ICP发射光谱仪", "凝胶色谱仪", 
@@ -148,7 +147,7 @@ def init_db():
             {
                 "name": "涂层检测类", 
                 "category_code": "COA", 
-                "description": "铅笔硬度计、数显卡规式测厚仪、磁性测厚仪、百格板",
+                "description": "Coating Testing, 专用于测试涂料、油墨、涂层等各种性能（如物理机械性能、光学性能、防护性能）的仪器和设备。",
                 "predefined_names": [
                     "铅笔硬度计", "数显卡规式测厚仪", "磁性测厚仪", "百格板", 
                     "漆膜划格器", "漆膜柔韧性测定仪", "漆膜弹性试验仪", "干燥时间试验器", 
@@ -162,7 +161,7 @@ def init_db():
             {
                 "name": "粘度流变类", 
                 "category_code": "VIS", 
-                "description": "ISO流出杯、涂-1#粘度杯、涂-4#粘度杯、斯托默粘度计",
+                "description": "Viscosity Measurement, 用于测量流体粘度及其流动特性的仪器。",
                 "predefined_names": [
                     "ISO流出杯", "涂-1#粘度杯", "涂-4#粘度杯", "斯托默粘度计", 
                     "旋转粘度计", "数字式粘度计", "粘度杯"
@@ -171,7 +170,7 @@ def init_db():
             {
                 "name": "流量测量类", 
                 "category_code": "FLM", 
-                "description": "罗茨流量计、腰轮流量计、齿轮流量计、智能浮子流量计",
+                "description": "Flow Measurement, 用于测量管道中流体（液体、气体）流动速率（流量）的仪表。",
                 "predefined_names": [
                     "罗茨流量计", "腰轮流量计", "齿轮流量计", "智能浮子流量计"
                 ]
@@ -179,7 +178,7 @@ def init_db():
             {
                 "name": "样品制备类", 
                 "category_code": "SAM", 
-                "description": "湿膜制备器、涂膜器、漆膜制备器、腻子涂刮器",
+                "description": "Sample Preparation, 用于制备标准化、一致性测试样板的专用工具。",
                 "predefined_names": [
                     "湿膜制备器", "涂膜器", "漆膜制备器", "腻子涂刮器", "可调式制备器（数显式）"
                 ]
@@ -187,7 +186,7 @@ def init_db():
             {
                 "name":"计量标准类",
                 "category_code": "STD",
-                "description": "计量标准器具、量具、检定设备",
+                "description": "Standard Equipment, 作为公司最高计量标准，用于量值传递、检定或校准其他工作计量器具的基准设备、标准器及配套设备。",
                 "predefined_names": [
                     "标准铂电阻温度计", "M1级砝码", "标准水银温度计", "标准水槽", "标准油槽",
                 ]
@@ -195,7 +194,7 @@ def init_db():
             {
                 "name": "信号处理与显示类",
                 "category_code": "SIG",
-                "description": "这些设备都属于工业过程控制中的 “二次仪表” （或称“显示控制仪表”），其特点是接收来自“一次仪表”（如热电偶、热电阻、压力传感器）的信号，进行处理后输出标准信号或进行显示记录。",
+                "description": "Signal Processing and Indication, 工业过程控制中的“二次仪表”，其核心功能是接收来自传感器或“一次仪表”的信号，进行处理、转换、显示、记录或传输标准信号。",
                 "predefined_names": [
                     "温度变送器","压力变送器", "压力液位变送器", "智能变送器", "数显表","无纸记录仪","雷达液位计"
                 ]

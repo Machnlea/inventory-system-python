@@ -104,10 +104,12 @@ python main.py
 | **数据库** | SQLite / PostgreSQL | 数据存储 |
 | **ORM** | SQLAlchemy 2.0+ | 数据库操作 |
 | **认证** | JWT | 用户认证和授权 |
-| **前端框架** | Bootstrap 5 | 响应式UI框架 |
+| **前端框架** | Tailwind CSS | 现代化CSS框架 |
+| **UI组件** | Bootstrap 5 | 部分页面UI组件 |
 | **图表库** | Chart.js | 数据可视化 |
 | **ASGI服务器** | uvicorn | 应用服务器 |
 | **密码加密** | bcrypt | 密码安全 |
+| **图标库** | Font Awesome 6.0 | 图标资源 |
 
 </div>
 

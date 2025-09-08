@@ -69,7 +69,6 @@ def create_department_user(db: Session, department_id: int, password: str = "sxy
         is_admin=False,
         user_type="department_user",
         department_id=department_id,
-        first_login=True,
         is_active=True,
         created_at=datetime.now()
     )
@@ -114,7 +113,6 @@ def change_department_user_password(
     
     # 更新密码
     user.hashed_password = get_password_hash(new_password)
-    user.first_login = False  # 标记不是首次登录
     user.password_reset_at = datetime.now()
     
     db.commit()
@@ -129,7 +127,6 @@ def admin_reset_department_user_password(db: Session, user_id: int, new_password
     
     # 重置密码
     user.hashed_password = get_password_hash(new_password)
-    user.first_login = True  # 标记需要首次登录修改密码
     user.password_reset_at = datetime.now()
     
     db.commit()

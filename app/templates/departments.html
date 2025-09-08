@@ -19,7 +19,7 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
         .glass-effect {
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(2px);
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
@@ -50,7 +50,7 @@
             width: 100%;
             height: 100%;
             background-color: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(4px);
+            backdrop-filter: blur(2px);
             z-index: 1000;
         }
         .modal.show {
@@ -368,10 +368,6 @@
                                     <div class="flex justify-between">
                                         <dt class="text-sm text-gray-500">最后登录：</dt>
                                         <dd class="text-sm text-gray-900" id="userLastLogin">-</dd>
-                                    </div>
-                                    <div class="flex justify-between">
-                                        <dt class="text-sm text-gray-500">首次登录：</dt>
-                                        <dd class="text-sm text-gray-900" id="userFirstLogin">-</dd>
                                     </div>
                                 </dl>
                             </div>
@@ -1247,7 +1243,6 @@
             document.getElementById('departmentUserName').textContent = user.username;
             document.getElementById('userCreatedAt').textContent = formatDateTime(user.created_at);
             document.getElementById('userLastLogin').textContent = user.last_login ? formatDateTime(user.last_login) : '从未登录';
-            document.getElementById('userFirstLogin').textContent = user.first_login ? '是' : '否';
             
             // 设置状态标识
             const statusBadge = document.getElementById('userStatusBadge');

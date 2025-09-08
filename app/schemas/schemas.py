@@ -48,7 +48,6 @@ class UserUpdate(BaseModel):
 
 class User(UserBase):
     id: int
-    first_login: bool
     last_login: Optional[datetime] = None
     password_reset_at: Optional[datetime] = None
     created_at: datetime
@@ -481,7 +480,6 @@ class DepartmentUser(BaseModel):
     user_type: str
     department_id: int
     department: "Department"
-    first_login: bool
     is_active: bool
     last_login: Optional[datetime] = None
     created_at: datetime

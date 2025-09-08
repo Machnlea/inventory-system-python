@@ -572,7 +572,6 @@ async def admin_update_department_user_status(
                 "is_active": bool(user.is_active),
                 "user_type": str(user.user_type),
                 "department_id": int(user.department_id),
-                "first_login": user.first_login,
                 "last_login": user.last_login,
                 "created_at": user.created_at
             }

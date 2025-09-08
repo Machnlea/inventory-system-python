@@ -695,12 +695,15 @@ def batch_transfer_equipments(
 
 @router.post("/search", response_model=PaginatedEquipment)
 def search_equipments(search_params: EquipmentSearch, skip: int = 0, limit: int = 999999,
+                     sort_field: str = "valid_until", 
+                     sort_order: str = "asc",
                      db: Session = Depends(get_db),
                      current_user = Depends(get_current_user)):
     """全文本搜索设备"""
     return equipment.search_equipments_paginated(
         db, search=search_params, skip=skip, limit=limit,
-        user_id=current_user.id, is_admin=current_user.is_admin
+        user_id=current_user.id, is_admin=current_user.is_admin,
+        sort_field=sort_field, sort_order=sort_order
     )
 
 @router.post("/export/search")

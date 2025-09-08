@@ -137,8 +137,7 @@ async def login_json(login_request: LoginRequest, request: Request, db: Session 
         "user": {
             "id": user.id,
             "username": user.username,
-            "is_admin": user.is_admin,
-            "first_login": user.first_login
+            "is_admin": user.is_admin
         }
     }
 
@@ -261,8 +260,5 @@ async def change_password(
             detail="密码更新失败"
         )
     
-    # 如果是首次登录，更新first_login标记
-    if current_user.first_login:
-        users.update_user_first_login(db, current_user.id, False)
-    
+        
     return {"message": "密码修改成功"}

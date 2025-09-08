@@ -160,13 +160,3 @@ def update_user_password(db: Session, user_id: int, new_password: str):
         db.refresh(db_user)
         return True
     return False
-
-def update_user_first_login(db: Session, user_id: int, first_login: bool):
-    """更新用户的首次登录标记"""
-    db_user = db.query(User).filter(User.id == user_id).first()
-    if db_user:
-        db_user.first_login = first_login
-        db.commit()
-        db.refresh(db_user)
-        return True
-    return False

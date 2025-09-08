@@ -12,7 +12,6 @@ class User(Base):
     is_admin = Column(Boolean, default=False)
     user_type = Column(String(20), default="manager")  # admin/manager/department_user
     department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)  # 部门关联
-    first_login = Column(Boolean, default=True)  # 首次登录标记
     is_active = Column(Boolean, default=True)  # 账户状态
     last_login = Column(DateTime(timezone=True), nullable=True)  # 最后登录时间
     password_reset_at = Column(DateTime(timezone=True), nullable=True)  # 密码重置时间

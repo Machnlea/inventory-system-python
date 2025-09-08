@@ -541,7 +541,6 @@ async def reset_password(request: PasswordResetConfirm, db: Session = Depends(ge
     # 重置密码
     from app.core.security import get_password_hash
     user.hashed_password = get_password_hash(request.new_password)
-    user.first_login = True  # 标记需要首次登录修改密码
     user.password_reset_at = datetime.now()
     
     db.commit()

@@ -310,7 +310,7 @@ def filter_equipments_count(db: Session, filters: EquipmentFilter, user_id: Opti
 
 def filter_equipments(db: Session, filters: EquipmentFilter, user_id: Optional[int] = None, 
                      is_admin: bool = False, skip: int = 0, limit: int = 100,
-                     sort_field: str = "next_calibration_date", 
+                     sort_field: str = "valid_until", 
                      sort_order: str = "asc"):
     query = db.query(Equipment).options(
         joinedload(Equipment.department),
@@ -525,7 +525,8 @@ def search_equipments_count(db: Session, search: EquipmentSearch, user_id: Optio
     return query.count()
 
 def search_equipments(db: Session, search: EquipmentSearch, user_id: Optional[int] = None, 
-                     is_admin: bool = False, skip: int = 0, limit: int = 100):
+                     is_admin: bool = False, skip: int = 0, limit: int = 100,
+                     sort_field: str = "valid_until", sort_order: str = "asc"):
     """全文本搜索设备"""
     query = db.query(Equipment).options(
         joinedload(Equipment.department),
@@ -612,12 +613,40 @@ def search_equipments(db: Session, search: EquipmentSearch, user_id: Optional[in
     if search.status:
         query = query.filter(Equipment.status == search.status)
     
+    # 添加排序逻辑
+    if sort_field == "name":
+        query = query.order_by(Equipment.name.asc() if sort_order == "asc" else Equipment.name.desc())
+    elif sort_field == "department":
+        query = query.join(Equipment.department).order_by(
+            Department.name.asc() if sort_order == "asc" else Department.name.desc()
+        )
+    elif sort_field == "category":
+        query = query.join(Equipment.category).order_by(
+            EquipmentCategory.name.asc() if sort_order == "asc" else EquipmentCategory.name.desc()
+        )
+    elif sort_field == "valid_until":
+        # 特殊处理：确保随坏随换设备（valid_until为null）总是排在最后
+        if sort_order == "asc":
+            # 升序：非null值按升序，null值排在最后
+            query = query.order_by(
+                Equipment.valid_until.asc().nulls_last()
+            )
+        else:
+            # 降序：非null值按降序，null值排在最后
+            query = query.order_by(
+                Equipment.valid_until.desc().nulls_last()
+            )
+    else:
+        # 默认按有效期至升序排序，随坏随换设备排在最后
+        query = query.order_by(Equipment.valid_until.asc().nulls_last())
+    
     return query.offset(skip).limit(limit).all()
 
 def search_equipments_paginated(db: Session, search: EquipmentSearch, user_id: Optional[int] = None, 
-                               is_admin: bool = False, skip: int = 0, limit: int = 100):
+                               is_admin: bool = False, skip: int = 0, limit: int = 100,
+                               sort_field: str = "valid_until", sort_order: str = "asc"):
     """获取分页搜索结果"""
-    items = search_equipments(db, search, user_id, is_admin, skip, limit)
+    items = search_equipments(db, search, user_id, is_admin, skip, limit, sort_field, sort_order)
     total = search_equipments_count(db, search, user_id, is_admin)
     
     return {

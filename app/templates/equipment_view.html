@@ -1981,7 +1981,79 @@
                 }
             }
         }
+
+        // 删除附件相关变量
+        let currentDeleteAttachmentId = null;
+
+        // 删除附件
+        function deleteAttachment(attachmentId) {
+            currentDeleteAttachmentId = attachmentId;
+            document.getElementById('deleteAttachmentModal').classList.add('show');
+        }
+
+        // 确认删除附件
+        async function confirmDeleteAttachment() {
+            if (!currentDeleteAttachmentId) return;
+            
+            try {
+                showNotification('正在删除附件...', 'info');
+                await AttachmentAPI.deleteAttachment(currentDeleteAttachmentId);
+                showNotification('附件删除成功', 'success');
+                closeDeleteAttachmentModal();
+                
+                // 重新加载附件列表
+                await loadAttachmentsForModal(currentEquipmentForAttachments);
+            } catch (error) {
+                console.error('删除附件失败:', error);
+                showNotification('删除附件失败: ' + error.message, 'error');
+            }
+        }
+
+        // 关闭附件删除确认模态框
+        function closeDeleteAttachmentModal() {
+            document.getElementById('deleteAttachmentModal').classList.remove('show');
+            currentDeleteAttachmentId = null;
+        }
+
+        // 附件删除确认模态框点击外部关闭
+        document.getElementById('deleteAttachmentModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeDeleteAttachmentModal();
+            }
+        });
         
     </script>
+
+    <!-- 附件删除确认模态框 -->
+    <div id="deleteAttachmentModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">确认删除附件</h3>
+            </div>
+            <div class="p-6">
+                <div class="mb-6">
+                    <div class="flex items-center mb-4">
+                        <div class="flex-shrink-0">
+                            <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                                <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm text-gray-600">您确定要删除这个附件吗？</p>
+                            <p class="text-sm text-red-600 mt-1">删除后无法恢复，请谨慎操作。</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400" onclick="closeDeleteAttachmentModal()">
+                        取消
+                    </button>
+                    <button type="button" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700" onclick="confirmDeleteAttachment()">
+                        <i class="fas fa-trash mr-2"></i>删除
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

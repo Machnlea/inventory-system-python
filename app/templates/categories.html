@@ -510,6 +510,7 @@
         let currentPredefinedNames = [];
         let currentEditPredefinedName = null;
         let currentEditPredefinedNameIndex = null;
+        let currentDeletePredefinedName = null;
         let categoryChart = null;
         let currentChartType = 'bar';
         let currentPage = 1;
@@ -667,6 +668,13 @@
             document.getElementById('editPredefinedNameModal').addEventListener('click', function(e) {
                 if (e.target === this) {
                     closeEditPredefinedNameModal();
+                }
+            });
+
+            // 预定义器具名称删除确认模态框点击外部关闭
+            document.getElementById('deletePredefinedNameModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeDeletePredefinedNameModal();
                 }
             });
 
@@ -1974,14 +1982,20 @@
         }
 
         // 删除预定义器具名称
-        async function removePredefinedName(name) {
-            if (!confirm(`确定要删除预定义器具名称"${name}"吗？`)) {
-                return;
-            }
+        function removePredefinedName(name) {
+            currentDeletePredefinedName = name;
+            document.getElementById('deletePredefinedName').textContent = name;
+            document.getElementById('deletePredefinedNameModal').classList.add('show');
+        }
 
+        // 确认删除预定义器具名称
+        async function confirmDeletePredefinedName() {
+            if (!currentDeletePredefinedName) return;
+            
             try {
-                await CategoryAPI.removePredefinedName(currentPredefinedNamesCategoryId, name);
+                await CategoryAPI.removePredefinedName(currentPredefinedNamesCategoryId, currentDeletePredefinedName);
                 showNotification('预定义器具名称删除成功', 'success');
+                closeDeletePredefinedNameModal();
                 
                 // 重新加载名称列表
                 const updatedNames = await CategoryAPI.getPredefinedNames(currentPredefinedNamesCategoryId);
@@ -1994,6 +2008,12 @@
                 console.error('删除预定义器具名称失败:', error);
                 showNotification('删除预定义器具名称失败: ' + error.message, 'error');
             }
+        }
+
+        // 关闭预定义器具名称删除确认模态框
+        function closeDeletePredefinedNameModal() {
+            document.getElementById('deletePredefinedNameModal').classList.remove('show');
+            currentDeletePredefinedName = null;
         }
 
         // 切换类别详情显示
@@ -2276,5 +2296,37 @@
             return colorMap[categoryName] || 'bg-gray-100';
         }
     </script>
+
+    <!-- 预定义器具名称删除确认模态框 -->
+    <div id="deletePredefinedNameModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">确认删除预定义器具名称</h3>
+            </div>
+            <div class="p-6">
+                <div class="mb-6">
+                    <div class="flex items-center mb-4">
+                        <div class="flex-shrink-0">
+                            <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                                <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm text-gray-600">您确定要删除预定义器具名称 "<span id="deletePredefinedName" class="font-medium text-gray-900"></span>" 吗？</p>
+                            <p class="text-sm text-red-600 mt-1">删除后无法恢复，请谨慎操作。</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400" onclick="closeDeletePredefinedNameModal()">
+                        取消
+                    </button>
+                    <button type="button" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700" onclick="confirmDeletePredefinedName()">
+                        <i class="fas fa-trash mr-2"></i>删除
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

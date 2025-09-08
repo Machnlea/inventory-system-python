@@ -2870,22 +2870,43 @@
             }
         }
 
+        // 删除设备相关变量
+        let currentDeleteEquipmentId = null;
+        let currentBatchDeleteIds = [];
+        let currentDeleteAttachmentId = null;
+        let currentDeletePredefinedName = null;
+
         // 删除设备
         function deleteEquipment(equipmentId, equipmentName) {
-            if (confirm(`确定要删除设备 "${equipmentName}" 吗？此操作不可恢复。`)) {
-                showNotification(`正在删除设备 ${equipmentName}...`, 'info');
-                
-                EquipmentAPI.deleteEquipment(equipmentId)
-                    .then(async () => {
-                        showNotification(`设备 ${equipmentName} 删除成功`, 'success');
-                        loadEquipmentData(); // 重新加载数据
-                        await loadDashboardStats(); // 刷新统计数据
-                    })
-                    .catch(error => {
-                        console.error('删除设备失败:', error);
-                        showNotification('删除设备失败: ' + error.message, 'error');
-                    });
+            currentDeleteEquipmentId = equipmentId;
+            document.getElementById('deleteEquipmentName').textContent = equipmentName;
+            document.getElementById('deleteEquipmentWarning').classList.add('hidden');
+            document.getElementById('deleteEquipmentModal').classList.add('show');
+        }
+
+        // 确认删除设备
+        async function confirmDeleteEquipment() {
+            if (!currentDeleteEquipmentId) return;
+            
+            const equipmentName = document.getElementById('deleteEquipmentName').textContent;
+            showNotification(`正在删除设备 ${equipmentName}...`, 'info');
+            
+            try {
+                await EquipmentAPI.deleteEquipment(currentDeleteEquipmentId);
+                showNotification(`设备 ${equipmentName} 删除成功`, 'success');
+                closeDeleteEquipmentModal();
+                loadEquipmentData(); // 重新加载数据
+                await loadDashboardStats(); // 刷新统计数据
+            } catch (error) {
+                console.error('删除设备失败:', error);
+                showNotification('删除设备失败: ' + error.message, 'error');
             }
+        }
+
+        // 关闭设备删除确认模态框
+        function closeDeleteEquipmentModal() {
+            document.getElementById('deleteEquipmentModal').classList.remove('show');
+            currentDeleteEquipmentId = null;
         }
 
         // 批量操作
@@ -2900,9 +2921,7 @@
             
             switch (operation) {
                 case 'delete':
-                    if (confirm(`确定要删除选中的 ${selectedIds.length} 台设备吗？此操作不可恢复。`)) {
-                        performBatchDelete(selectedIds);
-                    }
+                    openBatchDeleteModal(selectedIds);
                     break;
                 case 'export':
                     performBatchExport(selectedIds);
@@ -2917,6 +2936,38 @@
                     openBatchCalibrationModal(selectedIds);
                     break;
             }
+        }
+
+        // 打开批量删除确认模态框
+        function openBatchDeleteModal(equipmentIds) {
+            currentBatchDeleteIds = equipmentIds;
+            document.getElementById('batchDeleteCount').textContent = equipmentIds.length;
+            document.getElementById('batchDeleteModal').classList.add('show');
+        }
+
+        // 确认批量删除
+        async function confirmBatchDelete() {
+            if (!currentBatchDeleteIds || currentBatchDeleteIds.length === 0) return;
+            
+            try {
+                showNotification('正在批量删除设备...', 'info');
+                
+                await EquipmentAPI.batchDelete({ equipment_ids: currentBatchDeleteIds });
+                
+                showNotification(`成功删除 ${currentBatchDeleteIds.length} 台设备`, 'success');
+                closeBatchDeleteModal();
+                loadEquipmentData(); // 重新加载数据
+                await loadDashboardStats(); // 刷新统计数据
+            } catch (error) {
+                console.error('批量删除失败:', error);
+                showNotification('批量删除失败: ' + error.message, 'error');
+            }
+        }
+
+        // 关闭批量删除确认模态框
+        function closeBatchDeleteModal() {
+            document.getElementById('batchDeleteModal').classList.remove('show');
+            currentBatchDeleteIds = [];
         }
 
         // 执行批量删除
@@ -3479,20 +3530,32 @@
             }
         }
 
-        async function deletePredefinedName(name) {
-            if (!confirm('确定要删除这个预定义器具名称吗？')) {
-                return;
-            }
+        function deletePredefinedName(name) {
+            currentDeletePredefinedName = decodeURIComponent(name);
+            document.getElementById('deletePredefinedName').textContent = currentDeletePredefinedName;
+            document.getElementById('deletePredefinedNameModal').classList.add('show');
+        }
 
+        // 确认删除预定义器具名称
+        async function confirmDeletePredefinedName() {
+            if (!currentDeletePredefinedName) return;
+            
             try {
                 const categoryId = document.getElementById('predefinedNamesCategorySelect').value;
-                await CategoryAPI.removePredefinedName(categoryId, decodeURIComponent(name));
+                await CategoryAPI.removePredefinedName(categoryId, currentDeletePredefinedName);
                 showNotification('删除成功', 'success');
+                closeDeletePredefinedNameModal();
                 await loadPredefinedNames();
             } catch (error) {
                 console.error('删除预定义器具名称失败:', error);
                 showNotification('删除失败', 'error');
             }
+        }
+
+        // 关闭预定义器具名称删除确认模态框
+        function closeDeletePredefinedNameModal() {
+            document.getElementById('deletePredefinedNameModal').classList.remove('show');
+            currentDeletePredefinedName = null;
         }
 
         // 监听输入框变化
@@ -4570,21 +4633,34 @@
         }
 
         // 删除附件
-        async function deleteAttachment(attachmentId) {
-            if (confirm('确定要删除这个附件吗？')) {
-                try {
-                    await AttachmentAPI.deleteAttachment(attachmentId);
-                    showNotification('附件删除成功', 'success');
-                    loadAttachmentsForModal(currentEquipmentId); // 重新加载模态框附件列表
-                    
-                    // 更新附件数量显示
-                    const attachments = await AttachmentAPI.getEquipmentAttachments(currentEquipmentId);
-                    updateEquipmentAttachmentCount(currentEquipmentId, attachments.length);
-                } catch (error) {
-                    console.error('附件删除失败:', error);
-                    showNotification('附件删除失败: ' + error.message, 'error');
-                }
+        function deleteAttachment(attachmentId) {
+            currentDeleteAttachmentId = attachmentId;
+            document.getElementById('deleteAttachmentModal').classList.add('show');
+        }
+
+        // 确认删除附件
+        async function confirmDeleteAttachment() {
+            if (!currentDeleteAttachmentId) return;
+            
+            try {
+                await AttachmentAPI.deleteAttachment(currentDeleteAttachmentId);
+                showNotification('附件删除成功', 'success');
+                closeDeleteAttachmentModal();
+                loadAttachmentsForModal(currentEquipmentId); // 重新加载模态框附件列表
+                
+                // 更新附件数量显示
+                const attachments = await AttachmentAPI.getEquipmentAttachments(currentEquipmentId);
+                updateEquipmentAttachmentCount(currentEquipmentId, attachments.length);
+            } catch (error) {
+                console.error('附件删除失败:', error);
+                showNotification('附件删除失败: ' + error.message, 'error');
             }
+        }
+
+        // 关闭附件删除确认模态框
+        function closeDeleteAttachmentModal() {
+            document.getElementById('deleteAttachmentModal').classList.remove('show');
+            currentDeleteAttachmentId = null;
         }
 
         // 点击模态框外部关闭
@@ -5157,6 +5233,163 @@
                 closePredefinedNamesModal();
             }
         });
+
+        // 设备删除确认模态框点击外部关闭
+        document.getElementById('deleteEquipmentModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeDeleteEquipmentModal();
+            }
+        });
+
+        // 附件删除确认模态框点击外部关闭
+        document.getElementById('deleteAttachmentModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeDeleteAttachmentModal();
+            }
+        });
+
+        // 预定义名称删除确认模态框点击外部关闭
+        document.getElementById('deletePredefinedNameModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeDeletePredefinedNameModal();
+            }
+        });
+
+        // 批量删除确认模态框点击外部关闭
+        document.getElementById('batchDeleteModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeBatchDeleteModal();
+            }
+        });
     </script>
+
+    <!-- 设备删除确认模态框 -->
+    <div id="deleteEquipmentModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">确认删除设备</h3>
+            </div>
+            <div class="p-6">
+                <div class="mb-6">
+                    <div class="flex items-center mb-4">
+                        <div class="flex-shrink-0">
+                            <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                                <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm text-gray-600">您确定要删除设备 "<span id="deleteEquipmentName" class="font-medium text-gray-900"></span>" 吗？</p>
+                            <p class="text-sm text-red-600 mt-1">删除后无法恢复，请谨慎操作。</p>
+                            <p id="deleteEquipmentWarning" class="text-sm text-orange-600 mt-1 hidden"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400" onclick="closeDeleteEquipmentModal()">
+                        取消
+                    </button>
+                    <button type="button" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700" onclick="confirmDeleteEquipment()">
+                        <i class="fas fa-trash mr-2"></i>删除
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 批量删除确认模态框 -->
+    <div id="batchDeleteModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">确认批量删除</h3>
+            </div>
+            <div class="p-6">
+                <div class="mb-6">
+                    <div class="flex items-center mb-4">
+                        <div class="flex-shrink-0">
+                            <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                                <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm text-gray-600">您确定要删除选中的 <span id="batchDeleteCount" class="font-medium text-gray-900">0</span> 台设备吗？</p>
+                            <p class="text-sm text-red-600 mt-1">批量删除后无法恢复，请谨慎操作。</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400" onclick="closeBatchDeleteModal()">
+                        取消
+                    </button>
+                    <button type="button" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700" onclick="confirmBatchDelete()">
+                        <i class="fas fa-trash mr-2"></i>批量删除
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 附件删除确认模态框 -->
+    <div id="deleteAttachmentModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">确认删除附件</h3>
+            </div>
+            <div class="p-6">
+                <div class="mb-6">
+                    <div class="flex items-center mb-4">
+                        <div class="flex-shrink-0">
+                            <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                                <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm text-gray-600">您确定要删除这个附件吗？</p>
+                            <p class="text-sm text-red-600 mt-1">删除后无法恢复，请谨慎操作。</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400" onclick="closeDeleteAttachmentModal()">
+                        取消
+                    </button>
+                    <button type="button" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700" onclick="confirmDeleteAttachment()">
+                        <i class="fas fa-trash mr-2"></i>删除
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 预定义名称删除确认模态框 -->
+    <div id="deletePredefinedNameModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">确认删除预定义名称</h3>
+            </div>
+            <div class="p-6">
+                <div class="mb-6">
+                    <div class="flex items-center mb-4">
+                        <div class="flex-shrink-0">
+                            <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                                <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm text-gray-600">您确定要删除预定义器具名称 "<span id="deletePredefinedName" class="font-medium text-gray-900"></span>" 吗？</p>
+                            <p class="text-sm text-red-600 mt-1">删除后无法恢复，请谨慎操作。</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400" onclick="closeDeletePredefinedNameModal()">
+                        取消
+                    </button>
+                    <button type="button" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700" onclick="confirmDeletePredefinedName()">
+                        <i class="fas fa-trash mr-2"></i>删除
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

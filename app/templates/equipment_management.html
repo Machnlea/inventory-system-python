@@ -5311,76 +5311,84 @@
             document.getElementById('importResultModal').classList.remove('show');
         }
 
+        // 安全添加事件监听器的函数
+        function safeAddEventListener(elementId, eventType, handler) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.addEventListener(eventType, handler);
+            }
+        }
+
         // 点击模态框外部关闭
-        document.getElementById('exportModal').addEventListener('click', function(e) {
+        safeAddEventListener('exportModal', 'click', function(e) {
             if (e.target === this) {
                 closeExportModal();
             }
         });
 
-        document.getElementById('importModal').addEventListener('click', function(e) {
+        safeAddEventListener('importModal', 'click', function(e) {
             if (e.target === this) {
                 closeImportModal();
             }
         });
 
-        document.getElementById('importResultModal').addEventListener('click', function(e) {
+        safeAddEventListener('importResultModal', 'click', function(e) {
             if (e.target === this) {
                 closeImportResultModal();
             }
         });
 
-      // 单个设备检定日期更新模态框点击外部关闭
-        document.getElementById('singleCalibrationModal').addEventListener('click', function(e) {
+        // 单个设备检定日期更新模态框点击外部关闭
+        safeAddEventListener('singleCalibrationModal', 'click', function(e) {
             if (e.target === this) {
                 closeSingleCalibrationModal();
             }
         });
 
         // 批量检定日期更新模态框点击外部关闭
-        document.getElementById('batchCalibrationModal').addEventListener('click', function(e) {
+        safeAddEventListener('batchCalibrationModal', 'click', function(e) {
             if (e.target === this) {
                 closeBatchCalibrationModal();
             }
         });
 
         // 批量转移模态框点击外部关闭
-        document.getElementById('batchTransferModal').addEventListener('click', function(e) {
+        safeAddEventListener('batchTransferModal', 'click', function(e) {
             if (e.target === this) {
                 closeBatchTransferModal();
             }
         });
 
         // 预定义器具名称管理模态框点击外部关闭
-        document.getElementById('predefinedNamesModal').addEventListener('click', function(e) {
+        safeAddEventListener('predefinedNamesModal', 'click', function(e) {
             if (e.target === this) {
                 closePredefinedNamesModal();
             }
         });
 
         // 设备删除确认模态框点击外部关闭
-        document.getElementById('deleteEquipmentModal').addEventListener('click', function(e) {
+        safeAddEventListener('deleteEquipmentModal', 'click', function(e) {
             if (e.target === this) {
                 closeDeleteEquipmentModal();
             }
         });
 
         // 附件删除确认模态框点击外部关闭
-        document.getElementById('deleteAttachmentModal').addEventListener('click', function(e) {
+        safeAddEventListener('deleteAttachmentModal', 'click', function(e) {
             if (e.target === this) {
                 closeDeleteAttachmentModal();
             }
         });
 
         // 预定义名称删除确认模态框点击外部关闭
-        document.getElementById('deletePredefinedNameModal').addEventListener('click', function(e) {
+        safeAddEventListener('deletePredefinedNameModal', 'click', function(e) {
             if (e.target === this) {
                 closeDeletePredefinedNameModal();
             }
         });
 
         // 批量删除确认模态框点击外部关闭
-        document.getElementById('batchDeleteModal').addEventListener('click', function(e) {
+        safeAddEventListener('batchDeleteModal', 'click', function(e) {
             if (e.target === this) {
                 closeBatchDeleteModal();
             }

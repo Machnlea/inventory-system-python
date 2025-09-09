@@ -866,6 +866,39 @@
                         </p>
                     </div>
                 </div>
+                
+                <!-- 设备状态选择（检定合格时显示） -->
+                <div id="equipmentStatusSection" class="space-y-4 mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4 hidden">
+                    <h4 class="text-md font-medium text-blue-900 flex items-center">
+                        <i class="fas fa-cog mr-2"></i>设备状态设置
+                    </h4>
+                    
+                    <div class="grid grid-cols-1 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-blue-700 mb-2">设备状态 <span class="text-blue-500">*</span></label>
+                            <div class="flex space-x-4">
+                                <label class="flex items-center">
+                                    <input type="radio" name="equipmentStatus" value="在用" checked class="mr-2 text-blue-600 focus:ring-blue-500" onchange="toggleEquipmentStatusFields()">
+                                    <span class="text-sm font-medium text-gray-700">在用</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" name="equipmentStatus" value="停用" class="mr-2 text-blue-600 focus:ring-blue-500" onchange="toggleEquipmentStatusFields()">
+                                    <span class="text-sm font-medium text-gray-700">停用</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div id="statusChangeDateSection" class="hidden">
+                            <label class="block text-sm font-medium text-blue-700 mb-2">状态变更时间 <span class="text-red-500">*</span></label>
+                            <input type="date" id="singleActiveStatusChangeDate" class="w-full px-4 py-3 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        
+                        <div id="disposalReasonSection" class="hidden">
+                            <label class="block text-sm font-medium text-blue-700 mb-2">停用原因</label>
+                            <textarea id="singleActiveDisposalReason" class="w-full px-4 py-3 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows="3" placeholder="输入停用原因（选填）"></textarea>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- 文件上传 -->
                 <div class="space-y-4 mb-6">
@@ -1111,6 +1144,65 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- 报废信息（检定不合格时显示） -->
+                    <div id="batchDisposalSection" class="space-y-4 mb-6 bg-red-50 border border-red-200 rounded-lg p-4 hidden">
+                        <h4 class="text-md font-medium text-red-900 flex items-center">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>报废信息
+                        </h4>
+                        
+                        <div class="grid grid-cols-1 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-red-700 mb-2">状态变更时间 <span class="text-red-500">*</span></label>
+                                <input type="date" id="batchStatusChangeDate" class="w-full px-4 py-3 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-red-700 mb-2">报废原因</label>
+                                <textarea id="batchDisposalReason" class="w-full px-4 py-3 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent" rows="3" placeholder="输入报废原因"></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-red-100 border border-red-300 rounded-lg p-3">
+                            <p class="text-sm text-red-800">
+                                <i class="fas fa-warning mr-2"></i>
+                                <strong>警告:</strong> 检定不合格将自动将设备状态变更为"报废"
+                            </p>
+                        </div>
+                    </div>
+                
+                <!-- 设备状态选择（检定合格时显示） -->
+                <div id="batchEquipmentStatusSection" class="space-y-4 mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4 hidden">
+                    <h4 class="text-md font-medium text-blue-900 flex items-center">
+                        <i class="fas fa-cog mr-2"></i>设备状态设置
+                    </h4>
+                    
+                    <div class="grid grid-cols-1 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-blue-700 mb-2">设备状态 <span class="text-blue-500">*</span></label>
+                            <div class="flex space-x-4">
+                                <label class="flex items-center">
+                                    <input type="radio" name="batchEquipmentStatus" value="在用" checked class="mr-2 text-blue-600 focus:ring-blue-500" onchange="toggleBatchEquipmentStatusFields()">
+                                    <span class="text-sm font-medium text-gray-700">在用</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" name="batchEquipmentStatus" value="停用" class="mr-2 text-blue-600 focus:ring-blue-500" onchange="toggleBatchEquipmentStatusFields()">
+                                    <span class="text-sm font-medium text-gray-700">停用</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div id="batchStatusChangeDateSection" class="hidden">
+                            <label class="block text-sm font-medium text-blue-700 mb-2">状态变更时间 <span class="text-red-500">*</span></label>
+                            <input type="date" id="batchActiveStatusChangeDate" class="w-full px-4 py-3 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        
+                        <div id="batchDisposalReasonSection" class="hidden">
+                            <label class="block text-sm font-medium text-blue-700 mb-2">停用原因</label>
+                            <textarea id="batchActiveDisposalReason" class="w-full px-4 py-3 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows="3" placeholder="输入停用原因（选填）"></textarea>
+                        </div>
+                    </div>
+                </div>
                 </div>
 
                 <!-- 提示信息 -->
@@ -1127,6 +1219,8 @@
                                     <li>只有勾选的字段才会进行批量更新</li>
                                     <li>未勾选的字段将保持设备原有值不变</li>
                                     <li>检定结果为"不合格"时，设备状态将变更为"报废"</li>
+                                    <li>检定结果为"合格"时，可选择设备状态为"在用"或"停用"</li>
+                                    <li>选择"停用"状态时需要填写状态变更时间</li>
                                 </ul>
                             </div>
                         </div>
@@ -3098,6 +3192,12 @@
             if (unifiedRadio) {
                 unifiedRadio.checked = true;
             }
+            
+            // 隐藏报废信息部分
+            const batchDisposalSection = document.getElementById('batchDisposalSection');
+            if (batchDisposalSection) {
+                batchDisposalSection.classList.add('hidden');
+            }
             document.getElementById('unifiedCertificateNumber').classList.remove('hidden');
             document.getElementById('individualCertificateNumber').classList.add('hidden');
             document.getElementById('certificateNumberList').innerHTML = '';
@@ -3183,6 +3283,16 @@
                     toggleNotesMode(this.value);
                 });
             });
+            
+            // 设置批量检定结果变化监听器
+            const batchCalibrationResult = document.getElementById('batchCalibrationResult');
+            if (batchCalibrationResult) {
+                batchCalibrationResult.addEventListener('change', function() {
+                    toggleBatchDisposalSection(this.value);
+                });
+                // 初始化时检查一次
+                toggleBatchDisposalSection(batchCalibrationResult.value);
+            }
         }
 
         // 设置证书编号模式
@@ -3797,12 +3907,15 @@
         function toggleDisposalSection(show = null) {
             const disposalSection = document.getElementById('disposalSection');
             const disposalFileSection = document.getElementById('disposalFileSection');
+            const equipmentStatusSection = document.getElementById('equipmentStatusSection');
             const calibrationResult = document.getElementById('singleCalibrationResult').value;
             
-            const shouldShow = show !== null ? show : (calibrationResult === '不合格');
+            const shouldShowDisposal = show !== null ? show : (calibrationResult === '不合格');
+            const shouldShowStatus = calibrationResult === '合格';
             
+            // 报废信息区域（不合格时显示）
             if (disposalSection) {
-                if (shouldShow) {
+                if (shouldShowDisposal) {
                     disposalSection.classList.remove('hidden');
                 } else {
                     disposalSection.classList.add('hidden');
@@ -3810,10 +3923,111 @@
             }
             
             if (disposalFileSection) {
-                if (shouldShow) {
+                if (shouldShowDisposal) {
                     disposalFileSection.classList.remove('hidden');
                 } else {
                     disposalFileSection.classList.add('hidden');
+                }
+            }
+            
+            // 设备状态选择区域（合格时显示）
+            if (equipmentStatusSection) {
+                if (shouldShowStatus) {
+                    equipmentStatusSection.classList.remove('hidden');
+                    // 默认选择在用状态
+                    document.querySelector('input[name="equipmentStatus"][value="在用"]').checked = true;
+                    toggleEquipmentStatusFields();
+                } else {
+                    equipmentStatusSection.classList.add('hidden');
+                }
+            }
+        }
+        
+        // 切换设备状态字段显示
+        function toggleEquipmentStatusFields() {
+            const selectedStatus = document.querySelector('input[name="equipmentStatus"]:checked')?.value || '在用';
+            const statusChangeDateSection = document.getElementById('statusChangeDateSection');
+            const disposalReasonSection = document.getElementById('disposalReasonSection');
+            
+            if (selectedStatus === '停用') {
+                // 显示状态变更时间和停用原因字段
+                if (statusChangeDateSection) {
+                    statusChangeDateSection.classList.remove('hidden');
+                    // 设置默认值为今天
+                    const today = new Date().toISOString().split('T')[0];
+                    document.getElementById('singleActiveStatusChangeDate').value = today;
+                }
+                if (disposalReasonSection) {
+                    disposalReasonSection.classList.remove('hidden');
+                }
+            } else {
+                // 隐藏状态变更时间和停用原因字段
+                if (statusChangeDateSection) {
+                    statusChangeDateSection.classList.add('hidden');
+                }
+                if (disposalReasonSection) {
+                    disposalReasonSection.classList.add('hidden');
+                }
+            }
+        }
+
+        // 切换批量报废信息区域显示
+        function toggleBatchDisposalSection(calibrationResult) {
+            const disposalSection = document.getElementById('batchDisposalSection');
+            const equipmentStatusSection = document.getElementById('batchEquipmentStatusSection');
+            
+            const shouldShowDisposal = calibrationResult === '不合格';
+            const shouldShowStatus = calibrationResult === '合格';
+            
+            // 报废信息区域（不合格时显示）
+            if (disposalSection) {
+                if (shouldShowDisposal) {
+                    disposalSection.classList.remove('hidden');
+                    // 设置默认的状态变更时间为今天
+                    const today = new Date().toISOString().split('T')[0];
+                    document.getElementById('batchStatusChangeDate').value = today;
+                } else {
+                    disposalSection.classList.add('hidden');
+                }
+            }
+            
+            // 设备状态选择区域（合格时显示）
+            if (equipmentStatusSection) {
+                if (shouldShowStatus) {
+                    equipmentStatusSection.classList.remove('hidden');
+                    // 默认选择在用状态
+                    document.querySelector('input[name="batchEquipmentStatus"][value="在用"]').checked = true;
+                    toggleBatchEquipmentStatusFields();
+                } else {
+                    equipmentStatusSection.classList.add('hidden');
+                }
+            }
+        }
+        
+        // 切换批量设备状态字段显示
+        function toggleBatchEquipmentStatusFields() {
+            const selectedStatus = document.querySelector('input[name="batchEquipmentStatus"]:checked')?.value || '在用';
+            const statusChangeDateSection = document.getElementById('batchStatusChangeDateSection');
+            const disposalReasonSection = document.getElementById('batchDisposalReasonSection');
+            
+            if (selectedStatus === '停用') {
+                // 显示状态变更时间和停用原因字段
+                if (statusChangeDateSection) {
+                    statusChangeDateSection.classList.remove('hidden');
+                    // 设置默认值为今天
+                    const today = new Date().toISOString().split('T')[0];
+                    document.getElementById('batchActiveStatusChangeDate').value = today;
+                }
+                if (disposalReasonSection) {
+                    disposalReasonSection.classList.remove('hidden');
+                }
+            } else {
+                // 隐藏状态变更时间和停用原因字段
+                if (statusChangeDateSection) {
+                    statusChangeDateSection.classList.add('hidden');
+                }
+                if (disposalReasonSection) {
+                    disposalReasonSection.classList.add('hidden');
                 }
             }
         }
@@ -3878,12 +4092,23 @@
                 }
             }
             
-            // 检定不合格时验证报废信息
+            // 检定结果验证
             if (calibrationResult === '不合格') {
+                // 检定不合格时验证报废信息
                 const statusChangeDate = document.getElementById('singleStatusChangeDate').value;
                 if (!statusChangeDate) {
                     showNotification('检定不合格时状态变更时间为必填项', 'warning');
                     return;
+                }
+            } else if (calibrationResult === '合格') {
+                // 检定合格时验证设备状态选择
+                const selectedStatus = document.querySelector('input[name="equipmentStatus"]:checked')?.value || '在用';
+                if (selectedStatus === '停用') {
+                    const statusChangeDate = document.getElementById('singleActiveStatusChangeDate').value;
+                    if (!statusChangeDate) {
+                        showNotification('设备停用时状态变更时间为必填项', 'warning');
+                        return;
+                    }
                 }
             }
             
@@ -3926,10 +4151,20 @@
                     }
                 }
                 
-                // 添加报废相关字段
+                // 添加状态相关字段
                 if (calibrationResult === '不合格') {
+                    // 检定不合格：报废状态
                     requestData.status_change_date = document.getElementById('singleStatusChangeDate').value;
                     requestData.disposal_reason = document.getElementById('singleDisposalReason').value.trim() || null;
+                } else if (calibrationResult === '合格') {
+                    // 检定合格：根据用户选择设置设备状态
+                    const selectedStatus = document.querySelector('input[name="equipmentStatus"]:checked')?.value || '在用';
+                    requestData.equipment_status = selectedStatus;
+                    
+                    if (selectedStatus === '停用') {
+                        requestData.status_change_date = document.getElementById('singleActiveStatusChangeDate').value;
+                        requestData.disposal_reason = document.getElementById('singleActiveDisposalReason').value.trim() || null;
+                    }
                 }
                 
                 // 获取文件
@@ -3955,6 +4190,7 @@
                     if (requestData.certificate_number) formData.append('certificate_number', requestData.certificate_number);
                     if (requestData.certificate_form) formData.append('certificate_form', requestData.certificate_form);
                     if (requestData.verification_agency) formData.append('verification_agency', requestData.verification_agency);
+                    if (requestData.equipment_status) formData.append('equipment_status', requestData.equipment_status);
                     if (requestData.status_change_date) formData.append('status_change_date', requestData.status_change_date);
                     if (requestData.disposal_reason) formData.append('disposal_reason', requestData.disposal_reason);
                     
@@ -4113,6 +4349,27 @@
                 return;
             }
             
+            // 检定结果验证
+            const calibrationResult = document.getElementById('batchCalibrationResult').value;
+            if (calibrationResult === '不合格') {
+                // 检定不合格时验证报废信息
+                const statusChangeDate = document.getElementById('batchStatusChangeDate').value;
+                if (!statusChangeDate) {
+                    showNotification('检定不合格时，状态变更时间为必填项', 'warning');
+                    return;
+                }
+            } else if (calibrationResult === '合格') {
+                // 检定合格时验证设备状态选择
+                const selectedStatus = document.querySelector('input[name="batchEquipmentStatus"]:checked')?.value || '在用';
+                if (selectedStatus === '停用') {
+                    const statusChangeDate = document.getElementById('batchActiveStatusChangeDate').value;
+                    if (!statusChangeDate) {
+                        showNotification('设备停用时状态变更时间为必填项', 'warning');
+                        return;
+                    }
+                }
+            }
+            
             try {
                 showNotification('正在批量更新检定信息...', 'info');
                 document.getElementById('batchCalibrationBtn').disabled = true;
@@ -4180,10 +4437,20 @@
                         }
                     }
                     
-                    // 如果检定结果为不合格，需要设置报废相关字段
+                    // 添加状态相关字段
                     if (updateData.calibration_result === '不合格') {
-                        updateData.status_change_date = calibrationDate;
-                        updateData.disposal_reason = updateData.notes || '检定不合格';
+                        // 检定不合格：报废状态
+                        updateData.status_change_date = document.getElementById('batchStatusChangeDate').value;
+                        updateData.disposal_reason = document.getElementById('batchDisposalReason').value || updateData.notes || '检定不合格';
+                    } else if (updateData.calibration_result === '合格') {
+                        // 检定合格：根据用户选择设置设备状态
+                        const selectedStatus = document.querySelector('input[name="batchEquipmentStatus"]:checked')?.value || '在用';
+                        updateData.equipment_status = selectedStatus;
+                        
+                        if (selectedStatus === '停用') {
+                            updateData.status_change_date = document.getElementById('batchActiveStatusChangeDate').value;
+                            updateData.disposal_reason = document.getElementById('batchActiveDisposalReason').value.trim() || updateData.notes || '设备停用';
+                        }
                     }
                     
                     return updateData;

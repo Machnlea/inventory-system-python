@@ -132,6 +132,25 @@
         .timeline-dot.danger { border-color: #ef4444; }
         
         /* 模态框样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(2px);
+            opacity: 0;
+            transition: opacity 0.1s ease-in-out;
+        }
+        .modal.show {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            opacity: 1 !important;
+        }
         .modal-overlay {
             background-color: rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(2px);
@@ -228,6 +247,10 @@
                             <div class="info-row">
                                 <span class="info-label">设备状态</span>
                                 <span id="equipmentStatus" class="status-badge status-normal">加载中...</span>
+                            </div>
+                            <div class="info-row" id="statusChangeDateRow" style="display: none;">
+                                <span class="info-label">状态变更日期</span>
+                                <span id="statusChangeDate" class="info-value">加载中...</span>
                             </div>
                         </div>
                     </div>
@@ -621,6 +644,14 @@
                 
                 // 加载检定历史
                 await loadCalibrationHistory();
+                
+                // 设置模态框事件监听器
+                setupModalEventListeners();
+                
+                // 设置备注输入监听器
+                setupNotesInputListeners();
+                
+                console.log('设备详情页面加载完成');
 
             } catch (error) {
                 console.error('页面初始化失败:', error);
@@ -765,6 +796,18 @@
                 const statusElement = document.getElementById('equipmentStatus');
                 statusElement.textContent = equipmentData.status || '-';
                 statusElement.className = `status-badge ${getStatusClass(equipmentData.status)}`;
+                
+                // 状态变更日期（仅在非"在用"状态时显示）
+                const statusChangeDateRow = document.getElementById('statusChangeDateRow');
+                const statusChangeDateElement = document.getElementById('statusChangeDate');
+                
+                if (equipmentData.status && equipmentData.status !== '在用' && equipmentData.status_change_date) {
+                    statusChangeDateRow.style.display = 'flex';
+                    statusChangeDateElement.textContent = new Date(equipmentData.status_change_date).toLocaleDateString('zh-CN');
+                } else {
+                    statusChangeDateRow.style.display = 'none';
+                    statusChangeDateElement.textContent = '-';
+                }
 
                 // 备注信息
                 currentNotes = equipmentData.notes || '';
@@ -939,10 +982,7 @@
             window.location.href = equipmentUrl.toString();
         }
 
-        // 页面加载完成后的初始化
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('设备详情页面加载完成');
-        });
+        // 页面加载完成后的初始化（已合并到主初始化函数中）
 
         // ========== 附件管理功能 ==========
 
@@ -1181,7 +1221,7 @@
             }
         }
 
-        // 删除附件
+        // 删除附件（旧版本，保留以兼容性）
         async function deleteAttachment(attachmentId) {
             if (!confirm('确定要删除这个附件吗？')) return;
 
@@ -1366,18 +1406,44 @@
             }
         });
 
-        // 点击模态框外部关闭
-        document.getElementById('attachmentModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeAttachmentModal();
+        // 设置模态框事件监听器
+        function setupModalEventListeners() {
+            const attachmentModal = document.getElementById('attachmentModal');
+            if (attachmentModal) {
+                attachmentModal.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        closeAttachmentModal();
+                    }
+                });
             }
-        });
-
-        document.getElementById('attachmentPreviewModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closePreviewModal();
+            
+            const attachmentPreviewModal = document.getElementById('attachmentPreviewModal');
+            if (attachmentPreviewModal) {
+                attachmentPreviewModal.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        closePreviewModal();
+                    }
+                });
             }
-        });
+            
+            const notesEditModal = document.getElementById('notesEditModal');
+            if (notesEditModal) {
+                notesEditModal.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        closeNotesEditModal();
+                    }
+                });
+            }
+            
+            const deleteAttachmentModal = document.getElementById('deleteAttachmentModal');
+            if (deleteAttachmentModal) {
+                deleteAttachmentModal.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        closeDeleteAttachmentModal();
+                    }
+                });
+            }
+        }
 
         // ========== 备注管理功能 ==========
 
@@ -1478,8 +1544,8 @@
             }
         }
 
-        // 监听文本框输入事件
-        document.addEventListener('DOMContentLoaded', function() {
+        // 设置备注输入监听器
+        function setupNotesInputListeners() {
             const notesTextarea = document.getElementById('notesTextarea');
             if (notesTextarea) {
                 notesTextarea.addEventListener('input', updateNotesCharCount);
@@ -1487,7 +1553,7 @@
                     setTimeout(updateNotesCharCount, 10);
                 });
             }
-        });
+        }
 
         // ESC键关闭备注编辑模态框
         document.addEventListener('keydown', function(e) {
@@ -1499,12 +1565,7 @@
             }
         });
 
-        // 点击模态框外部关闭
-        document.getElementById('notesEditModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeNotesEditModal();
-            }
-        });
+        // 点击模态框外部关闭（已合并到setupModalEventListeners函数中）
 
         // 检定历史相关函数
         
@@ -1988,7 +2049,7 @@
         // 删除附件
         function deleteAttachment(attachmentId) {
             currentDeleteAttachmentId = attachmentId;
-            document.getElementById('deleteAttachmentModal').classList.add('show');
+            showModal('deleteAttachmentModal');
         }
 
         // 确认删除附件
@@ -2011,21 +2072,16 @@
 
         // 关闭附件删除确认模态框
         function closeDeleteAttachmentModal() {
-            document.getElementById('deleteAttachmentModal').classList.remove('show');
+            hideModal('deleteAttachmentModal');
             currentDeleteAttachmentId = null;
         }
 
-        // 附件删除确认模态框点击外部关闭
-        document.getElementById('deleteAttachmentModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeDeleteAttachmentModal();
-            }
-        });
+        // 附件删除确认模态框点击外部关闭（已合并到setupModalEventListeners函数中）
         
     </script>
 
     <!-- 附件删除确认模态框 -->
-    <div id="deleteAttachmentModal" class="modal">
+    <div id="deleteAttachmentModal" class="modal hidden">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
             <div class="px-6 py-4 border-b border-gray-200">
                 <h3 class="text-lg font-semibold text-gray-900">确认删除附件</h3>

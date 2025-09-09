@@ -114,15 +114,41 @@ class CalibrationUpdateRequest(BaseModel):
     # 外检专有字段
     verification_agency: Optional[str] = Field(None, description="检定机构", max_length=100)
     
-    # 报废相关字段（检定不合格时）
+    # 设备状态选择（检定合格时）
+    equipment_status: Optional[str] = Field("在用", description="设备状态", pattern="^(在用|停用)$")
     status_change_date: Optional[date] = Field(None, description="状态变更时间")
-    disposal_reason: Optional[str] = Field(None, description="报废原因")
+    disposal_reason: Optional[str] = Field(None, description="停用/报废原因")
 
     @validator('status_change_date')
-    def validate_status_change_date_when_failed(cls, v, values):
-        """检定不合格时状态变更时间必填"""
-        if values.get('calibration_result') == '不合格' and not v:
-            raise ValueError('检定不合格时状态变更时间为必填项')
+    def validate_status_change_date(cls, v, values):
+        """状态变更时间验证"""
+        calibration_result = values.get('calibration_result')
+        equipment_status = values.get('equipment_status')
+        
+        # 检定不合格时必须选择报废并填写状态变更时间
+        if calibration_result == '不合格':
+            if not v:
+                raise ValueError('检定不合格时状态变更时间为必填项')
+        
+        # 检定合格但选择停用时，必须填写状态变更时间
+        if calibration_result == '合格' and equipment_status == '停用':
+            if not v:
+                raise ValueError('设备停用时状态变更时间为必填项')
+        
+        return v
+    
+    @validator('disposal_reason')
+    def validate_disposal_reason(cls, v, values):
+        """停用/报废原因验证"""
+        calibration_result = values.get('calibration_result')
+        equipment_status = values.get('equipment_status')
+        
+        # 检定不合格时必须填写报废原因
+        if calibration_result == '不合格' and not v:
+            raise ValueError('检定不合格时必须填写报废原因')
+        
+        # 检定合格但选择停用时，建议填写停用原因（但不强制）
+        
         return v
 
 

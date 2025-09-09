@@ -170,11 +170,23 @@ async def update_equipment_calibration(
         equipment.verification_agency = calibration_data.verification_agency
         equipment.calibration_notes = calibration_data.notes
         
-        # 处理检定不合格的情况
+        # 处理设备状态变更
         if calibration_data.calibration_result == "不合格":
+            # 检定不合格，设备状态设为报废
             equipment.status = "报废"
             equipment.status_change_date = calibration_data.status_change_date or date.today()
             equipment.disposal_reason = calibration_data.disposal_reason
+        elif calibration_data.calibration_result == "合格":
+            # 检定合格，根据用户选择设置设备状态
+            if calibration_data.equipment_status == "停用":
+                equipment.status = "停用"
+                equipment.status_change_date = calibration_data.status_change_date or date.today()
+                equipment.disposal_reason = calibration_data.disposal_reason  # 停用原因
+            else:
+                # 默认为在用状态
+                equipment.status = "在用"
+                equipment.status_change_date = None
+                equipment.disposal_reason = None
             
         # 创建检定历史记录
         history_data = CalibrationHistoryCreate(

@@ -229,6 +229,9 @@ def update_equipment(db: Session, equipment_id: int, equipment_update: Equipment
         # 处理状态变更时间
         if "status" in update_data:
             if update_data["status"] in ["停用", "报废"]:
+                # 如果设备状态变为停用或报废，自动清空有效期至
+                update_data["valid_until"] = None
+                
                 # 如果提供了状态变更时间，使用提供的时间
                 if "status_change_date" in update_data and update_data["status_change_date"]:
                     pass  # 使用提供的日期
@@ -239,6 +242,13 @@ def update_equipment(db: Session, equipment_id: int, equipment_update: Equipment
             else:
                 # 如果状态改为在用，清除状态变更时间
                 update_data["status_change_date"] = None
+                
+                # 如果设备从停用/报废状态恢复为在用，且检定周期不是"随坏随换"且有检定日期，重新计算有效期至
+                if update_data["status"] == "在用" and db_equipment.status in ["停用", "报废"]:
+                    if db_equipment.calibration_cycle != "随坏随换" and db_equipment.calibration_date:
+                        update_data["valid_until"] = calculate_valid_until(
+                            db_equipment.calibration_date, db_equipment.calibration_cycle
+                        )
         
         for field, value in update_data.items():
             setattr(db_equipment, field, value)

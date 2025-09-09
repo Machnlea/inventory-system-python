@@ -7,15 +7,10 @@ from app.api.auth import get_current_user
 
 security = HTTPBearer()
 
-def get_current_admin_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
-) -> User:
+def get_current_admin_user(current_user: User = Depends(get_current_user)) -> User:
     """
     获取当前管理员用户，如果不是管理员则抛出异常
     """
-    current_user = get_current_user(credentials, db)
-    
     if not current_user.is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

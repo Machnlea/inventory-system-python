@@ -1,6 +1,6 @@
 from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status, Request
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.db.database import get_db
@@ -24,12 +24,20 @@ class SessionConflictResponse(BaseModel):
     active_sessions: List[dict]
     message: str
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+def get_current_user(token_data = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    
+    # 处理两种情况：HTTPAuthorizationCredentials 对象或字符串
+    if hasattr(token_data, 'credentials'):
+        # 如果是 HTTPAuthorizationCredentials 对象
+        token = token_data.credentials
+    else:
+        # 如果是字符串
+        token = token_data
     
     # 使用带session验证的token验证
     username, session_id = verify_token_with_session(token)

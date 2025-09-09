@@ -33,15 +33,14 @@ def get_dashboard_stats(db: Session = Depends(get_db),
     
     active_equipment_count = active_query.count()
     
-    # 计算本月的日期范围
+    # 计算待检设备的日期范围：从当前日期到月底
     today = date.today()
-    current_month_start = date(today.year, today.month, 1)
     _, last_day = monthrange(today.year, today.month)
     current_month_end = date(today.year, today.month, last_day)
     
-    # 本月待检设备数量和列表
+    # 本月待检设备数量和列表：从今天到月底
     monthly_due_equipments = equipment.get_equipments_due_for_calibration(
-        db, start_date=current_month_start, end_date=current_month_end,
+        db, start_date=today, end_date=current_month_end,
         user_id=current_user.id, is_admin=current_user.is_admin
     )
     monthly_due_count = len(monthly_due_equipments)
@@ -114,12 +113,11 @@ def get_monthly_due_equipments(db: Session = Depends(get_db),
                               current_user = Depends(get_current_user)):
     """获取当月待检设备列表"""
     today = date.today()
-    current_month_start = date(today.year, today.month, 1)
     _, last_day = monthrange(today.year, today.month)
     current_month_end = date(today.year, today.month, last_day)
     
     equipments = equipment.get_equipments_due_for_calibration(
-        db, start_date=current_month_start, end_date=current_month_end,
+        db, start_date=today, end_date=current_month_end,
         user_id=current_user.id, is_admin=current_user.is_admin
     )
     

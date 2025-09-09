@@ -1577,13 +1577,22 @@
                     handleCardClick(monthlyDueCard, 'card-monthly-due', () => {
                         resetAllFilters();
                         const today = new Date();
-                        const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, today.getDate());
+                        // 计算本月最后一天
+                        const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
                         const startDateFilter = document.getElementById('start-date-filter');
                         const endDateFilter = document.getElementById('end-date-filter');
                         
                         if (startDateFilter && endDateFilter) {
-                            startDateFilter.value = today.toISOString().split('T')[0];
-                            endDateFilter.value = nextMonth.toISOString().split('T')[0];
+                            // 格式化日期为 YYYY-MM-DD
+                            const formatDate = (date) => {
+                                const year = date.getFullYear();
+                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                const day = String(date.getDate()).padStart(2, '0');
+                                return `${year}-${month}-${day}`;
+                            };
+                            
+                            startDateFilter.value = formatDate(today);
+                            endDateFilter.value = formatDate(lastDay);
                             currentPage = 1;
                             loadEquipmentData();
                             showSmartNotification('card-monthly-due', '显示待检设备', 'info');
@@ -1699,16 +1708,20 @@
                 console.log('- 总设备数量:', total);
                 console.log('- 当前页码范围:', (currentPage - 1) * itemsPerPage + 1, '-', currentPage * itemsPerPage);
                 
-                // 检查是否有本月待检设备
+                // 检查是否有待检设备：从当前日期到月底
                 const now = new Date();
                 const currentMonth = now.getMonth();
                 const currentYear = now.getFullYear();
+                const currentDay = now.getDate();
                 
                 const monthlyDueEquipments = items.filter(equipment => {
                     if (!equipment.valid_until) return false;
                     
                     const expiryDate = new Date(equipment.valid_until);
-                    return expiryDate.getMonth() === currentMonth && expiryDate.getFullYear() === currentYear;
+                    // 检查设备是否在当前月份，且日期大于等于当前日期
+                    return expiryDate.getMonth() === currentMonth && 
+                           expiryDate.getFullYear() === currentYear &&
+                           expiryDate.getDate() >= currentDay;
                 });
                 
                 console.log('本月待检设备检查:');
@@ -1901,6 +1914,7 @@
             const now = new Date();
             const currentMonth = now.getMonth();
             const currentYear = now.getFullYear();
+            const currentDay = now.getDate();
             
             
             let overdueCount = 0;
@@ -1939,7 +1953,9 @@
                 
                 // 检查设备状态
                 const isOverdue = expiryDate < now;
-                const isMonthlyDue = expiryDate.getMonth() === currentMonth && expiryDate.getFullYear() === currentYear;
+                const isMonthlyDue = expiryDate.getMonth() === currentMonth && 
+                                   expiryDate.getFullYear() === currentYear &&
+                                   expiryDate.getDate() >= currentDay;
                 
                 console.log(`设备: ${equipmentName}`);
                 console.log(`  状态: ${equipmentStatus}`);

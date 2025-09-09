@@ -167,9 +167,9 @@ def export_monthly_plan(db: Session = Depends(get_db),
     # 获取当前日期
     today = datetime.now().date()
     
-    # 计算本月的开始和结束日期
-    start_date = date(today.year, today.month, 1)
+    # 计算待检设备的日期范围：从当前日期到月底
     _, last_day = monthrange(today.year, today.month)
+    start_date = today
     end_date = date(today.year, today.month, last_day)
     
     equipments = equipment.get_equipments_due_for_calibration(

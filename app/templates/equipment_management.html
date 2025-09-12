@@ -50,14 +50,61 @@
             transition: all 0.2s ease;
         }
         
-        /* 撤回删除模态框样式 */
+        /* 撤回删除通知样式 */
+        .undo-notification {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border-left: 4px solid #f59e0b;
+            min-width: 320px;
+            max-width: 400px;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        .undo-notification.fade-out {
+            animation: slideOut 0.3s ease-in forwards;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+        
         .undo-countdown {
             font-family: 'Courier New', monospace;
             font-weight: bold;
+            color: #dc2626;
         }
         
         .undo-progress {
+            height: 4px;
+            background: #e5e7eb;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        
+        .undo-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #f59e0b, #dc2626);
             transition: width 1s linear;
+            border-radius: 2px;
         }
         .sidebar-item:hover {
             background: rgba(255, 255, 255, 0.1);
@@ -2958,6 +3005,7 @@
         let undoDeleteEquipmentId = null;
         let undoDeleteEquipmentName = null;
         let undoDeleteOriginalData = null;
+        let undoNotificationElement = null;
 
         // 删除设备
         function deleteEquipment(equipmentId, equipmentName) {
@@ -2995,13 +3043,11 @@
                 // 关闭删除确认模态框
                 closeDeleteEquipmentModal();
                 
-                // 显示撤回模态框
-                showUndoDeleteModal();
+                // 显示撤回通知
+                showUndoNotification();
                 
                 // 开始10秒倒计时
                 startUndoCountdown();
-                
-                showNotification(`设备 ${equipmentName} 已标记为删除，10秒后永久删除`, 'warning');
                 
             } catch (error) {
                 console.error('标记设备删除失败:', error);
@@ -3015,36 +3061,78 @@
             currentDeleteEquipmentId = null;
         }
 
-        // 显示撤回删除模态框
-        function showUndoDeleteModal() {
-            document.getElementById('undoDeleteEquipmentName').textContent = undoDeleteEquipmentName;
-            document.getElementById('undoDeleteModal').classList.add('show');
-        }
-
-        // 关闭撤回删除模态框
-        function closeUndoDeleteModal() {
-            document.getElementById('undoDeleteModal').classList.remove('show');
-            if (undoDeleteTimeout) {
-                clearTimeout(undoDeleteTimeout);
-                undoDeleteTimeout = null;
-            }
-            // 立即删除设备
-            if (undoDeleteEquipmentId) {
-                performActualDelete();
-            }
+        // 显示撤回删除通知
+        function showUndoNotification() {
+            const container = document.getElementById('undoNotificationContainer');
+            
+            // 创建通知元素
+            const notification = document.createElement('div');
+            notification.className = 'undo-notification';
+            notification.innerHTML = `
+                <div class="p-4">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                                <i class="fas fa-clock text-orange-600 text-sm"></i>
+                            </div>
+                        </div>
+                        <div class="ml-3 flex-1">
+                            <div class="flex items-center justify-between">
+                                <h4 class="text-sm font-medium text-gray-900">设备删除确认</h4>
+                                <span class="undo-countdown text-xs">10s</span>
+                            </div>
+                            <p class="text-sm text-gray-600 mt-1">
+                                设备 "<span class="font-medium text-gray-900">${undoDeleteEquipmentName}</span>" 已标记为删除
+                            </p>
+                            <p class="text-xs text-orange-600 mt-1">将在10秒后永久删除</p>
+                            <div class="undo-progress mt-3">
+                                <div class="undo-progress-bar" style="width: 100%"></div>
+                            </div>
+                            <div class="flex justify-end space-x-2 mt-3">
+                                <button onclick="undoDeleteEquipment()" class="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors">
+                                    <i class="fas fa-undo mr-1"></i>撤销删除
+                                </button>
+                                <button onclick="immediateDelete()" class="px-3 py-1 bg-gray-600 text-white text-xs rounded hover:bg-gray-700 transition-colors">
+                                    立即删除
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // 添加到容器
+            container.appendChild(notification);
+            undoNotificationElement = notification;
         }
 
         // 开始撤回倒计时
         function startUndoCountdown() {
             let timeLeft = 10;
-            const countdownElement = document.getElementById('undoCountdown');
-            const progressElement = document.getElementById('undoProgress');
             
             // 更新倒计时显示
             function updateCountdown() {
                 timeLeft--;
-                countdownElement.textContent = timeLeft;
-                progressElement.style.width = (timeLeft * 10) + '%';
+                
+                if (undoNotificationElement) {
+                    // 更新倒计时数字
+                    const countdownElement = undoNotificationElement.querySelector('.undo-countdown');
+                    if (countdownElement) {
+                        countdownElement.textContent = timeLeft + 's';
+                    }
+                    
+                    // 更新进度条
+                    const progressBar = undoNotificationElement.querySelector('.undo-progress-bar');
+                    if (progressBar) {
+                        progressBar.style.width = (timeLeft * 10) + '%';
+                    }
+                    
+                    // 最后3秒变红色警示
+                    if (timeLeft <= 3) {
+                        countdownElement.style.color = '#dc2626';
+                        progressBar.style.background = '#dc2626';
+                    }
+                }
                 
                 if (timeLeft <= 0) {
                     // 倒计时结束，执行实际删除
@@ -3066,6 +3154,9 @@
             try {
                 await EquipmentAPI.deleteEquipment(undoDeleteEquipmentId);
                 showNotification(`设备 ${undoDeleteEquipmentName} 已永久删除`, 'success');
+                
+                // 移除通知
+                removeUndoNotification();
                 
                 // 清理撤回相关变量
                 clearUndoDeleteData();
@@ -3110,6 +3201,9 @@
                 
                 showNotification(`设备 ${undoDeleteEquipmentName} 已恢复`, 'success');
                 
+                // 移除通知
+                removeUndoNotification();
+                
                 // 清理撤回相关变量
                 clearUndoDeleteData();
                 
@@ -3132,7 +3226,29 @@
             undoDeleteEquipmentId = null;
             undoDeleteEquipmentName = null;
             undoDeleteOriginalData = null;
-            document.getElementById('undoDeleteModal').classList.remove('show');
+            undoNotificationElement = null;
+        }
+
+        // 移除撤回通知
+        function removeUndoNotification() {
+            if (undoNotificationElement) {
+                undoNotificationElement.classList.add('fade-out');
+                setTimeout(() => {
+                    if (undoNotificationElement && undoNotificationElement.parentNode) {
+                        undoNotificationElement.parentNode.removeChild(undoNotificationElement);
+                    }
+                }, 300);
+                undoNotificationElement = null;
+            }
+        }
+
+        // 立即删除设备
+        function immediateDelete() {
+            if (undoDeleteTimeout) {
+                clearTimeout(undoDeleteTimeout);
+                undoDeleteTimeout = null;
+            }
+            performActualDelete();
         }
 
         // 批量操作
@@ -5593,12 +5709,7 @@
             }
         });
         
-        safeAddEventListener('undoDeleteModal', 'click', function(e) {
-            if (e.target === this) {
-                closeUndoDeleteModal();
-            }
-        });
-    </script>
+            </script>
 
     <!-- 设备删除确认模态框 -->
     <div id="deleteEquipmentModal" class="modal">
@@ -5729,43 +5840,8 @@
         </div>
     </div>
 
-    <!-- 设备删除撤回模态框 -->
-    <div id="undoDeleteModal" class="modal">
-        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div class="px-6 py-4 border-b border-gray-200">
-                <h3 class="text-lg font-semibold text-gray-900">设备删除确认</h3>
-            </div>
-            <div class="p-6">
-                <div class="mb-6">
-                    <div class="flex items-center mb-4">
-                        <div class="flex-shrink-0">
-                            <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                                <i class="fas fa-clock text-orange-600 text-xl"></i>
-                            </div>
-                        </div>
-                        <div class="ml-4">
-                            <p class="text-sm text-gray-600">设备 "<span id="undoDeleteEquipmentName" class="font-medium text-gray-900"></span>" 已标记为删除</p>
-                            <p class="text-sm text-orange-600 mt-1">将在 <span id="undoCountdown" class="font-medium text-orange-700">10</span> 秒后永久删除</p>
-                            <p class="text-sm text-blue-600 mt-1">您可以在此期间撤销删除操作</p>
-                        </div>
-                    </div>
-                    <div class="mt-4">
-                        <div class="w-full bg-gray-200 rounded-full h-2">
-                            <div id="undoProgress" class="bg-orange-600 h-2 rounded-full transition-all duration-1000" style="width: 100%"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="flex justify-end space-x-3">
-                    <button type="button" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700" onclick="undoDeleteEquipment()">
-                        <i class="fas fa-undo mr-2"></i>撤销删除
-                    </button>
-                    <button type="button" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400" onclick="closeUndoDeleteModal()">
-                        立即删除
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- 撤回删除通知容器 -->
+    <div id="undoNotificationContainer" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
 
 </body>
 </html>

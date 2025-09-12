@@ -1872,7 +1872,7 @@
                 const calibrationMethod = equipment.calibration_method || '内检';
                 
                 return `
-                    <tr class="hover:bg-gray-50 equipment-row" data-expiry-date="${equipment.valid_until || ''}" data-calibration-cycle="${equipment.calibration_cycle || ''}">
+                    <tr class="hover:bg-gray-50 equipment-row" data-equipment-id="${equipment.id}" data-expiry-date="${equipment.valid_until || ''}" data-calibration-cycle="${equipment.calibration_cycle || ''}">
                         <td class="px-6 py-4 whitespace-nowrap text-center">
                             <input type="checkbox" class="equipment-checkbox rounded border-gray-300" 
                                    value="${equipment.id}" onchange="updateSelectedCount()">
@@ -3032,6 +3032,21 @@
                 const equipmentResponse = await EquipmentAPI.getEquipment(currentDeleteEquipmentId);
                 undoDeleteOriginalData = equipmentResponse;
                 
+                // 保存撤回信息
+                undoDeleteEquipmentId = currentDeleteEquipmentId;
+                undoDeleteEquipmentName = equipmentName;
+                
+                // 立即从UI中移除设备条目
+                const equipmentRow = document.querySelector(`tr[data-equipment-id="${currentDeleteEquipmentId}"]`);
+                if (equipmentRow) {
+                    equipmentRow.style.transition = 'all 0.3s ease';
+                    equipmentRow.style.opacity = '0';
+                    equipmentRow.style.transform = 'translateX(-20px)';
+                    setTimeout(() => {
+                        equipmentRow.remove();
+                    }, 300);
+                }
+                
                 // 标记设备为待删除状态
                 const markForDeletionData = {
                     status: '停用',
@@ -3041,10 +3056,6 @@
                 };
                 
                 await EquipmentAPI.updateEquipment(currentDeleteEquipmentId, markForDeletionData);
-                
-                // 保存撤回信息
-                undoDeleteEquipmentId = currentDeleteEquipmentId;
-                undoDeleteEquipmentName = equipmentName;
                 
                 // 关闭删除确认模态框
                 closeDeleteEquipmentModal();
@@ -3177,6 +3188,64 @@
             }
         }
 
+        // 生成单个设备行的HTML
+        function createEquipmentRowHTML(equipment) {
+            const departmentName = equipment.department ? equipment.department.name : '未知部门';
+            const categoryName = equipment.category ? equipment.category.name : '其他';
+            const accuracyLevel = equipment.accuracy_level || '未设置';
+            const measurementRange = equipment.measurement_range || '未设置';
+            const calibrationMethod = equipment.calibration_method || '内检';
+            
+            return `
+                <tr class="hover:bg-gray-50 equipment-row" data-equipment-id="${equipment.id}" data-expiry-date="${equipment.valid_until || ''}" data-calibration-cycle="${equipment.calibration_cycle || ''}" style="opacity: 0; transform: translateX(20px);">
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                        <input type="checkbox" class="equipment-checkbox rounded border-gray-300" 
+                               value="${equipment.id}" onchange="updateSelectedCount()">
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-left">
+                        <div class="flex items-center">
+                            <div class="h-10 w-10 flex-shrink-0">
+                                <div class="h-10 w-10 rounded-full ${getCategoryColor(categoryName)} flex items-center justify-center">
+                                    <i class="fas ${getCategoryIcon(categoryName)} ${getIconColor(categoryName)}"></i>
+                                </div>
+                            </div>
+                            <div class="ml-4">
+                                <div class="text-sm font-medium text-gray-900">${equipment.name || '未知设备'}</div>
+                                <div class="text-sm text-gray-500">型号: ${equipment.model || '未知'}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-left">${equipment.internal_id || '-'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-left">${equipment.manufacturer_id || '-'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-left">${departmentName}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-left">${formatDate(equipment.valid_until, equipment.calibration_cycle)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusStyle(equipment.status)}">${equipment.status || '未知'}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2 text-center">
+                        <button class="equipment-action-btn text-gray-600 hover:text-gray-900 relative" title="管理附件" 
+                                onclick="manageAttachments('${equipment.id}', '${equipment.name || '设备'}')"
+                                data-equipment-id="${equipment.id}">
+                            <i class="fas fa-paperclip"></i>
+                            <span class="attachment-count absolute -top-2 -right-2 bg-blue-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center loading">-</span>
+                        </button>
+                        <button class="equipment-action-btn text-indigo-600 hover:text-indigo-900" title="查看详情" onclick="viewEquipment('${equipment.id}')">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="equipment-action-btn text-green-600 hover:text-green-900" title="编辑" onclick="editEquipment('${equipment.id}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="equipment-action-btn text-purple-600 hover:text-purple-900" title="更新检定" onclick="updateCalibrationDate('${equipment.id}')">
+                            <i class="fas fa-calendar-alt"></i>
+                        </button>
+                        <button class="equipment-action-btn text-red-600 hover:text-red-900" title="删除" onclick="deleteEquipment('${equipment.id}', '${equipment.name || '设备'}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }
+
         // 撤销删除设备
         async function undoDeleteEquipment() {
             if (!undoDeleteEquipmentId || !undoDeleteOriginalData) return;
@@ -3205,17 +3274,60 @@
                 
                 await EquipmentAPI.updateEquipment(undoDeleteEquipmentId, restoreData);
                 
+                // 恢复UI中的设备条目
+                const tableBody = document.getElementById('equipment-table-body');
+                if (tableBody) {
+                    // 检查是否是空表格
+                    const isEmptyTable = tableBody.querySelector('td[colspan="7"]');
+                    
+                    // 使用原始数据生成HTML，确保包含所有关联信息
+                    const originalData = undoDeleteOriginalData;
+                    const rowHTML = createEquipmentRowHTML(originalData);
+                    
+                    let restoredRow = null;
+                    
+                    if (isEmptyTable) {
+                        // 如果是空表格，直接插入恢复的设备HTML
+                        tableBody.innerHTML = rowHTML;
+                        restoredRow = tableBody.querySelector(`tr[data-equipment-id="${undoDeleteEquipmentId}"]`);
+                    } else {
+                        // 使用insertAdjacentHTML直接插入，避免文本节点问题
+                        tableBody.insertAdjacentHTML('afterbegin', rowHTML);
+                        restoredRow = tableBody.querySelector(`tr[data-equipment-id="${undoDeleteEquipmentId}"]`);
+                    }
+                    
+                    // 立即添加动画效果
+                    if (restoredRow) {
+                        restoredRow.style.transition = 'all 0.3s ease';
+                        restoredRow.style.opacity = '1';
+                        restoredRow.style.transform = 'translateX(0)';
+                        
+                        // 强制重绘以确保动画生效
+                        restoredRow.offsetHeight;
+                    }
+                    
+                    // 更新设备附件数量
+                    const equipmentIdForAttachment = undoDeleteEquipmentId; // 保存ID供后续使用
+                    setTimeout(() => {
+                        if (equipmentIdForAttachment) {
+                            loadEquipmentAttachmentCounts([equipmentIdForAttachment]);
+                        }
+                    }, 400);
+                    
+                    // 更新背景色
+                    setTimeout(() => updateEquipmentExpiryBackground(), 500);
+                }
+                
                 showNotification(`设备 ${undoDeleteEquipmentName} 已恢复`, 'success');
                 
                 // 移除通知
                 removeUndoNotification();
                 
-                // 清理撤回相关变量
-                clearUndoDeleteData();
-                
-                // 重新加载数据
-                loadEquipmentData();
+                // 更新仪表板统计
                 loadDashboardStats();
+                
+                // 清理撤回相关变量（延迟清理，确保异步操作完成）
+                setTimeout(() => clearUndoDeleteData(), 600);
                 
             } catch (error) {
                 console.error('恢复设备失败:', error);
@@ -3400,17 +3512,58 @@
                 
                 await Promise.all(restorePromises);
                 
+                // 恢复UI中的设备条目
+                const tableBody = document.getElementById('equipment-table-body');
+                if (tableBody) {
+                    // 检查是否是空表格
+                    const isEmptyTable = tableBody.querySelector('td[colspan="7"]');
+                    
+                    if (isEmptyTable) {
+                        // 如果是空表格，添加所有恢复的设备
+                        const restoredHTML = undoBatchDeleteOriginalData.map(equipment => createEquipmentRowHTML(equipment)).join('');
+                        tableBody.innerHTML = restoredHTML;
+                    } else {
+                        // 在表格开头插入所有恢复的设备，使用insertAdjacentHTML避免文本节点问题
+                        undoBatchDeleteOriginalData.forEach((equipment, index) => {
+                            const rowHTML = createEquipmentRowHTML(equipment);
+                            tableBody.insertAdjacentHTML('afterbegin', rowHTML);
+                        });
+                    }
+                    
+                    // 添加动画效果
+                    setTimeout(() => {
+                        undoBatchDeleteIds.forEach(id => {
+                            const restoredRow = tableBody.querySelector(`tr[data-equipment-id="${id}"]`);
+                            if (restoredRow) {
+                                restoredRow.style.transition = 'all 0.3s ease';
+                                restoredRow.style.opacity = '1';
+                                restoredRow.style.transform = 'translateX(0)';
+                            }
+                        });
+                    }, 50);
+                    
+                    // 更新设备附件数量
+                    const equipmentIdsForAttachment = [...undoBatchDeleteIds]; // 保存ID供后续使用
+                    setTimeout(() => {
+                        if (equipmentIdsForAttachment.length > 0) {
+                            loadEquipmentAttachmentCounts(equipmentIdsForAttachment);
+                        }
+                    }, 400);
+                    
+                    // 更新背景色
+                    setTimeout(() => updateEquipmentExpiryBackground(), 500);
+                }
+                
                 showNotification(`已恢复 ${undoBatchDeleteIds.length} 台设备`, 'success');
                 
                 // 移除通知
                 removeBatchUndoNotification();
                 
-                // 清理批量撤回相关变量
-                clearBatchUndoDeleteData();
-                
-                // 重新加载数据
-                loadEquipmentData();
+                // 更新仪表板统计
                 loadDashboardStats();
+                
+                // 清理批量撤回相关变量（延迟清理，确保异步操作完成）
+                setTimeout(() => clearBatchUndoDeleteData(), 600);
                 
             } catch (error) {
                 console.error('批量恢复设备失败:', error);
@@ -3496,6 +3649,19 @@
                 // 保存原始数据
                 undoBatchDeleteOriginalData = equipmentResponses;
                 undoBatchDeleteIds = [...currentBatchDeleteIds];
+                
+                // 立即从UI中移除所有选中的设备条目
+                currentBatchDeleteIds.forEach(id => {
+                    const equipmentRow = document.querySelector(`tr[data-equipment-id="${id}"]`);
+                    if (equipmentRow) {
+                        equipmentRow.style.transition = 'all 0.3s ease';
+                        equipmentRow.style.opacity = '0';
+                        equipmentRow.style.transform = 'translateX(-20px)';
+                        setTimeout(() => {
+                            equipmentRow.remove();
+                        }, 300);
+                    }
+                });
                 
                 // 标记所有设备为待删除状态
                 const markPromises = currentBatchDeleteIds.map(id => {

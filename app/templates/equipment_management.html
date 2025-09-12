@@ -3933,6 +3933,17 @@
             if (disposalSection) {
                 if (shouldShowDisposal) {
                     disposalSection.classList.remove('hidden');
+                    // 设置默认的状态变更时间为今天
+                    const today = new Date().toISOString().split('T')[0];
+                    const statusChangeDateField = document.getElementById('singleStatusChangeDate');
+                    if (statusChangeDateField && !statusChangeDateField.value) {
+                        statusChangeDateField.value = today;
+                    }
+                    // 设置默认的报废原因
+                    const disposalReasonField = document.getElementById('singleDisposalReason');
+                    if (disposalReasonField && !disposalReasonField.value.trim()) {
+                        disposalReasonField.value = '检定不合格报废';
+                    }
                 } else {
                     disposalSection.classList.add('hidden');
                 }
@@ -4002,6 +4013,11 @@
                     // 设置默认的状态变更时间为今天
                     const today = new Date().toISOString().split('T')[0];
                     document.getElementById('batchStatusChangeDate').value = today;
+                    // 设置默认的报废原因
+                    const disposalReasonField = document.getElementById('batchDisposalReason');
+                    if (disposalReasonField && !disposalReasonField.value.trim()) {
+                        disposalReasonField.value = '检定不合格报废';
+                    }
                 } else {
                     disposalSection.classList.add('hidden');
                 }
@@ -4170,8 +4186,12 @@
                 // 添加状态相关字段
                 if (calibrationResult === '不合格') {
                     // 检定不合格：报废状态
-                    requestData.status_change_date = document.getElementById('singleStatusChangeDate').value;
-                    requestData.disposal_reason = document.getElementById('singleDisposalReason').value.trim() || null;
+                    const statusChangeDate = document.getElementById('singleStatusChangeDate').value;
+                    const disposalReason = document.getElementById('singleDisposalReason').value.trim();
+                    
+                    // 确保必填字段有值
+                    requestData.status_change_date = statusChangeDate || new Date().toISOString().split('T')[0];
+                    requestData.disposal_reason = disposalReason || '检定不合格报废';
                 } else if (calibrationResult === '合格') {
                     // 检定合格：根据用户选择设置设备状态
                     const selectedStatus = document.querySelector('input[name="equipmentStatus"]:checked')?.value || '在用';
@@ -4456,8 +4476,12 @@
                     // 添加状态相关字段
                     if (updateData.calibration_result === '不合格') {
                         // 检定不合格：报废状态
-                        updateData.status_change_date = document.getElementById('batchStatusChangeDate').value;
-                        updateData.disposal_reason = document.getElementById('batchDisposalReason').value || updateData.notes || '检定不合格';
+                        const statusChangeDate = document.getElementById('batchStatusChangeDate').value;
+                        const disposalReason = document.getElementById('batchDisposalReason').value.trim();
+                        
+                        // 确保必填字段有值
+                        updateData.status_change_date = statusChangeDate || new Date().toISOString().split('T')[0];
+                        updateData.disposal_reason = disposalReason || updateData.notes || '检定不合格报废';
                     } else if (updateData.calibration_result === '合格') {
                         // 检定合格：根据用户选择设置设备状态
                         const selectedStatus = document.querySelector('input[name="batchEquipmentStatus"]:checked')?.value || '在用';

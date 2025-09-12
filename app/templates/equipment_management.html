@@ -3006,6 +3006,12 @@
         let undoDeleteEquipmentName = null;
         let undoDeleteOriginalData = null;
         let undoNotificationElement = null;
+        
+        // 批量撤回删除相关变量
+        let undoBatchDeleteTimeout = null;
+        let undoBatchDeleteIds = [];
+        let undoBatchDeleteOriginalData = [];
+        let undoBatchNotificationElement = null;
 
         // 删除设备
         function deleteEquipment(equipmentId, equipmentName) {
@@ -3251,6 +3257,200 @@
             performActualDelete();
         }
 
+        // 显示批量撤回删除通知
+        function showBatchUndoNotification() {
+            const container = document.getElementById('undoNotificationContainer');
+            
+            // 创建通知元素
+            const notification = document.createElement('div');
+            notification.className = 'undo-notification';
+            notification.innerHTML = `
+                <div class="p-4">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                                <i class="fas fa-layer-group text-orange-600 text-sm"></i>
+                            </div>
+                        </div>
+                        <div class="ml-3 flex-1">
+                            <div class="flex items-center justify-between">
+                                <h4 class="text-sm font-medium text-gray-900">批量删除确认</h4>
+                                <span class="undo-countdown text-xs">15s</span>
+                            </div>
+                            <p class="text-sm text-gray-600 mt-1">
+                                已将 <span class="font-medium text-gray-900">${undoBatchDeleteIds.length}</span> 台设备标记为删除
+                            </p>
+                            <p class="text-xs text-orange-600 mt-1">将在15秒后永久删除</p>
+                            <div class="undo-progress mt-3">
+                                <div class="undo-progress-bar" style="width: 100%"></div>
+                            </div>
+                            <div class="flex justify-end space-x-2 mt-3">
+                                <button onclick="undoBatchDelete()" class="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors">
+                                    <i class="fas fa-undo mr-1"></i>撤销全部
+                                </button>
+                                <button onclick="immediateBatchDelete()" class="px-3 py-1 bg-gray-600 text-white text-xs rounded hover:bg-gray-700 transition-colors">
+                                    立即删除
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // 添加到容器
+            container.appendChild(notification);
+            undoBatchNotificationElement = notification;
+        }
+
+        // 开始批量撤回倒计时
+        function startBatchUndoCountdown() {
+            let timeLeft = 15; // 批量删除给更多时间
+            
+            // 更新倒计时显示
+            function updateCountdown() {
+                timeLeft--;
+                
+                if (undoBatchNotificationElement) {
+                    // 更新倒计时数字
+                    const countdownElement = undoBatchNotificationElement.querySelector('.undo-countdown');
+                    if (countdownElement) {
+                        countdownElement.textContent = timeLeft + 's';
+                    }
+                    
+                    // 更新进度条
+                    const progressBar = undoBatchNotificationElement.querySelector('.undo-progress-bar');
+                    if (progressBar) {
+                        progressBar.style.width = (timeLeft * 100 / 15) + '%';
+                    }
+                    
+                    // 最后5秒变红色警示
+                    if (timeLeft <= 5) {
+                        countdownElement.style.color = '#dc2626';
+                        progressBar.style.background = '#dc2626';
+                    }
+                }
+                
+                if (timeLeft <= 0) {
+                    // 倒计时结束，执行实际批量删除
+                    performActualBatchDelete();
+                } else {
+                    // 继续倒计时
+                    undoBatchDeleteTimeout = setTimeout(updateCountdown, 1000);
+                }
+            }
+            
+            // 开始倒计时
+            undoBatchDeleteTimeout = setTimeout(updateCountdown, 1000);
+        }
+
+        // 执行实际批量删除
+        async function performActualBatchDelete() {
+            if (!undoBatchDeleteIds || undoBatchDeleteIds.length === 0) return;
+            
+            try {
+                await EquipmentAPI.batchDelete({ equipment_ids: undoBatchDeleteIds });
+                showNotification(`已永久删除 ${undoBatchDeleteIds.length} 台设备`, 'success');
+                
+                // 移除通知
+                removeBatchUndoNotification();
+                
+                // 清理批量撤回相关变量
+                clearBatchUndoDeleteData();
+                
+                // 重新加载数据
+                loadEquipmentData();
+                loadDashboardStats();
+                
+            } catch (error) {
+                console.error('批量删除设备失败:', error);
+                showNotification('批量删除设备失败: ' + error.message, 'error');
+            }
+        }
+
+        // 撤销批量删除设备
+        async function undoBatchDelete() {
+            if (!undoBatchDeleteIds || undoBatchDeleteIds.length === 0 || !undoBatchDeleteOriginalData.length) return;
+            
+            try {
+                // 恢复所有设备的原始状态
+                const restorePromises = undoBatchDeleteIds.map(id => {
+                    const equipment = undoBatchDeleteOriginalData.find(e => e.id === id);
+                    const restoreData = {
+                        ...equipment,
+                        // 移除系统标记
+                        notes: equipment.notes ? 
+                            equipment.notes.replace('\n[系统标记] 设备准备删除，可撤回操作', '') : 
+                            equipment.notes
+                    };
+                    
+                    // 如果原状态不是停用，恢复原状态
+                    if (equipment.status !== '停用') {
+                        restoreData.status = equipment.status;
+                    }
+                    
+                    // 如果原处置原因不是准备删除，恢复原处置原因
+                    if (equipment.disposal_reason !== '准备删除，可撤回操作') {
+                        restoreData.disposal_reason = equipment.disposal_reason;
+                    } else {
+                        restoreData.disposal_reason = null;
+                    }
+                    
+                    return EquipmentAPI.updateEquipment(id, restoreData);
+                });
+                
+                await Promise.all(restorePromises);
+                
+                showNotification(`已恢复 ${undoBatchDeleteIds.length} 台设备`, 'success');
+                
+                // 移除通知
+                removeBatchUndoNotification();
+                
+                // 清理批量撤回相关变量
+                clearBatchUndoDeleteData();
+                
+                // 重新加载数据
+                loadEquipmentData();
+                loadDashboardStats();
+                
+            } catch (error) {
+                console.error('批量恢复设备失败:', error);
+                showNotification('批量恢复设备失败: ' + error.message, 'error');
+            }
+        }
+
+        // 清理批量撤回相关数据
+        function clearBatchUndoDeleteData() {
+            if (undoBatchDeleteTimeout) {
+                clearTimeout(undoBatchDeleteTimeout);
+                undoBatchDeleteTimeout = null;
+            }
+            undoBatchDeleteIds = [];
+            undoBatchDeleteOriginalData = [];
+            undoBatchNotificationElement = null;
+        }
+
+        // 移除批量撤回通知
+        function removeBatchUndoNotification() {
+            if (undoBatchNotificationElement) {
+                undoBatchNotificationElement.classList.add('fade-out');
+                setTimeout(() => {
+                    if (undoBatchNotificationElement && undoBatchNotificationElement.parentNode) {
+                        undoBatchNotificationElement.parentNode.removeChild(undoBatchNotificationElement);
+                    }
+                }, 300);
+                undoBatchNotificationElement = null;
+            }
+        }
+
+        // 立即批量删除设备
+        function immediateBatchDelete() {
+            if (undoBatchDeleteTimeout) {
+                clearTimeout(undoBatchDeleteTimeout);
+                undoBatchDeleteTimeout = null;
+            }
+            performActualBatchDelete();
+        }
+
         // 批量操作
         function batchOperation(operation) {
             const selectedCheckboxes = document.querySelectorAll('.equipment-checkbox:checked');
@@ -3289,17 +3489,40 @@
             if (!currentBatchDeleteIds || currentBatchDeleteIds.length === 0) return;
             
             try {
-                showNotification('正在批量删除设备...', 'info');
+                // 获取所有设备的原始数据
+                const equipmentPromises = currentBatchDeleteIds.map(id => EquipmentAPI.getEquipment(id));
+                const equipmentResponses = await Promise.all(equipmentPromises);
                 
-                await EquipmentAPI.batchDelete({ equipment_ids: currentBatchDeleteIds });
+                // 保存原始数据
+                undoBatchDeleteOriginalData = equipmentResponses;
+                undoBatchDeleteIds = [...currentBatchDeleteIds];
                 
-                showNotification(`成功删除 ${currentBatchDeleteIds.length} 台设备`, 'success');
+                // 标记所有设备为待删除状态
+                const markPromises = currentBatchDeleteIds.map(id => {
+                    const equipment = equipmentResponses.find(e => e.id === id);
+                    const markForDeletionData = {
+                        status: '停用',
+                        status_change_date: new Date().toISOString().split('T')[0],
+                        disposal_reason: '准备删除，可撤回操作',
+                        notes: (equipment.notes || '') + '\n[系统标记] 设备准备删除，可撤回操作'
+                    };
+                    return EquipmentAPI.updateEquipment(id, markForDeletionData);
+                });
+                
+                await Promise.all(markPromises);
+                
+                // 关闭批量删除确认模态框
                 closeBatchDeleteModal();
-                loadEquipmentData(); // 重新加载数据
-                await loadDashboardStats(); // 刷新统计数据
+                
+                // 显示批量撤回通知
+                showBatchUndoNotification();
+                
+                // 开始批量撤回倒计时
+                startBatchUndoCountdown();
+                
             } catch (error) {
-                console.error('批量删除失败:', error);
-                showNotification('批量删除失败: ' + error.message, 'error');
+                console.error('批量标记设备删除失败:', error);
+                showNotification('批量标记设备删除失败: ' + error.message, 'error');
             }
         }
 

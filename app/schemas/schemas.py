@@ -178,10 +178,17 @@ class EquipmentBase(BaseModel):
             if self.status not in ["在用", "停用"]:
                 raise ValueError("检定结果为合格时，设备状态只能是'在用'或'停用'")
         elif self.current_calibration_result == "不合格":
-            # 暂时放宽验证以避免500错误，记录警告但允许查询
+            # 业务规则：检定不合格的设备必须报废
+            # 为了兼容现有数据，查询时宽松处理，创建/更新时严格验证
             if self.status != "报废":
-                import warnings
-                warnings.warn(f"设备 {self.name} 检定结果为不合格但状态不是'报废'，建议更正", UserWarning)
+                # 检查是否为创建/更新操作（通过是否有设备ID判断）
+                if not hasattr(self, 'id') or not self.id:
+                    # 新建设备时严格执行业务规则
+                    raise ValueError("新建设备时，检定结果为不合格的设备状态必须设置为'报废'")
+                else:
+                    # 现有设备查询时记录警告，但允许显示
+                    import warnings
+                    warnings.warn(f"设备 {self.name} (ID: {getattr(self, 'id', '未知')}) 检定结果为不合格但状态不是'报废'，请及时更正", UserWarning)
         
         # 验证外检字段：当检定方式为"外检"时必填
         if self.calibration_method == "外检":
@@ -251,10 +258,9 @@ class EquipmentUpdate(BaseModel):
                 if self.status not in ["在用", "停用"]:
                     raise ValueError("检定结果为合格时，设备状态只能是'在用'或'停用'")
             elif self.current_calibration_result == "不合格":
-                # 暂时放宽验证以避免500错误
+                # 更新设备时严格执行业务规则：不合格必须报废
                 if self.status != "报废":
-                    import warnings
-                    warnings.warn("检定结果为不合格时，设备状态应该是'报废'", UserWarning)
+                    raise ValueError("检定结果为不合格时，设备状态必须设置为'报废'")
         
         # 验证外检字段：当检定方式为"外检"时必填
         if self.calibration_method == "外检":

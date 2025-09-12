@@ -147,6 +147,26 @@
         
         .equipment-action-btn {
             opacity: 0.8;
+            cursor: pointer !important;
+            transition: opacity 0.2s ease;
+            border: none !important;
+            background: none !important;
+            padding: 2px 4px !important;
+        }
+        
+        .equipment-action-btn:hover {
+            opacity: 1;
+        }
+        
+        /* 确保表格中的所有按钮都能正确显示指针 */
+        td .equipment-action-btn,
+        .equipment-action-btn[onclick] {
+            cursor: pointer !important;
+        }
+        
+        /* 防止其他样式覆盖 */
+        button.equipment-action-btn:not(:disabled) {
+            cursor: pointer !important;
         }
         
         /* 统计卡片样式优化 */

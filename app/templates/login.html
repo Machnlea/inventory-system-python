@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,51 +12,112 @@
     <script src="/static/js/tab-session-manager.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
         body {
             font-family: 'Inter', sans-serif;
         }
+
         .gradient-bg {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
+
         .glass-effect {
             backdrop-filter: blur(2px);
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
+
         .input-focus:focus {
             border-color: #667eea;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
+
         .btn-primary {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             transition: all 0.3s ease;
         }
+
         .btn-primary:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
         }
+
         .fade-in {
             animation: fadeIn 0.5s ease-in;
         }
+
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
+
         .pulse-animation {
             animation: pulse 2s infinite;
         }
+
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        /* 确保通知容器在最顶层 */
+        #notification-container {
+            z-index: 99999 !important;
+            pointer-events: none;
+        }
+
+        #notification-container .notification-item {
+            pointer-events: auto;
+            max-width: 100%;
+            word-wrap: break-word;
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        /* 通知动画优化 */
+        .notification-item {
+            animation: slideInRight 0.3s ease-out;
+        }
+        
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
         }
     </style>
 </head>
+
 <body class="gradient-bg min-h-screen flex items-center justify-center p-4">
     <!-- 背景装饰 -->
     <div class="absolute inset-0 overflow-hidden">
-        <div class="absolute -top-40 -right-40 w-80 h-80 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
-        <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-yellow-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
-        <div class="absolute top-40 left-40 w-80 h-80 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
+        <div
+            class="absolute -top-40 -right-40 w-80 h-80 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob">
+        </div>
+        <div
+            class="absolute -bottom-40 -left-40 w-80 h-80 bg-yellow-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000">
+        </div>
+        <div
+            class="absolute top-40 left-40 w-80 h-80 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000">
+        </div>
     </div>
 
     <!-- 主登录容器 -->
@@ -78,14 +140,9 @@
                         <i class="fas fa-user mr-2"></i>用户名
                     </label>
                     <div class="relative">
-                        <input 
-                            type="text" 
-                            id="username" 
-                            name="username"
-                            required
+                        <input type="text" id="username" name="username" required
                             class="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg text-white placeholder-white/70 input-focus outline-none transition-all duration-200"
-                            placeholder="请输入用户名"
-                        >
+                            placeholder="请输入用户名">
                         <i class="fas fa-user absolute right-3 top-3.5 text-white/70"></i>
                     </div>
                 </div>
@@ -96,19 +153,11 @@
                         <i class="fas fa-lock mr-2"></i>密码
                     </label>
                     <div class="relative">
-                        <input 
-                            type="password" 
-                            id="password" 
-                            name="password"
-                            required
+                        <input type="password" id="password" name="password" required
                             class="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg text-white placeholder-white/70 input-focus outline-none transition-all duration-200"
-                            placeholder="请输入密码"
-                        >
-                        <button 
-                            type="button" 
-                            id="toggle-password"
-                            class="absolute right-3 top-3.5 text-white/70 hover:text-white transition-colors"
-                        >
+                            placeholder="请输入密码">
+                        <button type="button" id="toggle-password"
+                            class="absolute right-3 top-3.5 text-white/70 hover:text-white transition-colors">
                             <i class="fas fa-eye" id="eye-icon"></i>
                         </button>
                     </div>
@@ -117,18 +166,17 @@
                 <!-- 记住我和忘记密码 -->
                 <div class="flex items-center justify-between">
                     <label class="flex items-center">
-                        <input type="checkbox" id="remember-me" name="remember-me" class="w-4 h-4 text-purple-600 bg-white/20 border-white/30 rounded focus:ring-purple-500 focus:ring-2">
+                        <input type="checkbox" id="remember-me" name="remember-me"
+                            class="w-4 h-4 text-purple-600 bg-white/20 border-white/30 rounded focus:ring-purple-500 focus:ring-2">
                         <span class="ml-2 text-sm text-white">记住我</span>
                     </label>
-                    <a href="/forgot-password" class="text-sm text-purple-100 hover:text-white transition-colors">忘记密码？</a>
+                    <a href="/forgot-password"
+                        class="text-sm text-purple-100 hover:text-white transition-colors">忘记密码？</a>
                 </div>
 
                 <!-- 登录按钮 -->
-                <button 
-                    type="submit" 
-                    id="login-btn"
-                    class="w-full btn-primary text-white font-medium py-3 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-purple-200"
-                >
+                <button type="submit" id="login-btn"
+                    class="w-full btn-primary text-white font-medium py-3 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-purple-200">
                     <span id="login-text">
                         <i class="fas fa-sign-in-alt mr-2"></i>登录
                     </span>
@@ -152,7 +200,7 @@
                         部门登录
                     </a>
                 </div>
-                
+
                 <div class="glass-effect rounded-lg p-4">
                     <h3 class="text-white font-medium mb-2">系统信息</h3>
                     <div class="space-y-1 text-sm text-purple-100">
@@ -171,31 +219,31 @@
                 </div>
             </div>
 
-          </div>
+        </div>
     </div>
 
     <!-- 通知容器 -->
-    <div id="notification-container" class="fixed top-4 right-4 z-[9999] space-y-2"></div>
+    <div id="notification-container" class="fixed top-4 right-4 z-[9999] space-y-2 w-72"></div>
 
-    
+
     <script>
         // 等待页面完全加载后再初始化事件
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             console.log('DOMContentLoaded 事件触发');
             console.log('检查全局对象:');
             console.log('  typeof api:', typeof api);
             console.log('  typeof showNotification:', typeof showNotification);
-            
+
             // 加载保存的用户名和密码
             loadSavedCredentials();
-            
+
             // 密码显示/隐藏切换
             const togglePasswordBtn = document.getElementById('toggle-password');
             if (togglePasswordBtn) {
-                togglePasswordBtn.addEventListener('click', function() {
+                togglePasswordBtn.addEventListener('click', function () {
                     const passwordInput = document.getElementById('password');
                     const eyeIcon = document.getElementById('eye-icon');
-                    
+
                     if (passwordInput.type === 'password') {
                         passwordInput.type = 'text';
                         eyeIcon.className = 'fas fa-eye-slash';
@@ -205,28 +253,28 @@
                     }
                 });
             }
-            
+
             // 表单提交处理函数
             async function handleLogin(e) {
                 console.log('表单提交事件触发');
                 if (e) e.preventDefault();
-                
+
                 // 检查api对象是否可用
                 if (typeof api === 'undefined') {
                     console.log('api对象未定义');
                     alert('系统初始化中，请稍后再试');
                     return;
                 }
-                
+
                 console.log('api对象已定义，开始登录流程');
-                
+
                 const username = document.getElementById('username').value.trim();
                 const password = document.getElementById('password').value;
                 const rememberMe = document.getElementById('remember-me').checked;
                 const loginBtn = document.getElementById('login-btn');
                 const loginText = document.getElementById('login-text');
                 const loadingText = document.getElementById('loading-text');
-                
+
                 if (!username || !password) {
                     if (typeof showNotification === 'function') {
                         showNotification('请填写用户名和密码', 'warning');
@@ -235,47 +283,47 @@
                     }
                     return;
                 }
-                
+
                 // 显示加载状态
                 loginBtn.disabled = true;
                 loginText.classList.add('hidden');
                 loadingText.classList.remove('hidden');
-                
+
                 try {
                     console.log('开始发送登录请求...');
-                    
+
                     // 使用标签页会话管理器进行登录
                     const response = await tabSessionManager.login({
                         username: username,
                         password: password
                     });
-                    
+
                     console.log('登录响应:', response);
-                    
-                                        
+
+
                     // 保存用户凭证（如果勾选了记住我）
                     if (rememberMe) {
                         saveCredentials(username, password);
                     } else {
                         clearCredentials();
                     }
-                    
+
                     // 如果showNotification函数存在，使用它
                     if (typeof showNotification === 'function') {
                         showNotification('登录成功！正在跳转...', 'success');
                     }
-                    
+
                     console.log('准备跳转到仪表盘...');
-                    
+
                     // 跳转到仪表盘页面
                     setTimeout(() => {
                         console.log('执行跳转...');
                         window.location.href = '/dashboard';
                     }, 1000);
-                    
+
                 } catch (error) {
                     console.error('登录失败:', error);
-                    
+
                     // 检查是否是用户取消登录
                     if (error.message === '登录已取消') {
                         if (typeof showNotification === 'function') {
@@ -295,7 +343,7 @@
                     loadingText.classList.add('hidden');
                 }
             }
-            
+
             // 表单提交处理
             const loginForm = document.getElementById('login-form');
             if (loginForm) {
@@ -304,14 +352,14 @@
             } else {
                 console.log('未找到登录表单');
             }
-            
+
             // Enter键处理 - 改进版本
-            document.addEventListener('keydown', function(e) {
+            document.addEventListener('keydown', function (e) {
                 if (e.key === 'Enter') {
                     const focusedElement = document.activeElement;
                     // 如果焦点在登录表单的输入框内
                     if (focusedElement && (
-                        focusedElement.id === 'username' || 
+                        focusedElement.id === 'username' ||
                         focusedElement.id === 'password'
                     )) {
                         e.preventDefault();
@@ -319,7 +367,7 @@
                     }
                 }
             });
-            
+
             // 记住我功能函数
             function saveCredentials(username, password) {
                 try {
@@ -330,14 +378,14 @@
                     console.error('保存凭证失败:', error);
                 }
             }
-            
+
             function loadSavedCredentials() {
                 try {
                     const rememberMe = localStorage.getItem('remember_me') === 'true';
                     if (rememberMe) {
                         const savedUsername = localStorage.getItem('saved_username');
                         const savedPassword = localStorage.getItem('saved_password');
-                        
+
                         if (savedUsername && savedPassword) {
                             document.getElementById('username').value = savedUsername;
                             document.getElementById('password').value = atob(savedPassword);
@@ -348,7 +396,7 @@
                     console.error('加载保存的凭证失败:', error);
                 }
             }
-            
+
             function clearCredentials() {
                 try {
                     localStorage.removeItem('saved_username');
@@ -358,11 +406,11 @@
                     console.error('清除凭证失败:', error);
                 }
             }
-            
+
             // 密码修改相关功能
-                        
+
             // 页面加载时检查是否需要修改密码
-                        
+
             // 动画样式
             const style = document.createElement('style');
             style.textContent = `
@@ -383,7 +431,36 @@
                 }
             `;
             document.head.appendChild(style);
+
+            // 添加测试通知功能（用于调试）
+            window.testNotifications = function() {
+                if (typeof showNotification === 'function') {
+                    showNotification('✅ 成功通知：登录成功！正在跳转到仪表盘...', 'success');
+                    setTimeout(() => {
+                        showNotification('❌ 错误通知：用户名或密码错误，请检查后重试', 'error');
+                    }, 1000);
+                    setTimeout(() => {
+                        showNotification('⚠️ 警告通知：请填写用户名和密码', 'warning');
+                    }, 2000);
+                    setTimeout(() => {
+                        showNotification('ℹ️ 信息通知：系统正在维护中，请稍后再试', 'info');
+                    }, 3000);
+                }
+            };
+            
+            // 关闭所有通知的测试函数
+            window.closeAllNotifications = function() {
+                if (window.notificationManager) {
+                    window.notificationManager.closeAllNotifications();
+                }
+            };
+            
+            // 在控制台提示测试方法
+            console.log('💡 提示：');
+            console.log('  - 输入 testNotifications() 测试通知效果');
+            console.log('  - 输入 closeAllNotifications() 关闭所有通知');
         });
     </script>
 </body>
+
 </html>

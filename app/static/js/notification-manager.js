@@ -29,11 +29,36 @@ class NotificationManager {
             if (!this.container && document.body) {
                 this.container = document.createElement('div');
                 this.container.id = 'notification-container';
-                this.container.className = 'fixed top-4 right-4 z-[9999] space-y-2 max-w-md';
+                this.container.className = 'fixed top-4 right-4 z-[9999] space-y-2 w-72';
+                this.container.style.pointerEvents = 'none'; // 让容器不阻挡点击
                 document.body.appendChild(this.container);
             }
         }
         return this.container;
+    }
+
+    // 关闭通知的方法
+    closeNotification(notification) {
+        if (!notification || !notification.parentNode) return;
+        
+        // 清除自动关闭定时器
+        if (notification.autoCloseTimer) {
+            clearTimeout(notification.autoCloseTimer);
+            notification.autoCloseTimer = null;
+        }
+        
+        // 添加关闭动画
+        notification.style.transform = 'translateX(100%)';
+        notification.style.opacity = '0';
+        notification.style.transition = 'all 0.3s ease-out';
+        
+        // 等待动画完成后移除元素
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+                this.repositionNotifications();
+            }
+        }, 300);
     }
 
     // 显示通知
@@ -41,46 +66,60 @@ class NotificationManager {
         const container = this.ensureContainer();
         const notification = document.createElement('div');
         
-        // 设置颜色方案 - 基于设置页面的设计
+        // 设置颜色方案 - 更美观的样式
         const colors = {
             success: {
-                bg: 'bg-white',
-                border: 'border-l-green-500',
+                bg: 'bg-gradient-to-r from-green-50 to-emerald-50',
+                border: 'border-l-4 border-green-500',
                 icon: 'fas fa-check-circle text-green-600',
-                text: 'text-green-900'
+                text: 'text-green-900',
+                shadow: 'shadow-green-500/20'
             },
             error: {
-                bg: 'bg-white',
-                border: 'border-l-red-500',
+                bg: 'bg-gradient-to-r from-red-50 to-rose-50',
+                border: 'border-l-4 border-red-500',
                 icon: 'fas fa-exclamation-circle text-red-600',
-                text: 'text-red-900'
+                text: 'text-red-900',
+                shadow: 'shadow-red-500/20'
             },
             warning: {
-                bg: 'bg-white',
-                border: 'border-l-yellow-500',
+                bg: 'bg-gradient-to-r from-yellow-50 to-amber-50',
+                border: 'border-l-4 border-yellow-500',
                 icon: 'fas fa-exclamation-triangle text-yellow-600',
-                text: 'text-yellow-900'
+                text: 'text-yellow-900',
+                shadow: 'shadow-yellow-500/20'
             },
             info: {
-                bg: 'bg-white',
-                border: 'border-l-blue-500',
+                bg: 'bg-gradient-to-r from-blue-50 to-sky-50',
+                border: 'border-l-4 border-blue-500',
                 icon: 'fas fa-info-circle text-blue-600',
-                text: 'text-blue-900'
+                text: 'text-blue-900',
+                shadow: 'shadow-blue-500/20'
             }
         };
         
         const colorScheme = colors[type] || colors.info;
         
-        notification.className = `${colorScheme.bg} ${colorScheme.border} border-l-4 px-6 py-4 rounded-lg shadow-lg transform transition-all duration-300 translate-x-full`;
-        notification.style.marginBottom = '12px';
+        // 优化样式，让通知更美观 - 减少上下边距，保持左右边距
+        notification.className = `notification-item ${colorScheme.bg} ${colorScheme.border} ${colorScheme.shadow} rounded-xl shadow-xl transform transition-all duration-300 translate-x-full w-full px-4 py-2`;
+        notification.style.pointerEvents = 'auto'; // 让通知可以接收点击事件
+        notification.style.minHeight = '48px'; // 减少最小高度
+        
+        // 创建唯一ID用于关闭
+        const notificationId = 'notification-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        notification.id = notificationId;
         
         notification.innerHTML = `
             <div class="flex items-center">
-                <i class="${colorScheme.icon} text-xl mr-3"></i>
-                <span class="${colorScheme.text} font-medium">${message}</span>
-                <div class="ml-auto pl-3">
-                    <button onclick="this.closest('.transform').remove()" class="text-gray-400 hover:text-gray-600">
-                        <i class="fas fa-times"></i>
+                <div class="flex-shrink-0 mr-3">
+                    <i class="${colorScheme.icon} text-lg"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="${colorScheme.text} font-medium text-lg leading-snug break-words">${message}</p>
+                </div>
+                <div class="flex-shrink-0 ml-3">
+                    <button onclick="window.notificationManager && window.notificationManager.closeNotification(document.getElementById('${notificationId}'))" class="text-gray-400 hover:text-gray-600 p-1 hover:bg-gray-100 rounded-full transition-colors">
+                        <i class="fas fa-times text-xs"></i>
                     </button>
                 </div>
             </div>
@@ -88,38 +127,33 @@ class NotificationManager {
         
         container.appendChild(notification);
         
-        // 重新排列所有通知的位置
-        this.repositionNotifications();
-        
         // 触发动画
         setTimeout(() => {
             notification.classList.remove('translate-x-full');
         }, 100);
         
-        // 3秒后自动消失
-        setTimeout(() => {
-            notification.classList.add('translate-x-full');
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.parentNode.removeChild(notification);
-                    // 重新计算剩余通知的位置
-                    this.repositionNotifications();
-                }
-            }, 300);
-        }, 3000);
+        // 5秒后自动消失（增加时间让用户有足够时间阅读）
+        const autoCloseTimer = setTimeout(() => {
+            this.closeNotification(notification);
+        }, 5000);
+        
+        // 将定时器保存到元素上，以便手动关闭时可以清除
+        notification.autoCloseTimer = autoCloseTimer;
     }
 
-    // 重新计算通知位置
-    repositionNotifications() {
+    // 关闭所有通知
+    closeAllNotifications() {
         const container = this.ensureContainer();
-        const notifications = Array.from(container.querySelectorAll('.transform.translate-x-full')).reverse();
-        
-        let topPosition = 16; // 初始位置距离顶部16px
-        
-        notifications.forEach((notification, index) => {
-            notification.style.top = `${topPosition}px`;
-            topPosition += 92; // 每个通知高度约80px + 间距12px
+        const notifications = container.querySelectorAll('.notification-item');
+        notifications.forEach(notification => {
+            this.closeNotification(notification);
         });
+    }
+
+    // 重新计算通知位置（现在使用简单的垂直堆叠）
+    repositionNotifications() {
+        // 由于我们使用了 space-y-2 类和自然的文档流，不需要手动定位
+        // 这个函数保留用于未来可能的扩展
     }
 
     // 显示成功通知

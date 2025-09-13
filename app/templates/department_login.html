@@ -63,11 +63,41 @@
         .notification.info {
             background-color: #3B82F6;
         }
+        
+        /* 确保通知容器在最顶层 */
+        #notification-container {
+            z-index: 99999 !important;
+            pointer-events: none;
+        }
+        
+        #notification-container .notification-item {
+            pointer-events: auto;
+            max-width: 100%;
+            word-wrap: break-word;
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        /* 通知动画优化 */
+        .notification-item {
+            animation: slideInRight 0.3s ease-out;
+        }
+        
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
     </style>
 </head>
 <body class="gradient-bg min-h-screen flex items-center justify-center">
     <!-- 通知容器 -->
-    <div id="notification-container" class="fixed top-4 right-4 z-[9999] space-y-2"></div>
+    <div id="notification-container" class="fixed top-4 right-4 z-[9999] space-y-2 w-72"></div>
 
     <div class="glass-effect rounded-2xl p-8 max-w-md w-full mx-4 fade-in">
         <!-- Logo和标题 -->

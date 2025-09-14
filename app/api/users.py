@@ -91,7 +91,7 @@ def read_user(user_id: int,
               current_user: User = Depends(get_current_admin_user)):
     db_user = users.get_user(db, user_id=user_id)
     if db_user is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="用户未找到")
     return db_user
 
 @router.put("/{user_id}", response_model=User)
@@ -100,7 +100,7 @@ def update_user(user_id: int, user_update: UserUpdate,
                 current_user: User = Depends(get_current_admin_user)):
     db_user = users.update_user(db, user_id=user_id, user_update=user_update)
     if db_user is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="用户未找到")
     return db_user
 
 @router.delete("/{user_id}")
@@ -110,7 +110,7 @@ def delete_user(user_id: int,
     # 检查用户是否存在
     db_user = users.get_user(db, user_id=user_id)
     if not db_user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="用户未找到")
     
     # 检查用户是否有关联的设备类别权限
     user_categories = users.get_user_categories(db, user_id)
@@ -135,9 +135,9 @@ def delete_user(user_id: int,
     # 删除用户
     success = users.delete_user(db, user_id=user_id)
     if not success:
-        raise HTTPException(status_code=400, detail="Failed to delete user")
+        raise HTTPException(status_code=400, detail="删除用户失败")
     
-    return {"message": "User deleted successfully"}
+    return {"message": "用户删除成功"}
 
 @router.get("/{user_id}/categories", response_model=List[UserCategory])
 def get_user_categories(user_id: int,

@@ -6,14 +6,27 @@
 class TabSessionManager {
     constructor() {
         this.tabId = this.generateTabId();
-        this.channel = new BroadcastChannel('tab-session-manager');
         this.currentUser = null;
         this.loginConflictHandler = null;
         
-        // 监听其他标签页的消息
-        this.channel.addEventListener('message', (event) => {
-            this.handleMessage(event.data);
-        });
+        // 初始化 BroadcastChannel，添加错误处理
+        try {
+            this.channel = new BroadcastChannel('tab-session-manager');
+            
+            // 监听其他标签页的消息
+            this.channel.addEventListener('message', (event) => {
+                this.handleMessage(event.data);
+            });
+            
+            // 监听 channel 错误
+            this.channel.addEventListener('messageerror', (event) => {
+                console.warn('BroadcastChannel 消息错误:', event);
+            });
+            
+        } catch (error) {
+            console.warn('BroadcastChannel 初始化失败:', error);
+            this.channel = null;
+        }
         
         // 页面卸载时清理资源
         window.addEventListener('beforeunload', () => {
@@ -63,6 +76,16 @@ class TabSessionManager {
      */
     async checkLoginConflict(username) {
         return new Promise((resolve) => {
+            // 检查 channel 是否可用
+            if (!this.channel || this.channel.readyState === 'closed') {
+                console.warn('BroadcastChannel 不可用，跳过冲突检测');
+                resolve({
+                    hasConflict: false,
+                    conflicts: []
+                });
+                return;
+            }
+            
             const requestId = this.generateTabId();
             const timeout = 1000; // 1秒超时
             
@@ -77,13 +100,23 @@ class TabSessionManager {
             
             this.channel.addEventListener('message', messageHandler);
             
-            // 发送检查请求
-            this.channel.postMessage({
-                type: 'login_check_request',
-                username: username,
-                requestId: requestId,
-                fromTab: this.tabId
-            });
+            try {
+                // 发送检查请求
+                this.channel.postMessage({
+                    type: 'login_check_request',
+                    username: username,
+                    requestId: requestId,
+                    fromTab: this.tabId
+                });
+            } catch (error) {
+                console.warn('发送冲突检测消息失败:', error);
+                this.channel.removeEventListener('message', messageHandler);
+                resolve({
+                    hasConflict: false,
+                    conflicts: []
+                });
+                return;
+            }
             
             // 等待响应
             setTimeout(() => {
@@ -122,13 +155,19 @@ class TabSessionManager {
     handleLoginCheckRequest(data) {
         const currentUser = this.getCurrentUser();
         
-        this.channel.postMessage({
-            type: 'login_check_response',
-            requestId: data.requestId,
-            hasUser: !!currentUser,
-            username: currentUser ? currentUser.username : null,
-            tabId: this.tabId
-        });
+        try {
+            if (this.channel && this.channel.readyState !== 'closed') {
+                this.channel.postMessage({
+                    type: 'login_check_response',
+                    requestId: data.requestId,
+                    hasUser: !!currentUser,
+                    username: currentUser ? currentUser.username : null,
+                    tabId: this.tabId
+                });
+            }
+        } catch (error) {
+            console.warn('发送登录检查响应失败:', error);
+        }
     }
     
     /**
@@ -268,12 +307,18 @@ class TabSessionManager {
             this.setSession(response);
             
             // 通知其他标签页会话更新
-            this.channel.postMessage({
-                type: 'session_update',
-                action: 'login',
-                username: response.user.username,
-                tabId: this.tabId
-            });
+            try {
+                if (this.channel && this.channel.readyState !== 'closed') {
+                    this.channel.postMessage({
+                        type: 'session_update',
+                        action: 'login',
+                        username: response.user.username,
+                        tabId: this.tabId
+                    });
+                }
+            } catch (error) {
+                console.warn('发送会话更新消息失败:', error);
+            }
             
             return response;
             
@@ -486,12 +531,18 @@ class TabSessionManager {
      * 强制退出其他标签页的登录
      */
     forceLogoutOtherTabs(username) {
-        this.channel.postMessage({
-            type: 'force_logout',
-            username: username,
-            fromTab: this.tabId,
-            targetTabs: null // null表示所有其他标签页
-        });
+        try {
+            if (this.channel && this.channel.readyState !== 'closed') {
+                this.channel.postMessage({
+                    type: 'force_logout',
+                    username: username,
+                    fromTab: this.tabId,
+                    targetTabs: null // null表示所有其他标签页
+                });
+            }
+        } catch (error) {
+            console.warn('发送强制退出消息失败:', error);
+        }
     }
     
     /**
@@ -539,12 +590,18 @@ class TabSessionManager {
         
         // 通知其他标签页
         if (username) {
-            this.channel.postMessage({
-                type: 'session_update',
-                action: 'logout',
-                username: username,
-                tabId: this.tabId
-            });
+            try {
+                if (this.channel && this.channel.readyState !== 'closed') {
+                    this.channel.postMessage({
+                        type: 'session_update',
+                        action: 'logout',
+                        username: username,
+                        tabId: this.tabId
+                    });
+                }
+            } catch (error) {
+                console.warn('发送退出登录消息失败:', error);
+            }
         }
     }
     
@@ -584,8 +641,12 @@ class TabSessionManager {
      * 页面卸载时的清理工作
      */
     cleanup() {
-        if (this.channel) {
-            this.channel.close();
+        try {
+            if (this.channel && this.channel.readyState !== 'closed') {
+                this.channel.close();
+            }
+        } catch (error) {
+            console.warn('清理 BroadcastChannel 失败:', error);
         }
     }
     

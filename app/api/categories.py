@@ -131,7 +131,7 @@ def read_category(category_id: int,
                  current_user = Depends(get_current_user)):
     db_category = categories.get_category(db, category_id=category_id)
     if db_category is None:
-        raise HTTPException(status_code=404, detail="Category not found")
+        raise HTTPException(status_code=404, detail="类别未找到")
     
     # 普通用户权限检查：只能查看授权的类别
     if not current_user.is_admin:
@@ -153,7 +153,7 @@ def update_category(category_id: int, category: EquipmentCategoryCreate,
                    current_user = Depends(get_current_admin_user)):
     db_category = categories.update_category(db, category_id=category_id, category=category)
     if db_category is None:
-        raise HTTPException(status_code=404, detail="Category not found")
+        raise HTTPException(status_code=404, detail="类别未找到")
     return db_category
 
 @router.delete("/{category_id}")
@@ -178,7 +178,7 @@ def add_predefined_name(category_id: int,
     # 检查类别是否存在
     existing_category = categories.get_category(db, category_id)
     if not existing_category:
-        raise HTTPException(status_code=404, detail="Category not found")
+        raise HTTPException(status_code=404, detail="类别未找到")
     
     # 检查重复
     predefined_names = safe_get_list(existing_category.predefined_names)
@@ -225,7 +225,7 @@ def remove_predefined_name(category_id: int,
         # 获取类别信息
         category = categories.get_category(db, category_id)
         if not category:
-            raise HTTPException(status_code=404, detail="Category not found")
+            raise HTTPException(status_code=404, detail="类别未找到")
         
         # 获取该类别下所有设备的名称和internal_id
         equipment_data = db.query(Equipment.name, Equipment.internal_id).filter(
@@ -288,12 +288,12 @@ def edit_predefined_name(category_id: int,
     # 检查类别是否存在
     existing_category = categories.get_category(db, category_id)
     if not existing_category:
-        raise HTTPException(status_code=404, detail="Category not found")
+        raise HTTPException(status_code=404, detail="类别未找到")
     
     # 检查旧名称是否存在
     current_names = safe_get_list(existing_category.predefined_names)
     if old_name not in current_names:
-        raise HTTPException(status_code=404, detail="Old name not found in predefined names")
+        raise HTTPException(status_code=404, detail="旧名称在预定义名称中未找到")
     
     # 检查新名称是否已存在（排除旧名称）
     if new_name in current_names and new_name != old_name:
@@ -334,8 +334,8 @@ def update_predefined_names(category_id: int,
     try:
         category = categories.update_predefined_names(db, category_id, request.names)
         if not category:
-            raise HTTPException(status_code=404, detail="Category not found")
-        return {"message": "Predefined names updated successfully", "category": category}
+            raise HTTPException(status_code=404, detail="类别未找到")
+        return {"message": "预定义名称更新成功", "category": category}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -346,7 +346,7 @@ def get_predefined_names(category_id: int,
     """获取指定类别的预定义器具名称列表"""
     category = categories.get_category(db, category_id)
     if not category:
-        raise HTTPException(status_code=404, detail="Category not found")
+        raise HTTPException(status_code=404, detail="类别未找到")
     
     # 普通用户权限检查：只能查看授权的类别或有设备权限的类别
     if not current_user.is_admin:
@@ -400,7 +400,7 @@ def get_category_equipment_usage(category_id: int,
     # 获取类别信息
     category = db.query(EquipmentCategory).filter(EquipmentCategory.id == category_id).first()
     if not category:
-        raise HTTPException(status_code=404, detail="Category not found")
+        raise HTTPException(status_code=404, detail="类别未找到")
     
     # 普通用户权限检查：只能查看授权的类别或有设备权限的类别
     authorized_equipment_names = []  # 用户有权限的设备名称列表

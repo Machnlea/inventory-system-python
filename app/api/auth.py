@@ -27,7 +27,7 @@ class SessionConflictResponse(BaseModel):
 def get_current_user(token_data = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
+        detail="无法验证凭据",
         headers={"WWW-Authenticate": "Bearer"},
     )
     
@@ -64,7 +64,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
+            detail="用户名或密码错误",
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token_expires = timedelta(hours=settings.ACCESS_TOKEN_EXPIRE_HOURS)
@@ -79,7 +79,7 @@ async def login_json(login_request: LoginRequest, request: Request, db: Session 
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
+            detail="用户名或密码错误",
         )
     
     # 获取客户端信息
@@ -167,11 +167,11 @@ async def logout(request: Request, current_user: User = Depends(get_current_user
             
             if session_id:
                 session_manager.invalidate_session(session_id)
-                return {"message": "Successfully logged out"}
+                return {"message": "登出成功"}
         except Exception as e:
             print(f"Error during logout: {e}")
     
-    return {"message": "Logout completed"}
+    return {"message": "登出完成"}
 
 @router.get("/sessions")
 async def get_user_sessions(current_user: User = Depends(get_current_user)):
@@ -195,11 +195,11 @@ async def terminate_session(session_id: str, current_user: User = Depends(get_cu
     """终止指定会话（仅管理员）"""
     success = session_manager.invalidate_session(session_id)
     if success:
-        return {"message": "Session terminated successfully"}
+        return {"message": "会话终止成功"}
     else:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Session not found"
+            detail="会话未找到"
         )
 
 @router.get("/sessions/stats")

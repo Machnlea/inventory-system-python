@@ -78,7 +78,7 @@ def read_equipment(equipment_id: int,
         user_id=current_user.id, is_admin=current_user.is_admin
     )
     if db_equipment is None:
-        raise HTTPException(status_code=404, detail="Equipment not found")
+        raise HTTPException(status_code=404, detail="设备未找到")
     return db_equipment
 
 @router.put("/{equipment_id}", response_model=Equipment)
@@ -91,7 +91,7 @@ def update_equipment(equipment_id: int, equipment_update: EquipmentUpdate,
         user_id=current_user.id, is_admin=current_user.is_admin
     )
     if db_equipment is None:
-        raise HTTPException(status_code=404, detail="Equipment not found")
+        raise HTTPException(status_code=404, detail="设备未找到")
     
     # 记录更新前的状态
     old_status = db_equipment.status
@@ -130,7 +130,7 @@ def delete_equipment(equipment_id: int,
         user_id=current_user.id, is_admin=current_user.is_admin
     )
     if db_equipment is None:
-        raise HTTPException(status_code=404, detail="Equipment not found")
+        raise HTTPException(status_code=404, detail="设备未找到")
     
     # 记录操作日志
     create_audit_log(
@@ -143,8 +143,8 @@ def delete_equipment(equipment_id: int,
     
     success = equipment.delete_equipment(db, equipment_id=equipment_id)
     if not success:
-        raise HTTPException(status_code=404, detail="Equipment not found")
-    return {"message": "Equipment deleted successfully"}
+        raise HTTPException(status_code=404, detail="设备未找到")
+    return {"message": "设备删除成功"}
 
 @router.post("/filter", response_model=PaginatedEquipment)
 def filter_equipments(filters: EquipmentFilter, skip: int = 0, limit: int = 999999,

@@ -48,7 +48,7 @@ def read_department(department_id: int,
                    current_user = Depends(get_current_user)):
     db_department = departments.get_department(db, department_id=department_id)
     if db_department is None:
-        raise HTTPException(status_code=404, detail="Department not found")
+        raise HTTPException(status_code=404, detail="部门未找到")
     return db_department
 
 @router.put("/{department_id}", response_model=Department)
@@ -57,7 +57,7 @@ def update_department(department_id: int, department: DepartmentUpdate,
                      current_user = Depends(get_current_admin_user)):
     db_department = departments.update_department(db, department_id=department_id, department=department)
     if db_department is None:
-        raise HTTPException(status_code=404, detail="Department not found")
+        raise HTTPException(status_code=404, detail="部门未找到")
     return db_department
 
 @router.delete("/{department_id}")

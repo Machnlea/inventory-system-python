@@ -23,7 +23,7 @@ async def verify_api_key(x_api_key: str = Header(..., description="API密钥")):
     if not x_api_key:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="API Key is required"
+            detail="需要API密钥"
         )
     
     # 这里可以实现更复杂的API Key验证逻辑
@@ -37,7 +37,7 @@ async def verify_api_key(x_api_key: str = Header(..., description="API密钥")):
     if x_api_key not in valid_api_keys:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid API Key"
+            detail="无效的API密钥"
         )
     
     return x_api_key

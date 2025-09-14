@@ -133,7 +133,7 @@
             </div>
 
             <!-- 登录表单 -->
-            <form id="login-form" class="space-y-6">
+            <form id="login-form" class="space-y-6" onsubmit="return false;">
                 <!-- 用户名输入 -->
                 <div class="space-y-2">
                     <label for="username" class="block text-sm font-medium text-white">
@@ -257,7 +257,11 @@
             // 表单提交处理函数
             async function handleLogin(e) {
                 console.log('表单提交事件触发');
-                if (e) e.preventDefault();
+                // 确保阻止表单的默认提交行为
+                if (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
 
                 // 检查api对象是否可用
                 if (typeof api === 'undefined') {
@@ -323,18 +327,54 @@
 
                 } catch (error) {
                     console.error('登录失败:', error);
-
+                    
                     // 检查是否是用户取消登录
                     if (error.message === '登录已取消') {
                         if (typeof showNotification === 'function') {
                             showNotification('登录已取消', 'info');
                         }
-                    } else {
-                        if (typeof showNotification === 'function') {
-                            showNotification(error.message || '登录失败，请检查用户名和密码', 'error');
-                        } else {
-                            alert('登录失败: ' + error.message);
+                        return;
+                    }
+                    
+                    // 处理不同类型的错误，提供用户友好的错误信息
+                    let errorMessage = '登录失败，请检查用户名和密码';
+                    
+                    // 检查是否是BroadcastChannel相关的技术错误
+                    if (error.message && (error.message.includes('BroadcastChannel') || error.message.includes('postMessage') || error.message.includes('Channel'))) {
+                        console.warn('检测到BroadcastChannel技术错误，使用默认错误信息');
+                        errorMessage = '登录失败，请检查用户名和密码';
+                    }
+                    // 检查是否有HTTP响应错误信息
+                    else if (error.response && error.response.data) {
+                        const serverError = error.response.data;
+                        if (typeof serverError === 'string') {
+                            errorMessage = serverError;
+                        } else if (serverError.detail) {
+                            errorMessage = serverError.detail;
+                        } else if (serverError.message) {
+                            errorMessage = serverError.message;
                         }
+                    }
+                    // 检查是否是网络连接错误
+                    else if (error.message && (error.message.includes('网络') || error.message.includes('fetch') || error.message.includes('NetworkError'))) {
+                        errorMessage = '网络连接失败，请检查网络设置';
+                    }
+                    // 检查是否是401认证错误
+                    else if (error.message && error.message.includes('401')) {
+                        errorMessage = '用户名或密码错误';
+                    }
+                    // 使用服务器返回的错误信息，但过滤掉技术性错误
+                    else if (error.message && 
+                             !error.message.includes('postMessage') && 
+                             !error.message.includes('Channel') && 
+                             !error.message.includes('InvalidStateError')) {
+                        errorMessage = error.message;
+                    }
+                    
+                    if (typeof showNotification === 'function') {
+                        showNotification(errorMessage, 'error');
+                    } else {
+                        alert('登录失败: ' + errorMessage);
                     }
                 } finally {
                     // 恢复按钮状态
@@ -349,6 +389,13 @@
             if (loginForm) {
                 console.log('找到登录表单，绑定提交事件');
                 loginForm.addEventListener('submit', handleLogin);
+                
+                // 额外的安全措施：确保表单永远不会执行默认提交
+                loginForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                });
             } else {
                 console.log('未找到登录表单');
             }
@@ -363,7 +410,7 @@
                         focusedElement.id === 'password'
                     )) {
                         e.preventDefault();
-                        handleLogin();
+                        handleLogin(e);
                     }
                 }
             });

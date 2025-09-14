@@ -54,8 +54,14 @@ class ApiClient {
                 
                 // 处理401未授权错误
                 if (response.status === 401) {
-                    this.handleUnauthorized();
-                    throw new Error('登录已过期, 请重新登录');
+                    // 如果是登录接口，不要调用handleUnauthorized，避免重定向循环
+                    if (endpoint.includes('/api/auth/login')) {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(errorData.detail || '用户名或密码错误');
+                    } else {
+                        this.handleUnauthorized();
+                        throw new Error('登录已过期, 请重新登录');
+                    }
                 }
 
                 // 处理409冲突错误（会话冲突），不要当作常规错误

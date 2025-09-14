@@ -1102,9 +1102,9 @@
                     continue;
                 }
 
-                // 验证文件大小 (10MB限制)
-                if (file.size > 10 * 1024 * 1024) {
-                    showNotification(`文件过大: ${file.name}\\n文件大小不能超过 10MB`, 'error');
+                // 验证文件大小 (100MB限制)
+                if (file.size > 100 * 1024 * 1024) {
+                    showNotification(`文件过大: ${file.name}\\n文件大小不能超过 100MB`, 'error');
                     continue;
                 }
 

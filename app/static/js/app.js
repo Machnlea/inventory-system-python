@@ -3557,9 +3557,9 @@ async function uploadAttachment() {
         return;
     }
     
-    // 验证文件大小 (最大10MB)
-    if (file.size > 10 * 1024 * 1024) {
-        showAlert('文件大小不能超过10MB', 'danger');
+    // 验证文件大小 (最大100MB)
+    if (file.size > 100 * 1024 * 1024) {
+        showAlert('文件大小不能超过100MB', 'danger');
         return;
     }
     

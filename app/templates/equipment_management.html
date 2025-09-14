@@ -1136,7 +1136,7 @@
                             <span id="singleCertificateFileCount" class="text-sm text-gray-500">未选择文件</span>
                         </div>
                         <div id="singleCertificateFileList" class="space-y-1"></div>
-                        <p class="text-xs text-gray-500 mt-1">支持PDF、JPG、PNG、DOC、DOCX格式，可选择多个文件，单文件大小不超过10MB</p>
+                        <p class="text-xs text-gray-500 mt-1">支持PDF、JPG、PNG、DOC、DOCX格式，可选择多个文件，单文件大小不超过100MB</p>
                     </div>
 
                     <!-- 报废文件上传（仅在检定不合格时显示） -->
@@ -1152,7 +1152,7 @@
                             <span id="singleDisposalFileCount" class="text-sm text-gray-500">未选择文件</span>
                         </div>
                         <div id="singleDisposalFileList" class="space-y-1"></div>
-                        <p class="text-xs text-gray-500 mt-1">支持PDF、JPG、PNG、DOC、DOCX格式，可选择多个文件，单文件大小不超过10MB</p>
+                        <p class="text-xs text-gray-500 mt-1">支持PDF、JPG、PNG、DOC、DOCX格式，可选择多个文件，单文件大小不超过100MB</p>
                     </div>
                 </div>
 
@@ -4172,7 +4172,7 @@
                     fileItem.className = 'flex items-center justify-between bg-gray-50 px-3 py-2 rounded border text-sm';
 
                     // 文件大小检查
-                    const maxSize = 10 * 1024 * 1024; // 10MB
+                    const maxSize = 100 * 1024 * 1024; // 100MB
                     const isValidSize = file.size <= maxSize;
                     const sizeClass = isValidSize ? 'text-green-600' : 'text-red-600';
 

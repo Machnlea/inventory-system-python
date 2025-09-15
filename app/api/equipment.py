@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from sqlalchemy.orm import Session
 from datetime import date, datetime
 from calendar import monthrange
@@ -11,8 +11,13 @@ from app.schemas.schemas import Equipment, EquipmentCreate, EquipmentUpdate, Equ
 from app.api.audit_logs import create_audit_log
 from app.api.auth import get_current_user
 from app.utils.auto_id import generate_internal_id
+from app.core.logging import get_context_logger, log_database_operation
+import logging
 
 router = APIRouter()
+
+# 获取日志记录器
+equipment_logger = logging.getLogger("equipment")
 
 @router.get("/", response_model=PaginatedEquipment)
 def read_equipments(skip: int = 0, limit: int = 999999,

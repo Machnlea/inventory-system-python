@@ -102,6 +102,20 @@
             border-color: transparent;
             box-shadow: 0 0 0 2px #3b82f6;
         }
+        
+        /* 管理工具卡片样式 */
+        .management-tool-card {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            transition: all 0.2s ease-in-out;
+        }
+        .management-tool-card:hover {
+            border-color: #d1d5db;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transform: translateY(-1px);
+        }
         .form-checkbox {
             border-radius: 0.25rem;
             border-color: #d1d5db;
@@ -459,6 +473,139 @@
                                     <label class="setting-label">备份路径</label>
                                     <input type="text" id="backupPath" value="./backups"
                                            class="form-input">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 系统管理工具 -->
+                    <div class="settings-card mb-6 fade-in">
+                        <div class="settings-header">
+                            <h3 class="text-lg font-semibold text-gray-900">
+                                <i class="fas fa-tools mr-2 text-indigo-600"></i>
+                                系统管理工具
+                            </h3>
+                        </div>
+                        <div class="settings-content">
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <!-- 日志管理 -->
+                                <div class="management-tool-card">
+                                    <div class="flex items-center mb-3">
+                                        <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                                            <i class="fas fa-file-alt text-blue-600"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-medium text-gray-900">日志管理</h4>
+                                            <p class="text-sm text-gray-500">查看系统日志</p>
+                                        </div>
+                                    </div>
+                                    <p class="text-sm text-gray-600 mb-3">
+                                        查看和分析系统运行日志、错误日志、安全日志和API访问日志
+                                    </p>
+                                    <button onclick="openLogViewer()" class="w-full bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors">
+                                        <i class="fas fa-external-link-alt mr-2"></i>
+                                        打开日志查看器
+                                    </button>
+                                </div>
+
+                                <!-- 系统监控 -->
+                                <div class="management-tool-card">
+                                    <div class="flex items-center mb-3">
+                                        <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                                            <i class="fas fa-chart-line text-green-600"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-medium text-gray-900">系统监控</h4>
+                                            <p class="text-sm text-gray-500">性能监控</p>
+                                        </div>
+                                    </div>
+                                    <p class="text-sm text-gray-600 mb-3">
+                                        监控系统性能、资源使用情况和运行状态
+                                    </p>
+                                    <button onclick="showSystemStats()" class="w-full bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors">
+                                        <i class="fas fa-tachometer-alt mr-2"></i>
+                                        查看系统状态
+                                    </button>
+                                </div>
+
+                                <!-- 数据库管理 -->
+                                <div class="management-tool-card">
+                                    <div class="flex items-center mb-3">
+                                        <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
+                                            <i class="fas fa-database text-purple-600"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-medium text-gray-900">数据库管理</h4>
+                                            <p class="text-sm text-gray-500">数据维护</p>
+                                        </div>
+                                    </div>
+                                    <p class="text-sm text-gray-600 mb-3">
+                                        数据库备份、恢复和优化工具
+                                    </p>
+                                    <button onclick="showDatabaseTools()" class="w-full bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600 transition-colors">
+                                        <i class="fas fa-wrench mr-2"></i>
+                                        数据库工具
+                                    </button>
+                                </div>
+
+                                <!-- 安全审计 -->
+                                <div class="management-tool-card">
+                                    <div class="flex items-center mb-3">
+                                        <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center mr-3">
+                                            <i class="fas fa-shield-alt text-red-600"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-medium text-gray-900">安全审计</h4>
+                                            <p class="text-sm text-gray-500">安全检查</p>
+                                        </div>
+                                    </div>
+                                    <p class="text-sm text-gray-600 mb-3">
+                                        查看安全事件、登录记录和权限审计
+                                    </p>
+                                    <button onclick="showSecurityAudit()" class="w-full bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition-colors">
+                                        <i class="fas fa-search mr-2"></i>
+                                        安全审计
+                                    </button>
+                                </div>
+
+                                <!-- 系统清理 -->
+                                <div class="management-tool-card">
+                                    <div class="flex items-center mb-3">
+                                        <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center mr-3">
+                                            <i class="fas fa-broom text-yellow-600"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-medium text-gray-900">系统清理</h4>
+                                            <p class="text-sm text-gray-500">清理工具</p>
+                                        </div>
+                                    </div>
+                                    <p class="text-sm text-gray-600 mb-3">
+                                        清理临时文件、过期日志和无用数据
+                                    </p>
+                                    <button onclick="showCleanupTools()" class="w-full bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 transition-colors">
+                                        <i class="fas fa-trash-alt mr-2"></i>
+                                        清理工具
+                                    </button>
+                                </div>
+
+                                <!-- API文档 -->
+                                <div class="management-tool-card">
+                                    <div class="flex items-center mb-3">
+                                        <div class="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center mr-3">
+                                            <i class="fas fa-book text-indigo-600"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-medium text-gray-900">API文档</h4>
+                                            <p class="text-sm text-gray-500">开发文档</p>
+                                        </div>
+                                    </div>
+                                    <p class="text-sm text-gray-600 mb-3">
+                                        查看系统API文档和接口说明
+                                    </p>
+                                    <button onclick="openApiDocs()" class="w-full bg-indigo-500 text-white px-4 py-2 rounded-md hover:bg-indigo-600 transition-colors">
+                                        <i class="fas fa-external-link-alt mr-2"></i>
+                                        API文档
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -946,6 +1093,181 @@
                     currentUserElement.style.visibility = 'visible'; // 显示用户信息
                 }
             }
+        }
+
+        // 系统管理工具函数
+        function openLogViewer() {
+            // 在新标签页中打开日志查看器
+            window.open('/logs', '_blank');
+        }
+
+        async function showSystemStats() {
+            try {
+                const response = await api.get('/api/system/status');
+                
+                // 创建系统状态模态框
+                const modal = document.createElement('div');
+                modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[2000]';
+                modal.innerHTML = `
+                    <div class="bg-white rounded-lg max-w-4xl max-h-[90vh] w-full mx-4 overflow-y-auto">
+                        <div class="flex items-center justify-between p-6 border-b">
+                            <h3 class="text-xl font-semibold">系统状态监控</h3>
+                            <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+                        <div class="p-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <!-- CPU使用率 -->
+                                <div class="bg-blue-50 p-4 rounded-lg">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <h4 class="font-medium text-blue-900">CPU使用率</h4>
+                                        <i class="fas fa-microchip text-blue-600"></i>
+                                    </div>
+                                    <div class="text-2xl font-bold text-blue-700">${response.cpu.cpu_percent.toFixed(1)}%</div>
+                                    <div class="text-sm text-blue-600">核心数: ${response.cpu.cpu_count}</div>
+                                </div>
+                                
+                                <!-- 内存使用率 -->
+                                <div class="bg-green-50 p-4 rounded-lg">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <h4 class="font-medium text-green-900">内存使用率</h4>
+                                        <i class="fas fa-memory text-green-600"></i>
+                                    </div>
+                                    <div class="text-2xl font-bold text-green-700">${response.memory.percent.toFixed(1)}%</div>
+                                    <div class="text-sm text-green-600">${formatBytes(response.memory.used)} / ${formatBytes(response.memory.total)}</div>
+                                </div>
+                                
+                                <!-- 磁盘使用率 -->
+                                <div class="bg-purple-50 p-4 rounded-lg">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <h4 class="font-medium text-purple-900">磁盘使用率</h4>
+                                        <i class="fas fa-hdd text-purple-600"></i>
+                                    </div>
+                                    <div class="text-2xl font-bold text-purple-700">${response.disk.percent.toFixed(1)}%</div>
+                                    <div class="text-sm text-purple-600">${formatBytes(response.disk.used)} / ${formatBytes(response.disk.total)}</div>
+                                </div>
+                                
+                                <!-- 数据库状态 -->
+                                <div class="bg-yellow-50 p-4 rounded-lg">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <h4 class="font-medium text-yellow-900">数据库状态</h4>
+                                        <i class="fas fa-database text-yellow-600"></i>
+                                    </div>
+                                    <div class="text-lg font-bold ${response.database.status === 'connected' ? 'text-green-700' : 'text-red-700'}">
+                                        ${response.database.status === 'connected' ? '已连接' : '未连接'}
+                                    </div>
+                                    <div class="text-sm text-yellow-600">${response.database.message}</div>
+                                </div>
+                                
+                                <!-- 日志文件 -->
+                                <div class="bg-indigo-50 p-4 rounded-lg">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <h4 class="font-medium text-indigo-900">日志文件</h4>
+                                        <i class="fas fa-file-alt text-indigo-600"></i>
+                                    </div>
+                                    <div class="text-2xl font-bold text-indigo-700">${response.logs.total_files}</div>
+                                    <div class="text-sm text-indigo-600">个日志文件</div>
+                                </div>
+                                
+                                <!-- 上传文件 -->
+                                <div class="bg-red-50 p-4 rounded-lg">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <h4 class="font-medium text-red-900">上传文件</h4>
+                                        <i class="fas fa-upload text-red-600"></i>
+                                    </div>
+                                    <div class="text-2xl font-bold text-red-700">${response.uploads.total_files}</div>
+                                    <div class="text-sm text-red-600">${formatBytes(response.uploads.total_size)}</div>
+                                </div>
+                            </div>
+                            
+                            <!-- 系统信息 -->
+                            <div class="mt-6 bg-gray-50 p-4 rounded-lg">
+                                <h4 class="font-medium text-gray-900 mb-3">系统信息</h4>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                    <div><strong>操作系统:</strong> ${response.system.platform} ${response.system.platform_release}</div>
+                                    <div><strong>主机名:</strong> ${response.system.hostname}</div>
+                                    <div><strong>架构:</strong> ${response.system.architecture}</div>
+                                    <div><strong>Python版本:</strong> ${response.system.python_version}</div>
+                                    <div><strong>进程ID:</strong> ${response.process.pid}</div>
+                                    <div><strong>线程数:</strong> ${response.process.num_threads}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-6 border-t bg-gray-50">
+                            <div class="flex justify-end">
+                                <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">
+                                    关闭
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(modal);
+                
+                // 点击背景关闭
+                modal.addEventListener('click', function(e) {
+                    if (e.target === modal) {
+                        modal.remove();
+                    }
+                });
+                
+            } catch (error) {
+                console.error('获取系统状态失败:', error);
+                showNotification('获取系统状态失败: ' + error.message, 'error');
+            }
+        }
+        
+        // 格式化字节数
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function showDatabaseTools() {
+            // 显示数据库工具模态框
+            showNotification('数据库管理工具正在开发中...', 'info');
+        }
+
+        function showSecurityAudit() {
+            // 显示安全审计，可以跳转到日志页面的安全日志
+            window.open('/logs?tab=security', '_blank');
+        }
+
+        async function showCleanupTools() {
+            // 显示系统清理工具
+            if (confirm('确定要执行系统清理吗？这将清理临时文件和过期日志。')) {
+                try {
+                    showNotification('正在执行系统清理...', 'info');
+                    
+                    const response = await api.post('/api/system/cleanup');
+                    
+                    if (response.success) {
+                        const results = response.results;
+                        const message = `清理完成！\n` +
+                                      `- 清理日志文件: ${results.logs_cleaned} 个\n` +
+                                      `- 清理临时文件: ${results.temp_files_cleaned} 个\n` +
+                                      `- 释放空间: ${response.space_freed_mb.toFixed(2)} MB`;
+                        
+                        showNotification(message, 'success');
+                    } else {
+                        showNotification('系统清理失败', 'error');
+                    }
+                    
+                } catch (error) {
+                    console.error('系统清理失败:', error);
+                    showNotification('系统清理失败: ' + error.message, 'error');
+                }
+            }
+        }
+
+        function openApiDocs() {
+            // 在新标签页中打开API文档
+            window.open('/docs', '_blank');
         }
 
         // 设置当前页面激活状态

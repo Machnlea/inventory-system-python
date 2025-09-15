@@ -2,6 +2,18 @@ from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+import logging
+import os
+
+# 导入日志系统和中间件
+# from app.core.logging import setup_logging
+# from app.core.middleware import (
+#     LoggingMiddleware, 
+#     SecurityHeadersMiddleware, 
+#     RateLimitMiddleware,
+#     ErrorHandlingMiddleware
+# )
 from app.api.users import router as users_router
 from app.api.auth import router as auth_router
 from app.api.equipment import router as equipment_router
@@ -16,11 +28,26 @@ from app.api.reports import router as reports_router
 from app.api.department_users import router as department_users_router
 from app.api.external_api import router as external_api_router
 from app.api.calibration import router as calibration_router
+# from app.api.logs import router as logs_router
+# from app.api.system import router as system_router
 from app.db.database import engine
 from app.models import models
 
+# 初始化日志系统
+# setup_logging(
+#     log_level=os.getenv("LOG_LEVEL", "INFO"),
+#     enable_console=True,
+#     enable_file=True,
+#     enable_json=True
+# )
+
+# 获取应用日志记录器
+app_logger = logging.getLogger("app")
+app_logger.info("正在启动设备台账管理系统...")
+
 # 创建数据库表
 models.Base.metadata.create_all(bind=engine)
+app_logger.info("数据库表创建完成")
 
 app = FastAPI(
     title="设备台账管理系统",
@@ -30,6 +57,15 @@ app = FastAPI(
     redoc_url="/redoc",
     openapi_url="/openapi.json"
 )
+
+# 添加中间件（注意顺序很重要）
+# app.add_middleware(ErrorHandlingMiddleware)
+# app.add_middleware(LoggingMiddleware)
+# app.add_middleware(SecurityHeadersMiddleware)
+# app.add_middleware(RateLimitMiddleware, requests_per_minute=120)  # 每分钟120个请求
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=["*"])  # 生产环境应该限制具体域名
+
+app_logger.info("中间件配置完成")
 
 # 静态文件和模板
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
@@ -51,6 +87,8 @@ app.include_router(reports_router, prefix="/api/reports", tags=["统计报表"])
 app.include_router(department_users_router, prefix="/api/department", tags=["部门用户"])
 app.include_router(external_api_router, prefix="/api/external", tags=["外部系统API"])
 app.include_router(calibration_router, prefix="/api", tags=["检定管理"])
+# app.include_router(logs_router, prefix="/api/logs", tags=["日志管理"])
+# app.include_router(system_router, prefix="/api/system", tags=["系统管理"])
 
 @app.get("/favicon.ico")
 async def favicon():
@@ -107,6 +145,10 @@ async def settings(request: Request):
 async def reports(request: Request):
     return templates.TemplateResponse("reports.html", {"request": request})
 
+# @app.get("/logs", response_class=HTMLResponse)
+# async def logs(request: Request):
+#     return templates.TemplateResponse("logs.html", {"request": request})
+
 @app.get("/simple_login_test", response_class=HTMLResponse)
 async def simple_login_test(request: Request):
     return templates.TemplateResponse("simple_login_test.html", {"request": request})
@@ -147,4 +189,15 @@ async def api_docs():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    
+    app_logger.info("启动Web服务器...")
+    app_logger.info("访问地址: http://0.0.0.0:8000")
+    app_logger.info("API文档: http://0.0.0.0:8000/docs")
+    
+    uvicorn.run(
+        app, 
+        host="0.0.0.0", 
+        port=8000,
+        log_config=None,  # 禁用uvicorn的默认日志配置，使用我们的日志系统
+        access_log=False  # 禁用访问日志，我们用中间件记录
+    )

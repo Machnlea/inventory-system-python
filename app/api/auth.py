@@ -9,10 +9,16 @@ from app.schemas.schemas import Token, User
 from app.core.security import create_access_token, verify_token, verify_token_with_session
 from app.core.config import settings
 from app.core.session_manager import session_manager
+from app.core.logging import get_context_logger, log_security_event
 from typing import Optional, List
+import logging
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
+
+# 获取日志记录器
+auth_logger = logging.getLogger("auth")
+security_logger = logging.getLogger("security")
 
 class LoginRequest(BaseModel):
     username: str
@@ -75,8 +81,33 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
 
 @router.post("/login/json")
 async def login_json(login_request: LoginRequest, request: Request, db: Session = Depends(get_db)):
+    # 获取客户端信息
+    client_ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "")
+    request_id = getattr(request.state, 'request_id', 'unknown')
+    
+    # 创建带上下文的日志记录器
+    logger = get_context_logger(
+        "auth.login",
+        ip_address=client_ip,
+        request_id=request_id
+    )
+    
+    logger.info(f"用户登录尝试: {login_request.username}")
+    
     user = users.authenticate_user(db, login_request.username, login_request.password)
     if not user:
+        # 记录登录失败事件
+        log_security_event(
+            security_logger,
+            event_type="FAILED_LOGIN",
+            description=f"用户 {login_request.username} 登录失败：用户名或密码错误",
+            ip_address=client_ip,
+            severity="WARNING"
+        )
+        
+        logger.warning(f"用户登录失败: {login_request.username} - 用户名或密码错误")
+        
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="用户名或密码错误",
@@ -114,7 +145,17 @@ async def login_json(login_request: LoginRequest, request: Request, db: Session 
     # 如果强制登录，先清除其他会话
     if login_request.force and active_sessions:
         invalidated_count = session_manager.invalidate_user_sessions(int(user.id))
-        print(f"强制登录：已清除 {invalidated_count} 个会话")
+        logger.info(f"强制登录：已清除 {invalidated_count} 个会话")
+        
+        # 记录强制登录事件
+        log_security_event(
+            security_logger,
+            event_type="FORCE_LOGIN",
+            description=f"用户 {user.username} 强制登录，清除了 {invalidated_count} 个活跃会话",
+            user_id=user.id,
+            ip_address=client_ip,
+            severity="INFO"
+        )
     
     # 创建新会话
     session_id = session_manager.create_session(
@@ -137,6 +178,18 @@ async def login_json(login_request: LoginRequest, request: Request, db: Session 
         expires_delta=timedelta(days=settings.ACCESS_TOKEN_EXPIRE_HOURS * 24)
     )
     
+    # 记录登录成功事件
+    log_security_event(
+        security_logger,
+        event_type="LOGIN_SUCCESS",
+        description=f"用户 {user.username} 登录成功",
+        user_id=user.id,
+        ip_address=client_ip,
+        severity="INFO"
+    )
+    
+    logger.info(f"用户登录成功: {user.username}, 会话ID: {session_id}")
+    
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
@@ -156,6 +209,20 @@ async def read_users_me(current_user: User = Depends(get_current_user)):
 @router.post("/logout")
 async def logout(request: Request, current_user: User = Depends(get_current_user)):
     """用户登出"""
+    # 获取客户端信息
+    client_ip = request.client.host if request.client else "unknown"
+    request_id = getattr(request.state, 'request_id', 'unknown')
+    
+    # 创建带上下文的日志记录器
+    logger = get_context_logger(
+        "auth.logout",
+        user_id=current_user.id,
+        ip_address=client_ip,
+        request_id=request_id
+    )
+    
+    logger.info(f"用户登出: {current_user.username}")
+    
     # 从JWT token中获取session_id
     auth_header = request.headers.get("authorization")
     if auth_header and auth_header.startswith("Bearer "):
@@ -167,9 +234,21 @@ async def logout(request: Request, current_user: User = Depends(get_current_user
             
             if session_id:
                 session_manager.invalidate_session(session_id)
+                
+                # 记录登出成功事件
+                log_security_event(
+                    security_logger,
+                    event_type="LOGOUT_SUCCESS",
+                    description=f"用户 {current_user.username} 登出成功",
+                    user_id=current_user.id,
+                    ip_address=client_ip,
+                    severity="INFO"
+                )
+                
+                logger.info(f"用户登出成功: {current_user.username}, 会话ID: {session_id}")
                 return {"message": "登出成功"}
         except Exception as e:
-            print(f"Error during logout: {e}")
+            logger.error(f"登出过程中发生错误: {str(e)}", exc_info=True)
     
     return {"message": "登出完成"}
 

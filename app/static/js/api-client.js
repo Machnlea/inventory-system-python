@@ -59,8 +59,16 @@ class ApiClient {
                         const errorData = await response.json().catch(() => ({}));
                         throw new Error(errorData.detail || '用户名或密码错误');
                     } else {
-                        this.handleUnauthorized();
-                        throw new Error('登录已过期, 请重新登录');
+                        // 对于非登录接口的401错误，如果是第一次尝试，延迟重试一次
+                        if (attempt === 1) {
+                            console.log('第一次收到401错误，延迟重试...');
+                            await this.delay(500); // 延迟500ms重试
+                            continue; // 继续下一次尝试
+                        } else {
+                            // 第二次还是401，则处理未授权
+                            this.handleUnauthorized();
+                            throw new Error('登录已过期, 请重新登录');
+                        }
                     }
                 }
 
@@ -140,6 +148,39 @@ class ApiClient {
 
     // 处理未授权访问
     handleUnauthorized() {
+        console.warn('收到401未授权错误，检查会话状态...');
+        
+        // 在清除会话前，检查是否是临时会话问题
+        const currentToken = sessionStorage.getItem('access_token');
+        const userInfo = sessionStorage.getItem('user_info');
+        
+        if (currentToken && userInfo) {
+            console.log('检测到可能的服务器端会话失效，尝试重新同步...');
+            
+            // 如果有tabSessionManager，让它处理会话恢复
+            if (window.tabSessionManager && typeof tabSessionManager.checkSessionValidity === 'function') {
+                // 延迟一点时间让会话管理器处理
+                setTimeout(async () => {
+                    try {
+                        await tabSessionManager.checkSessionValidity();
+                    } catch (error) {
+                        console.error('会话验证失败:', error);
+                        // 如果验证失败，清除会话并重定向
+                        this.clearSessionAndRedirect();
+                    }
+                }, 100);
+                return;
+            }
+        }
+        
+        // 如果没有会话管理器或无法恢复，则清除会话
+        this.clearSessionAndRedirect();
+    }
+    
+    // 清除会话并重定向
+    clearSessionAndRedirect() {
+        console.log('清除会话数据并重定向到登录页');
+        
         // 清除当前标签页的会话数据
         sessionStorage.removeItem('access_token');
         sessionStorage.removeItem('refresh_token');
@@ -155,7 +196,10 @@ class ApiClient {
             tabSessionManager.clearSession();
         }
         
-        window.location.href = '/login';
+        // 只有不在登录页时才跳转
+        if (window.location.pathname !== '/login') {
+            window.location.href = '/login';
+        }
     }
 
     // 文件上传
@@ -732,8 +776,10 @@ document.addEventListener('visibilitychange', function() {
                 window.location.href = '/login';
             }
         } else if (window.tabSessionManager) {
-            // 如果有会话管理器，检查会话有效性
-            tabSessionManager.checkSessionValidity();
+            // 如果有会话管理器，异步检查会话有效性
+            tabSessionManager.checkSessionValidity().catch(error => {
+                console.error('检查会话有效性时发生错误:', error);
+            });
         }
     }
 });

@@ -36,7 +36,9 @@ class TabSessionManager {
         // 页面可见性变化时检查会话
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden) {
-                this.checkSessionValidity();
+                this.checkSessionValidity().catch(error => {
+                    console.error('页面可见性变化时检查会话失败:', error);
+                });
             }
         });
         
@@ -608,7 +610,7 @@ class TabSessionManager {
     /**
      * 检查会话有效性
      */
-    checkSessionValidity() {
+    async checkSessionValidity() {
         const user = this.getCurrentUser();
         // 优先从sessionStorage获取，然后回退到localStorage（兼容多标签页登录和旧系统）
         const accessToken = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
@@ -618,6 +620,38 @@ class TabSessionManager {
             if (window.location.pathname !== '/login') {
                 window.location.href = '/login';
             }
+            return;
+        }
+        
+        // 如果有token和用户信息，主动验证会话在服务器端是否仍然有效
+        try {
+            console.log('主动验证服务器端会话有效性...');
+            const response = await fetch('/api/auth/me', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                console.log('服务器端会话验证成功');
+                return true;
+            } else if (response.status === 401) {
+                console.warn('服务器端会话已失效，清除本地会话');
+                this.clearSession();
+                if (window.location.pathname !== '/login') {
+                    window.location.href = '/login';
+                }
+                return false;
+            } else {
+                console.warn('服务器端会话验证返回异常状态:', response.status);
+                return false;
+            }
+        } catch (error) {
+            console.error('验证服务器端会话时发生错误:', error);
+            // 网络错误等情况暂时认为会话仍然有效，避免误判
+            return true;
         }
     }
     

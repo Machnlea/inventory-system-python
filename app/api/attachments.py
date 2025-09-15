@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import os
@@ -9,8 +9,13 @@ from app.crud import attachments as crud_attachments
 from app.schemas.schemas import EquipmentAttachment, EquipmentAttachmentCreate, EquipmentAttachmentUpdate
 from app.api.auth import get_current_user
 from app.api.audit_logs import create_audit_log
+from app.core.logging import get_context_logger, log_file_operation
+import logging
 
 router = APIRouter()
+
+# 获取日志记录器
+attachment_logger = logging.getLogger("attachment")
 
 # 创建上传目录
 UPLOAD_DIR = Path("data/uploads")
@@ -236,23 +241,57 @@ def download_attachment(
 @router.get("/{attachment_id}/preview")
 def preview_attachment(
     attachment_id: int,
+    request: Request,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
     """预览附件（仅支持图片和PDF）"""
+    # 获取客户端信息
+    client_ip = request.client.host if request.client else "unknown"
+    request_id = getattr(request.state, 'request_id', 'unknown')
+    
+    # 创建带上下文的日志记录器
+    logger = get_context_logger(
+        "attachment.preview",
+        user_id=current_user.id,
+        ip_address=client_ip,
+        request_id=request_id
+    )
+    
+    logger.info(f"开始预览附件: ID={attachment_id}")
+    
     attachment = crud_attachments.get_equipment_attachment(db=db, attachment_id=attachment_id)
     if not attachment:
+        logger.warning(f"附件不存在: ID={attachment_id}")
         raise HTTPException(status_code=404, detail="附件不存在")
+    
+    logger.info(f"附件信息: 文件名={attachment.original_filename}, 类型={attachment.file_type}, 路径={attachment.file_path}")
     
     # 检查文件是否存在
     if not os.path.exists(str(attachment.file_path)):
+        logger.error(f"文件不存在于磁盘: {attachment.file_path}")
         raise HTTPException(status_code=404, detail="文件不存在")
+    
+    # 获取文件信息
+    file_size = os.path.getsize(str(attachment.file_path))
+    logger.info(f"文件大小: {file_size} bytes")
     
     # 检查文件类型是否支持预览
     if attachment.file_type not in ['PDF', 'JPG', 'PNG', 'GIF', 'JPEG']:
+        logger.warning(f"不支持的文件类型: {attachment.file_type}")
         raise HTTPException(status_code=400, detail="该文件类型不支持在线预览")
     
     from fastapi.responses import FileResponse
+    
+    # 记录文件操作日志
+    log_file_operation(
+        attachment_logger,
+        operation="PREVIEW",
+        file_path=str(attachment.file_path),
+        user_id=current_user.id,
+        equipment_id=attachment.equipment_id,
+        file_size=file_size
+    )
     
     # 记录预览日志
     create_audit_log(
@@ -263,8 +302,15 @@ def preview_attachment(
         description=f"预览附件: {attachment.original_filename or 'unknown'}"
     )
     
+    logger.info(f"返回文件预览: {attachment.original_filename}, MIME类型: {attachment.mime_type}")
+    
     # 返回文件用于预览
     return FileResponse(
         path=str(attachment.file_path),
-        media_type=str(attachment.mime_type or "application/octet-stream")
+        media_type=str(attachment.mime_type or "application/octet-stream"),
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
     )

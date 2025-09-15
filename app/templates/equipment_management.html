@@ -1524,7 +1524,7 @@
             if (activeCard) {
                 activeCard.addEventListener('click', function () {
                     handleCardClick(activeCard, 'card-active', () => {
-                        resetAllFilters();
+                        resetFiltersExceptSearch();
                         const statusFilter = document.getElementById('status-filter');
                         if (statusFilter) {
                             statusFilter.value = '在用';
@@ -1541,7 +1541,7 @@
             if (monthlyDueCard) {
                 monthlyDueCard.addEventListener('click', function () {
                     handleCardClick(monthlyDueCard, 'card-monthly-due', () => {
-                        resetAllFilters();
+                        resetFiltersExceptSearch();
                         const today = new Date();
                         // 计算本月最后一天
                         const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
@@ -1572,7 +1572,7 @@
             if (overdueCard) {
                 overdueCard.addEventListener('click', function () {
                     handleCardClick(overdueCard, 'card-overdue', () => {
-                        resetAllFilters();
+                        resetFiltersExceptSearch();
                         const today = new Date();
                         const startDateFilter = document.getElementById('start-date-filter');
                         const endDateFilter = document.getElementById('end-date-filter');
@@ -1592,7 +1592,7 @@
             if (inactiveCard) {
                 inactiveCard.addEventListener('click', function () {
                     handleCardClick(inactiveCard, 'card-inactive', () => {
-                        resetAllFilters();
+                        resetFiltersExceptSearch();
                         const statusFilter = document.getElementById('status-filter');
                         if (statusFilter) {
                             // 重置点击计数，实现停用和报废的循环切换
@@ -1613,8 +1613,8 @@
             }
         }
 
-        // 重置所有筛选条件
-        function resetAllFilters() {
+        // 重置所有筛选条件（保留搜索框）
+        function resetFiltersExceptSearch() {
             const filters = ['department-filter', 'category-filter', 'start-date-filter', 'end-date-filter'];
             filters.forEach(id => {
                 const element = document.getElementById(id);
@@ -1627,6 +1627,17 @@
             const statusFilter = document.getElementById('status-filter');
             if (statusFilter) {
                 statusFilter.value = '';
+            }
+        }
+
+        // 重置所有筛选条件（包括搜索框）
+        function resetAllFilters() {
+            resetFiltersExceptSearch();
+            
+            // 重置搜索框
+            const searchInput = document.getElementById('search-input');
+            if (searchInput) {
+                searchInput.value = '';
             }
         }
 
@@ -1648,7 +1659,15 @@
                 let response;
                 if (filters.query) {
                     // 如果有搜索查询，使用搜索接口
-                    console.log('使用搜索接口');
+                    console.log('使用搜索接口，传递的筛选条件:', JSON.stringify(filters, null, 2));
+                    console.log('搜索关键词:', filters.query);
+                    console.log('包含的筛选条件:', {
+                        '部门ID': filters.department_id,
+                        '类别ID': filters.category_id,
+                        '状态': filters.status,
+                        '开始日期': filters.next_calibration_start,
+                        '结束日期': filters.next_calibration_end
+                    });
                     response = await EquipmentAPI.searchEquipments(filters, {
                         skip: (currentPage - 1) * itemsPerPage,
                         limit: itemsPerPage,

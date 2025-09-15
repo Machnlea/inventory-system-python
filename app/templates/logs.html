@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日志管理 - 设备台账管理系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="/static/js/api-client.js"></script>
+    <script src="/static/js/notification-manager.js"></script>
+    <style>
+        .log-entry {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        .log-level-ERROR { color: #dc2626; }
+        .log-level-WARNING { color: #d97706; }
+        .log-level-INFO { color: #059669; }
+        .log-level-DEBUG { color: #6b7280; }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- 导航栏 -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <h1 class="text-xl font-semibold text-gray-900">日志管理</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button onclick="window.location.href='/dashboard'" class="text-gray-600 hover:text-gray-900">
+                        <i class="fas fa-arrow-left mr-2"></i>返回仪表盘
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        <!-- 统计卡片 -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-file-alt text-blue-500 text-2xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-500">总日志数</p>
+                        <p class="text-2xl font-semibold text-gray-900" id="totalLogs">-</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-circle text-red-500 text-2xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-500">错误数</p>
+                        <p class="text-2xl font-semibold text-gray-900" id="errorCount">-</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-shield-alt text-yellow-500 text-2xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-500">安全事件</p>
+                        <p class="text-2xl font-semibold text-gray-900" id="securityEvents">-</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exchange-alt text-green-500 text-2xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-500">API请求</p>
+                        <p class="text-2xl font-semibold text-gray-900" id="apiRequests">-</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 搜索和过滤 -->
+        <div class="bg-white rounded-lg shadow mb-6">
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">搜索关键词</label>
+                        <input type="text" id="searchKeyword" class="w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="输入搜索关键词">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">日志类型</label>
+                        <select id="logType" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                            <option value="all">全部</option>
+                            <option value="json">JSON格式</option>
+                            <option value="app">应用日志</option>
+                            <option value="error">错误日志</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">时间范围</label>
+                        <select id="timeRange" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                            <option value="1">最近1小时</option>
+                            <option value="6">最近6小时</option>
+                            <option value="24" selected>最近24小时</option>
+                            <option value="72">最近3天</option>
+                            <option value="168">最近7天</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="searchLogs()" class="w-full bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
+                            <i class="fas fa-search mr-2"></i>搜索
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 快速操作 -->
+        <div class="bg-white rounded-lg shadow mb-6">
+            <div class="p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">快速查看</h3>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="viewErrorLogs()" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600">
+                        <i class="fas fa-exclamation-circle mr-2"></i>错误日志
+                    </button>
+                    <button onclick="viewSecurityLogs()" class="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600">
+                        <i class="fas fa-shield-alt mr-2"></i>安全日志
+                    </button>
+                    <button onclick="viewApiLogs()" class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600">
+                        <i class="fas fa-exchange-alt mr-2"></i>API日志
+                    </button>
+                    <button onclick="viewPreviewLogs()" class="bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600">
+                        <i class="fas fa-eye mr-2"></i>预览日志
+                    </button>
+                    <button onclick="refreshStats()" class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600">
+                        <i class="fas fa-sync-alt mr-2"></i>刷新统计
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 日志显示区域 -->
+        <div class="bg-white rounded-lg shadow">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-medium text-gray-900">日志内容</h3>
+                    <div class="text-sm text-gray-500" id="logCount">准备就绪</div>
+                </div>
+                <div class="bg-gray-900 text-green-400 p-4 rounded-md h-96 overflow-y-auto" id="logContent">
+                    <div class="text-center text-gray-500 mt-20">
+                        选择一个操作来查看日志
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通知容器 -->
+    <div id="notification-container" class="fixed top-4 right-4 z-[9999] space-y-2 w-72"></div>
+
+    <script>
+        // 页面加载时获取统计信息
+        document.addEventListener('DOMContentLoaded', function() {
+            refreshStats();
+            
+            // 检查URL参数，自动显示特定类型的日志
+            const urlParams = new URLSearchParams(window.location.search);
+            const tab = urlParams.get('tab');
+            
+            if (tab === 'security') {
+                setTimeout(() => viewSecurityLogs(), 500);
+            } else if (tab === 'errors') {
+                setTimeout(() => viewErrorLogs(), 500);
+            } else if (tab === 'api') {
+                setTimeout(() => viewApiLogs(), 500);
+            } else if (tab === 'preview') {
+                setTimeout(() => viewPreviewLogs(), 500);
+            }
+        });
+
+        // 刷新统计信息
+        async function refreshStats() {
+            try {
+                const response = await api.get('/api/logs/stats?hours=24');
+                
+                document.getElementById('totalLogs').textContent = response.total_logs || 0;
+                document.getElementById('errorCount').textContent = response.errors || 0;
+                document.getElementById('securityEvents').textContent = response.security_events || 0;
+                document.getElementById('apiRequests').textContent = response.api_requests || 0;
+                
+            } catch (error) {
+                console.error('获取统计信息失败:', error);
+                showNotification('获取统计信息失败: ' + error.message, 'error');
+            }
+        }
+
+        // 搜索日志
+        async function searchLogs() {
+            const keyword = document.getElementById('searchKeyword').value.trim();
+            const logType = document.getElementById('logType').value;
+            const hours = parseInt(document.getElementById('timeRange').value);
+
+            if (!keyword) {
+                showNotification('请输入搜索关键词', 'warning');
+                return;
+            }
+
+            try {
+                const response = await api.post('/api/logs/search', {
+                    keyword: keyword,
+                    log_type: logType,
+                    hours: hours,
+                    max_results: 200
+                });
+
+                displayLogs(response.logs, `搜索结果: "${keyword}" (${response.total}条)`);
+                
+            } catch (error) {
+                console.error('搜索日志失败:', error);
+                showNotification('搜索日志失败: ' + error.message, 'error');
+            }
+        }
+
+        // 查看错误日志
+        async function viewErrorLogs() {
+            try {
+                const hours = parseInt(document.getElementById('timeRange').value);
+                const response = await api.get(`/api/logs/errors?hours=${hours}`);
+                
+                displayLogs(response.logs, `错误日志 (${response.total}条)`);
+                
+            } catch (error) {
+                console.error('获取错误日志失败:', error);
+                showNotification('获取错误日志失败: ' + error.message, 'error');
+            }
+        }
+
+        // 查看安全日志
+        async function viewSecurityLogs() {
+            try {
+                const hours = parseInt(document.getElementById('timeRange').value);
+                const response = await api.get(`/api/logs/security?hours=${hours}`);
+                
+                displayLogs(response.logs, `安全日志 (${response.total}条)`);
+                
+            } catch (error) {
+                console.error('获取安全日志失败:', error);
+                showNotification('获取安全日志失败: ' + error.message, 'error');
+            }
+        }
+
+        // 查看API日志
+        async function viewApiLogs() {
+            try {
+                const hours = parseInt(document.getElementById('timeRange').value);
+                const response = await api.get(`/api/logs/api?hours=${hours}`);
+                
+                displayLogs(response.logs, `API日志 (${response.total}条)`);
+                
+            } catch (error) {
+                console.error('获取API日志失败:', error);
+                showNotification('获取API日志失败: ' + error.message, 'error');
+            }
+        }
+
+        // 查看预览日志
+        async function viewPreviewLogs() {
+            try {
+                const hours = parseInt(document.getElementById('timeRange').value);
+                const response = await api.get(`/api/logs/preview?hours=${hours}`);
+                
+                displayLogs(response.logs, `预览日志 (${response.total}条)`);
+                
+            } catch (error) {
+                console.error('获取预览日志失败:', error);
+                showNotification('获取预览日志失败: ' + error.message, 'error');
+            }
+        }
+
+        // 显示日志
+        function displayLogs(logs, title) {
+            const logContent = document.getElementById('logContent');
+            const logCount = document.getElementById('logCount');
+            
+            logCount.textContent = title;
+            
+            if (!logs || logs.length === 0) {
+                logContent.innerHTML = '<div class="text-center text-gray-500 mt-20">没有找到日志</div>';
+                return;
+            }
+
+            let html = '';
+            logs.forEach(log => {
+                const timestamp = log.timestamp || 'N/A';
+                const level = log.level || 'INFO';
+                const message = log.message || log.content || 'N/A';
+                const logger = log.logger || 'unknown';
+                
+                html += `<div class="log-entry mb-2 p-2 border-l-2 border-gray-600">`;
+                html += `<div class="flex items-start space-x-2">`;
+                html += `<span class="text-gray-400 text-xs">[${timestamp}]</span>`;
+                html += `<span class="log-level-${level} font-bold text-xs">${level}</span>`;
+                html += `<span class="text-blue-400 text-xs">${logger}</span>`;
+                html += `</div>`;
+                html += `<div class="mt-1 text-sm">${escapeHtml(message)}</div>`;
+                
+                // 显示额外信息
+                if (log.user_id || log.ip_address || log.equipment_id) {
+                    html += `<div class="mt-1 text-xs text-gray-500">`;
+                    if (log.user_id) html += `用户ID: ${log.user_id} `;
+                    if (log.ip_address) html += `IP: ${log.ip_address} `;
+                    if (log.equipment_id) html += `设备ID: ${log.equipment_id} `;
+                    html += `</div>`;
+                }
+                
+                html += `</div>`;
+            });
+            
+            logContent.innerHTML = html;
+            logContent.scrollTop = 0; // 滚动到顶部
+        }
+
+        // HTML转义
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

@@ -598,6 +598,13 @@ def search_equipments_count(db: Session, search: EquipmentSearch, user_id: Optio
     if search.status:
         query = query.filter(Equipment.status == search.status)
     
+    # 添加日期筛选条件
+    if search.next_calibration_start:
+        query = query.filter(Equipment.valid_until >= search.next_calibration_start)
+    
+    if search.next_calibration_end:
+        query = query.filter(Equipment.valid_until <= search.next_calibration_end)
+    
     return query.count()
 
 def search_equipments(db: Session, search: EquipmentSearch, user_id: Optional[int] = None, 
@@ -695,6 +702,13 @@ def search_equipments(db: Session, search: EquipmentSearch, user_id: Optional[in
     
     if search.status:
         query = query.filter(Equipment.status == search.status)
+    
+    # 添加日期筛选条件
+    if search.next_calibration_start:
+        query = query.filter(Equipment.valid_until >= search.next_calibration_start)
+    
+    if search.next_calibration_end:
+        query = query.filter(Equipment.valid_until <= search.next_calibration_end)
     
     # 添加排序逻辑
     if sort_field == "name":

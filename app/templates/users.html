@@ -2114,6 +2114,7 @@
                                ${isChecked ? 'checked' : ''}
                                ${isManagedByOthers ? 'disabled' : ''}
                                value="${equipmentName}"
+                               data-category-id="${categoryId}"
                                class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
                                id="${uniqueId}"
                                onchange="updateEquipmentStyle('${equipmentName}', this.checked)">
@@ -2173,56 +2174,50 @@
             const label = container.querySelector('label');
             const nameSpan = label?.querySelector('span');
             
+            // 检查是否有设备
+            const deviceCountElement = container.querySelector('i.fa-cube');
+            const hasDevices = deviceCountElement !== null;
+            
+            // 清除所有可能的背景样式类
+            const classesToRemove = [
+                'bg-gradient-to-r', 'from-purple-50', 'to-blue-50', 'border-l-4', 'border-purple-500',
+                'from-green-50', 'border-l-2', 'border-green-300', 'bg-purple-50', 'hover:bg-gray-100'
+            ];
+            
+            classesToRemove.forEach(cls => {
+                container.classList.remove(cls);
+            });
+            
             if (isChecked) {
                 // 选中状态：使用紫色样式
-                container.className = container.className
-                    .replace(/bg-gradient-to-r from-green-50 to-blue-50 border-l-2 border-green-300/, '')
-                    .replace(/hover:bg-gray-100/, '');
-                
-                if (container.className.includes('from-purple-50 to-blue-50')) {
-                    // 已经有渐变背景，不需要修改
+                if (hasDevices) {
+                    container.classList.add('bg-gradient-to-r', 'from-purple-50', 'to-blue-50', 'border-l-4', 'border-purple-500');
                 } else {
-                    // 添加选中的紫色背景
-                    container.className += ' bg-purple-50 border-l-4 border-purple-500';
+                    container.classList.add('bg-purple-50', 'border-l-4', 'border-purple-500');
                 }
                 
                 if (nameSpan) {
-                    nameSpan.className = nameSpan.className.replace(/text-gray-700/, 'text-purple-900');
+                    nameSpan.classList.remove('text-gray-700');
+                    nameSpan.classList.add('text-purple-900');
                 }
             } else {
                 // 未选中状态：恢复原有样式
-                container.className = container.className
-                    .replace(/bg-purple-50/, '')
-                    .replace(/bg-gradient-to-r from-purple-50 to-blue-50/, '')
-                    .replace(/border-l-4 border-purple-500/, '');
-                
-                // 检查是否有设备来决定背景色
-                const deviceCountElement = container.querySelector('[class*="fas fa-cube"], [class*="无设备"]');
-                const hasDevices = deviceCountElement && deviceCountElement.className.includes('fa-cube');
-                
                 if (hasDevices) {
-                    if (!container.className.includes('from-green-50 to-blue-50')) {
-                        container.className += ' bg-gradient-to-r from-green-50 to-blue-50 border-l-2 border-green-300';
-                    }
+                    container.classList.add('bg-gradient-to-r', 'from-green-50', 'to-blue-50', 'border-l-2', 'border-green-300');
                 } else {
-                    if (!container.className.includes('hover:bg-gray-100')) {
-                        container.className += ' hover:bg-gray-100';
-                    }
+                    container.classList.add('hover:bg-gray-100');
                 }
                 
                 if (nameSpan) {
-                    nameSpan.className = nameSpan.className.replace(/text-purple-900/, 'text-gray-700');
+                    nameSpan.classList.remove('text-purple-900');
+                    nameSpan.classList.add('text-gray-700');
                 }
             }
             
             // 更新权限统计
-            if (categoryId) {
-                const category = allCategories.find(c => c.id == categoryId);
-                if (category && category.predefined_names) {
-                    const checkedCount = document.querySelectorAll('#equipment-checkboxes input[type="checkbox"]:checked').length;
-                    updateEquipmentPermissionStats(checkedCount, category.predefined_names.length);
-                }
-            }
+            const checkedCount = document.querySelectorAll('#equipment-checkboxes input[type="checkbox"]:checked').length;
+            const totalCount = document.querySelectorAll('#equipment-checkboxes input[type="checkbox"]').length;
+            updateEquipmentPermissionStats(checkedCount, totalCount);
         }
 
         // 更新器具权限统计
@@ -2492,6 +2487,157 @@
             await clearUserEquipmentPermissions(categoryId);
         }
         
+        // 保存用户器具权限
+        async function saveUserEquipmentPermissions() {
+            if (!managingEquipmentPermissionsUserId) return;
+
+            const categoryId = document.getElementById('category-select').value;
+            
+            if (!categoryId) {
+                // 如果没有选择类别，保存所有类别的权限
+                await saveAllCategoriesEquipmentPermissions();
+                return;
+            }
+
+            // 获取当前类别下选中的器具
+            const checkboxes = document.querySelectorAll('#equipment-checkboxes input[type="checkbox"]:checked');
+            const equipmentNames = Array.from(checkboxes).map(cb => cb.value);
+
+            try {
+                const response = await fetch(`/api/users/${managingEquipmentPermissionsUserId}/equipment-permissions`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${getCurrentToken()}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        category_id: parseInt(categoryId),
+                        equipment_names: equipmentNames
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const categoryName = allCategories.find(c => c.id == categoryId)?.name || '选定类别';
+                showNotification(`用户在 ${categoryName} 下的器具权限更新成功`, 'success');
+                
+                await refreshUserPermissions();
+                
+            } catch (error) {
+                console.error('保存用户器具权限失败:', error);
+                showNotification('保存器具权限失败: ' + error.message, 'error');
+            }
+        }
+
+        // 保存所有类别的器具权限
+        async function saveAllCategoriesEquipmentPermissions() {
+            try {
+                // 获取所有选中的器具，按类别分组
+                const checkboxes = document.querySelectorAll('#equipment-checkboxes input[type="checkbox"]:checked');
+                const selectedEquipment = {};
+                
+                checkboxes.forEach(checkbox => {
+                    const categoryId = parseInt(checkbox.dataset.categoryId);
+                    const equipmentName = checkbox.value;
+                    
+                    if (!selectedEquipment[categoryId]) {
+                        selectedEquipment[categoryId] = [];
+                    }
+                    selectedEquipment[categoryId].push(equipmentName);
+                });
+
+                // 获取用户当前的权限，找出所有涉及的类别
+                const currentPermissions = window.currentUserEquipmentPermissions || [];
+                const allCategoryIds = [...new Set([
+                    ...Object.keys(selectedEquipment).map(id => parseInt(id)),
+                    ...currentPermissions.map(p => p.category_id)
+                ])];
+
+                // 为每个类别发送更新请求
+                const updatePromises = allCategoryIds.map(async (categoryId) => {
+                    const equipmentNames = selectedEquipment[categoryId] || [];
+                    
+                    const response = await fetch(`/api/users/${managingEquipmentPermissionsUserId}/equipment-permissions`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${getCurrentToken()}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            category_id: categoryId,
+                            equipment_names: equipmentNames
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        const categoryName = allCategories.find(c => c.id === categoryId)?.name || categoryId;
+                        throw new Error(`${categoryName}: ${errorData.detail || response.statusText}`);
+                    }
+                    
+                    return { categoryId, success: true };
+                });
+                
+                await Promise.all(updatePromises);
+                
+                showNotification('用户器具权限更新成功', 'success');
+                await refreshUserPermissions();
+                
+            } catch (error) {
+                console.error('保存所有器具权限失败:', error);
+                showNotification('保存器具权限失败: ' + error.message, 'error');
+            }
+        }
+
+        // 全选器具
+        function selectAllEquipment() {
+            const checkboxes = document.querySelectorAll('#equipment-checkboxes input[type="checkbox"]:not(:disabled)');
+            
+            checkboxes.forEach(checkbox => {
+                if (!checkbox.checked) {
+                    checkbox.checked = true;
+                    // 触发样式更新
+                    const categoryId = parseInt(checkbox.dataset.categoryId || document.getElementById('category-select').value);
+                    const equipmentName = checkbox.value;
+                    
+                    // 根据当前显示模式更新样式
+                    if (document.getElementById('category-select').value) {
+                        // 单类别模式
+                        updateEquipmentStyle(equipmentName, true);
+                    } else {
+                        // 所有类别模式
+                        updateEquipmentStyleInAll(equipmentName, categoryId, true);
+                    }
+                }
+            });
+        }
+
+        // 清空所有器具选择
+        function clearAllEquipment() {
+            const checkboxes = document.querySelectorAll('#equipment-checkboxes input[type="checkbox"]');
+            
+            checkboxes.forEach(checkbox => {
+                if (checkbox.checked) {
+                    checkbox.checked = false;
+                    // 触发样式更新
+                    const categoryId = parseInt(checkbox.dataset.categoryId || document.getElementById('category-select').value);
+                    const equipmentName = checkbox.value;
+                    
+                    // 根据当前显示模式更新样式
+                    if (document.getElementById('category-select').value) {
+                        // 单类别模式
+                        updateEquipmentStyle(equipmentName, false);
+                    } else {
+                        // 所有类别模式
+                        updateEquipmentStyleInAll(equipmentName, categoryId, false);
+                    }
+                }
+            });
+        }
+
         // 刷新用户权限显示
         async function refreshUserPermissions() {
             // 重新加载该用户的权限显示

@@ -1,415 +1,271 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-日志记录系统配置
-提供统一的日志记录功能，支持文件日志、控制台日志和结构化日志
-"""
-
 import logging
-import logging.handlers
-import sys
 import os
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
+from typing import List, Dict, Any, Optional
+import re
 from pathlib import Path
-from typing import Optional, Dict, Any
-from contextlib import contextmanager
 
-# 创建日志目录
-LOG_DIR = Path("data/logs")
-LOG_DIR.mkdir(parents=True, exist_ok=True)
-
-class JSONFormatter(logging.Formatter):
-    """JSON格式的日志格式化器"""
+class LogManager:
+    """日志管理器 - 处理真实的日志文件"""
     
-    def format(self, record):
-        log_entry = {
-            "timestamp": datetime.fromtimestamp(record.created).isoformat(),
-            "level": record.levelname,
-            "logger": record.name,
-            "message": record.getMessage(),
-            "module": record.module,
-            "function": record.funcName,
-            "line": record.lineno,
-        }
+    def __init__(self, logs_dir: str = "logs"):
+        self.logs_dir = Path(logs_dir)
+        self.logs_dir.mkdir(exist_ok=True)
         
-        # 添加异常信息
-        if record.exc_info:
-            log_entry["exception"] = self.formatException(record.exc_info)
+        # 日志文件路径
+        self.app_log_file = self.logs_dir / "app.log"
+        self.access_log_file = self.logs_dir / "access.log"
+        self.error_log_file = self.logs_dir / "error.log"
+        self.security_log_file = self.logs_dir / "security.log"
         
-        # 添加额外字段
-        if hasattr(record, 'user_id'):
-            log_entry["user_id"] = record.user_id
-        if hasattr(record, 'equipment_id'):
-            log_entry["equipment_id"] = record.equipment_id
-        if hasattr(record, 'action'):
-            log_entry["action"] = record.action
-        if hasattr(record, 'ip_address'):
-            log_entry["ip_address"] = record.ip_address
-        if hasattr(record, 'request_id'):
-            log_entry["request_id"] = record.request_id
+        # 设置日志记录器
+        self.setup_loggers()
+    
+    def setup_loggers(self):
+        """设置各种日志记录器"""
         
-        return json.dumps(log_entry, ensure_ascii=False)
-
-class ColoredFormatter(logging.Formatter):
-    """带颜色的控制台日志格式化器"""
-    
-    # ANSI颜色代码
-    COLORS = {
-        'DEBUG': '\033[36m',    # 青色
-        'INFO': '\033[32m',     # 绿色
-        'WARNING': '\033[33m',  # 黄色
-        'ERROR': '\033[31m',    # 红色
-        'CRITICAL': '\033[35m', # 紫色
-        'RESET': '\033[0m'      # 重置
-    }
-    
-    def format(self, record):
-        # 添加颜色
-        color = self.COLORS.get(record.levelname, self.COLORS['RESET'])
-        reset = self.COLORS['RESET']
+        # 应用日志记录器
+        self.app_logger = logging.getLogger("app")
+        self.app_logger.setLevel(logging.INFO)
         
-        # 格式化消息
-        formatted = super().format(record)
-        return f"{color}{formatted}{reset}"
-
-def setup_logging(
-    log_level: str = "INFO",
-    enable_console: bool = True,
-    enable_file: bool = True,
-    enable_json: bool = True,
-    max_file_size: int = 10 * 1024 * 1024,  # 10MB
-    backup_count: int = 5
-):
-    """
-    设置日志系统
-    
-    Args:
-        log_level: 日志级别 (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-        enable_console: 是否启用控制台日志
-        enable_file: 是否启用文件日志
-        enable_json: 是否启用JSON格式日志
-        max_file_size: 单个日志文件最大大小（字节）
-        backup_count: 保留的日志文件数量
-    """
-    
-    # 获取根日志记录器
-    root_logger = logging.getLogger()
-    root_logger.setLevel(getattr(logging, log_level.upper()))
-    
-    # 清除现有处理器
-    root_logger.handlers.clear()
-    
-    # 控制台处理器
-    if enable_console:
-        console_handler = logging.StreamHandler(sys.stdout)
-        console_formatter = ColoredFormatter(
+        # 访问日志记录器
+        self.access_logger = logging.getLogger("access")
+        self.access_logger.setLevel(logging.INFO)
+        
+        # 错误日志记录器
+        self.error_logger = logging.getLogger("error")
+        self.error_logger.setLevel(logging.ERROR)
+        
+        # 安全日志记录器
+        self.security_logger = logging.getLogger("security")
+        self.security_logger.setLevel(logging.WARNING)
+        
+        # 创建格式化器
+        formatter = logging.Formatter(
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         )
-        console_handler.setFormatter(console_formatter)
-        console_handler.setLevel(logging.INFO)  # 控制台只显示INFO及以上级别
-        root_logger.addHandler(console_handler)
-    
-    # 文件处理器 - 普通格式
-    if enable_file:
-        file_handler = logging.handlers.RotatingFileHandler(
-            LOG_DIR / "app.log",
-            maxBytes=max_file_size,
-            backupCount=backup_count,
-            encoding='utf-8'
-        )
-        file_formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(module)s:%(funcName)s:%(lineno)d - %(message)s'
-        )
-        file_handler.setFormatter(file_formatter)
-        root_logger.addHandler(file_handler)
-    
-    # JSON格式日志处理器
-    if enable_json:
-        json_handler = logging.handlers.RotatingFileHandler(
-            LOG_DIR / "app.json",
-            maxBytes=max_file_size,
-            backupCount=backup_count,
-            encoding='utf-8'
-        )
-        json_formatter = JSONFormatter()
-        json_handler.setFormatter(json_formatter)
-        root_logger.addHandler(json_handler)
-    
-    # 错误日志处理器
-    error_handler = logging.handlers.RotatingFileHandler(
-        LOG_DIR / "error.log",
-        maxBytes=max_file_size,
-        backupCount=backup_count,
-        encoding='utf-8'
-    )
-    error_formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(module)s:%(funcName)s:%(lineno)d - %(message)s\n%(exc_info)s'
-    )
-    error_handler.setFormatter(error_formatter)
-    error_handler.setLevel(logging.ERROR)
-    root_logger.addHandler(error_handler)
-    
-    # 设置第三方库的日志级别
-    logging.getLogger("uvicorn").setLevel(logging.WARNING)
-    logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
-    logging.getLogger("sqlalchemy").setLevel(logging.WARNING)
-    
-    logging.info("日志系统初始化完成")
-
-def get_logger(name: str) -> logging.Logger:
-    """获取指定名称的日志记录器"""
-    return logging.getLogger(name)
-
-class LoggerAdapter(logging.LoggerAdapter):
-    """日志适配器，用于添加上下文信息"""
-    
-    def process(self, msg, kwargs):
-        # 添加额外的上下文信息到日志记录中
-        if 'extra' not in kwargs:
-            kwargs['extra'] = {}
         
-        # 合并适配器的额外信息
-        kwargs['extra'].update(self.extra)
+        json_formatter = logging.Formatter(
+            '{"timestamp": "%(asctime)s", "logger": "%(name)s", "level": "%(levelname)s", "message": "%(message)s"}'
+        )
         
-        return msg, kwargs
+        # 为每个记录器添加文件处理器
+        self._add_file_handler(self.app_logger, self.app_log_file, formatter)
+        self._add_file_handler(self.access_logger, self.access_log_file, formatter)
+        self._add_file_handler(self.error_logger, self.error_log_file, formatter)
+        self._add_file_handler(self.security_logger, self.security_log_file, formatter)
+    
+    def _add_file_handler(self, logger, file_path, formatter):
+        """为记录器添加文件处理器"""
+        handler = logging.FileHandler(file_path, encoding='utf-8')
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+        
+        # 防止重复日志
+        logger.propagate = False
+    
+    def log_api_access(self, method: str, path: str, status_code: int, 
+                      user_id: Optional[int] = None, ip_address: str = "127.0.0.1"):
+        """记录API访问日志"""
+        message = f"{method} {path} - {status_code}"
+        if user_id:
+            message += f" - User: {user_id}"
+        message += f" - IP: {ip_address}"
+        
+        self.access_logger.info(message)
+    
+    def log_security_event(self, event_type: str, message: str, 
+                          user_id: Optional[int] = None, ip_address: str = "127.0.0.1"):
+        """记录安全事件"""
+        security_message = f"[{event_type}] {message}"
+        if user_id:
+            security_message += f" - User: {user_id}"
+        security_message += f" - IP: {ip_address}"
+        
+        self.security_logger.warning(security_message)
+    
+    def log_error(self, error_message: str, exception: Optional[Exception] = None,
+                  user_id: Optional[int] = None):
+        """记录错误日志"""
+        message = error_message
+        if user_id:
+            message += f" - User: {user_id}"
+        if exception:
+            message += f" - Exception: {str(exception)}"
+        
+        self.error_logger.error(message)
+    
+    def parse_log_file(self, file_path: Path, hours: int = 24) -> List[Dict[str, Any]]:
+        """解析日志文件"""
+        if not file_path.exists():
+            return []
+        
+        logs = []
+        cutoff_time = datetime.now() - timedelta(hours=hours)
+        
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    
+                    # 解析日志行
+                    log_entry = self._parse_log_line(line)
+                    if log_entry and log_entry.get('timestamp'):
+                        try:
+                            log_time = datetime.fromisoformat(log_entry['timestamp'].replace('Z', '+00:00'))
+                            if log_time >= cutoff_time:
+                                logs.append(log_entry)
+                        except:
+                            # 如果时间解析失败，仍然包含这条日志
+                            logs.append(log_entry)
+        except Exception as e:
+            print(f"Error reading log file {file_path}: {e}")
+        
+        return sorted(logs, key=lambda x: x.get('timestamp', ''), reverse=True)
+    
+    def _parse_log_line(self, line: str) -> Optional[Dict[str, Any]]:
+        """解析单行日志"""
+        # 尝试解析JSON格式
+        if line.startswith('{'):
+            try:
+                return json.loads(line)
+            except:
+                pass
+        
+        # 解析标准格式: 2024-01-15 10:30:25,123 - app - INFO - message
+        pattern = r'(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}),?\d* - ([^-]+) - ([^-]+) - (.+)'
+        match = re.match(pattern, line)
+        
+        if match:
+            timestamp, logger, level, message = match.groups()
+            return {
+                'timestamp': timestamp.strip(),
+                'logger': logger.strip(),
+                'level': level.strip(),
+                'message': message.strip()
+            }
+        
+        # 如果无法解析，返回原始行
+        return {
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'logger': 'unknown',
+            'level': 'INFO',
+            'message': line
+        }
+    
+    def get_log_stats(self, hours: int = 24) -> Dict[str, int]:
+        """获取日志统计信息"""
+        stats = {
+            'total_logs': 0,
+            'errors': 0,
+            'warnings': 0,
+            'info_logs': 0,
+            'security_events': 0,
+            'api_requests': 0
+        }
+        
+        # 统计各类日志
+        for log_file, log_type in [
+            (self.app_log_file, 'app'),
+            (self.access_log_file, 'access'),
+            (self.error_log_file, 'error'),
+            (self.security_log_file, 'security')
+        ]:
+            logs = self.parse_log_file(log_file, hours)
+            
+            for log in logs:
+                stats['total_logs'] += 1
+                level = log.get('level', '').upper()
+                
+                if level == 'ERROR':
+                    stats['errors'] += 1
+                elif level == 'WARNING':
+                    stats['warnings'] += 1
+                elif level == 'INFO':
+                    stats['info_logs'] += 1
+                
+                if log_type == 'security':
+                    stats['security_events'] += 1
+                elif log_type == 'access':
+                    stats['api_requests'] += 1
+        
+        return stats
+    
+    def get_error_logs(self, hours: int = 24) -> List[Dict[str, Any]]:
+        """获取错误日志"""
+        error_logs = self.parse_log_file(self.error_log_file, hours)
+        app_logs = self.parse_log_file(self.app_log_file, hours)
+        
+        # 合并错误级别的日志
+        all_errors = error_logs + [log for log in app_logs if log.get('level') == 'ERROR']
+        
+        return sorted(all_errors, key=lambda x: x.get('timestamp', ''), reverse=True)
+    
+    def get_security_logs(self, hours: int = 24) -> List[Dict[str, Any]]:
+        """获取安全日志"""
+        return self.parse_log_file(self.security_log_file, hours)
+    
+    def get_api_logs(self, hours: int = 24) -> List[Dict[str, Any]]:
+        """获取API访问日志"""
+        return self.parse_log_file(self.access_log_file, hours)
+    
+    def search_logs(self, keyword: str, hours: int = 24, max_results: int = 200) -> List[Dict[str, Any]]:
+        """搜索日志"""
+        all_logs = []
+        
+        # 搜索所有日志文件
+        for log_file in [self.app_log_file, self.access_log_file, self.error_log_file, self.security_log_file]:
+            logs = self.parse_log_file(log_file, hours)
+            all_logs.extend(logs)
+        
+        # 过滤包含关键词的日志
+        keyword_lower = keyword.lower()
+        filtered_logs = [
+            log for log in all_logs 
+            if keyword_lower in log.get('message', '').lower()
+        ]
+        
+        # 按时间排序并限制结果数量
+        filtered_logs.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+        return filtered_logs[:max_results]
 
-def get_context_logger(
-    name: str,
-    user_id: Optional[int] = None,
-    equipment_id: Optional[int] = None,
-    request_id: Optional[str] = None,
-    ip_address: Optional[str] = None
-) -> LoggerAdapter:
-    """
-    获取带上下文信息的日志记录器
-    
-    Args:
-        name: 日志记录器名称
-        user_id: 用户ID
-        equipment_id: 设备ID
-        request_id: 请求ID
-        ip_address: IP地址
-    
-    Returns:
-        带上下文信息的日志适配器
-    """
+# 全局日志管理器实例
+log_manager = LogManager()
+
+def get_context_logger(name: str, **kwargs):
+    """获取上下文日志记录器（兼容性函数）"""
     logger = logging.getLogger(name)
-    extra = {}
-    
-    if user_id is not None:
-        extra['user_id'] = user_id
-    if equipment_id is not None:
-        extra['equipment_id'] = equipment_id
-    if request_id is not None:
-        extra['request_id'] = request_id
-    if ip_address is not None:
-        extra['ip_address'] = ip_address
-    
-    return LoggerAdapter(logger, extra)
+    # 为了兼容性，我们忽略额外的参数
+    return logger
 
-@contextmanager
-def log_execution_time(logger: logging.Logger, operation: str):
-    """
-    记录操作执行时间的上下文管理器
-    
-    Args:
-        logger: 日志记录器
-        operation: 操作描述
-    """
-    start_time = datetime.now()
-    logger.info(f"开始执行: {operation}")
-    
-    try:
-        yield
-        end_time = datetime.now()
-        duration = (end_time - start_time).total_seconds()
-        logger.info(f"执行完成: {operation}, 耗时: {duration:.3f}秒")
-    except Exception as e:
-        end_time = datetime.now()
-        duration = (end_time - start_time).total_seconds()
-        logger.error(f"执行失败: {operation}, 耗时: {duration:.3f}秒, 错误: {str(e)}")
-        raise
+def log_security_event(logger, event_type: str, description: str, ip_address: str = "127.0.0.1", 
+                      severity: str = "INFO", user_id: Optional[int] = None, **kwargs):
+    """记录安全事件（兼容性函数）"""
+    # 兼容旧的调用方式
+    log_manager.log_security_event(event_type, description, user_id, ip_address)
 
-def log_api_request(
-    logger: logging.Logger,
-    method: str,
-    path: str,
-    user_id: Optional[int] = None,
-    ip_address: Optional[str] = None,
-    user_agent: Optional[str] = None,
-    request_id: Optional[str] = None
-):
-    """
-    记录API请求日志
-    
-    Args:
-        logger: 日志记录器
-        method: HTTP方法
-        path: 请求路径
-        user_id: 用户ID
-        ip_address: IP地址
-        user_agent: 用户代理
-        request_id: 请求ID
-    """
-    extra = {
-        'action': 'api_request',
-        'method': method,
-        'path': path
-    }
-    
-    if user_id is not None:
-        extra['user_id'] = user_id
-    if ip_address is not None:
-        extra['ip_address'] = ip_address
-    if user_agent is not None:
-        extra['user_agent'] = user_agent
-    if request_id is not None:
-        extra['request_id'] = request_id
-    
-    logger.info(f"API请求: {method} {path}", extra=extra)
+def log_database_operation(logger, operation: str, table: str, record_id: Optional[int] = None, 
+                          user_id: Optional[int] = None, **kwargs):
+    """记录数据库操作（兼容性函数）"""
+    message = f"数据库操作: {operation} on {table}"
+    if record_id:
+        message += f" (ID: {record_id})"
+    log_manager.app_logger.info(message)
 
-def log_api_response(
-    logger: logging.Logger,
-    method: str,
-    path: str,
-    status_code: int,
-    response_time: float,
-    user_id: Optional[int] = None,
-    request_id: Optional[str] = None
-):
-    """
-    记录API响应日志
-    
-    Args:
-        logger: 日志记录器
-        method: HTTP方法
-        path: 请求路径
-        status_code: 响应状态码
-        response_time: 响应时间（秒）
-        user_id: 用户ID
-        request_id: 请求ID
-    """
-    extra = {
-        'action': 'api_response',
-        'method': method,
-        'path': path,
-        'status_code': status_code,
-        'response_time': response_time
-    }
-    
-    if user_id is not None:
-        extra['user_id'] = user_id
-    if request_id is not None:
-        extra['request_id'] = request_id
-    
-    level = logging.INFO if status_code < 400 else logging.WARNING if status_code < 500 else logging.ERROR
-    logger.log(level, f"API响应: {method} {path} - {status_code} ({response_time:.3f}s)", extra=extra)
+def log_file_operation(logger, operation: str, file_path: str, user_id: Optional[int] = None, 
+                      equipment_id: Optional[int] = None, **kwargs):
+    """记录文件操作（兼容性函数）"""
+    message = f"文件操作: {operation} - {file_path}"
+    if user_id:
+        message += f" - User: {user_id}"
+    if equipment_id:
+        message += f" - Equipment: {equipment_id}"
+    log_manager.app_logger.info(message)
 
-def log_database_operation(
-    logger: logging.Logger,
-    operation: str,
-    table: str,
-    record_id: Optional[int] = None,
-    user_id: Optional[int] = None,
-    details: Optional[Dict[str, Any]] = None
-):
-    """
-    记录数据库操作日志
-    
-    Args:
-        logger: 日志记录器
-        operation: 操作类型 (CREATE, READ, UPDATE, DELETE)
-        table: 表名
-        record_id: 记录ID
-        user_id: 操作用户ID
-        details: 操作详情
-    """
-    extra = {
-        'action': 'database_operation',
-        'operation': operation,
-        'table': table
-    }
-    
-    if record_id is not None:
-        extra['record_id'] = record_id
-    if user_id is not None:
-        extra['user_id'] = user_id
-    if details is not None:
-        extra['details'] = details
-    
-    logger.info(f"数据库操作: {operation} {table}", extra=extra)
-
-def log_security_event(
-    logger: logging.Logger,
-    event_type: str,
-    description: str,
-    user_id: Optional[int] = None,
-    ip_address: Optional[str] = None,
-    severity: str = "INFO"
-):
-    """
-    记录安全事件日志
-    
-    Args:
-        logger: 日志记录器
-        event_type: 事件类型 (LOGIN, LOGOUT, FAILED_LOGIN, PERMISSION_DENIED, etc.)
-        description: 事件描述
-        user_id: 用户ID
-        ip_address: IP地址
-        severity: 严重程度 (INFO, WARNING, ERROR, CRITICAL)
-    """
-    extra = {
-        'action': 'security_event',
-        'event_type': event_type,
-        'severity': severity
-    }
-    
-    if user_id is not None:
-        extra['user_id'] = user_id
-    if ip_address is not None:
-        extra['ip_address'] = ip_address
-    
-    level = getattr(logging, severity.upper(), logging.INFO)
-    logger.log(level, f"安全事件: {event_type} - {description}", extra=extra)
-
-def log_file_operation(
-    logger: logging.Logger,
-    operation: str,
-    file_path: str,
-    user_id: Optional[int] = None,
-    equipment_id: Optional[int] = None,
-    file_size: Optional[int] = None
-):
-    """
-    记录文件操作日志
-    
-    Args:
-        logger: 日志记录器
-        operation: 操作类型 (UPLOAD, DOWNLOAD, DELETE, PREVIEW)
-        file_path: 文件路径
-        user_id: 用户ID
-        equipment_id: 设备ID
-        file_size: 文件大小
-    """
-    extra = {
-        'action': 'file_operation',
-        'operation': operation,
-        'file_path': file_path
-    }
-    
-    if user_id is not None:
-        extra['user_id'] = user_id
-    if equipment_id is not None:
-        extra['equipment_id'] = equipment_id
-    if file_size is not None:
-        extra['file_size'] = file_size
-    
-    logger.info(f"文件操作: {operation} {file_path}", extra=extra)
-
-# 预定义的日志记录器
-app_logger = get_logger("app")
-api_logger = get_logger("api")
-db_logger = get_logger("database")
-security_logger = get_logger("security")
-file_logger = get_logger("file")
+def setup_logging():
+    """设置应用日志"""
+    # 简化版本，只返回日志管理器
+    return log_manager

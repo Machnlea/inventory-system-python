@@ -28,18 +28,14 @@ from app.api.reports import router as reports_router
 from app.api.department_users import router as department_users_router
 from app.api.external_api import router as external_api_router
 from app.api.calibration import router as calibration_router
-# from app.api.logs import router as logs_router
-# from app.api.system import router as system_router
+from app.api.logs import router as logs_router
+from app.api.system import router as system_router
 from app.db.database import engine
 from app.models import models
 
 # 初始化日志系统
-# setup_logging(
-#     log_level=os.getenv("LOG_LEVEL", "INFO"),
-#     enable_console=True,
-#     enable_file=True,
-#     enable_json=True
-# )
+from app.core.logging import setup_logging
+log_manager = setup_logging()
 
 # 获取应用日志记录器
 app_logger = logging.getLogger("app")
@@ -59,10 +55,11 @@ app = FastAPI(
 )
 
 # 添加中间件（注意顺序很重要）
+# 暂时注释掉自定义中间件，避免启动问题
+# from app.core.middleware import LoggingMiddleware, SecurityMiddleware, ErrorHandlingMiddleware
 # app.add_middleware(ErrorHandlingMiddleware)
 # app.add_middleware(LoggingMiddleware)
-# app.add_middleware(SecurityHeadersMiddleware)
-# app.add_middleware(RateLimitMiddleware, requests_per_minute=120)  # 每分钟120个请求
+# app.add_middleware(SecurityMiddleware, max_requests_per_minute=120)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=["*"])  # 生产环境应该限制具体域名
 
 app_logger.info("中间件配置完成")
@@ -87,8 +84,8 @@ app.include_router(reports_router, prefix="/api/reports", tags=["统计报表"])
 app.include_router(department_users_router, prefix="/api/department", tags=["部门用户"])
 app.include_router(external_api_router, prefix="/api/external", tags=["外部系统API"])
 app.include_router(calibration_router, prefix="/api", tags=["检定管理"])
-# app.include_router(logs_router, prefix="/api/logs", tags=["日志管理"])
-# app.include_router(system_router, prefix="/api/system", tags=["系统管理"])
+app.include_router(logs_router, prefix="/api/logs", tags=["日志管理"])
+app.include_router(system_router, prefix="/api/system", tags=["系统管理"])
 
 @app.get("/favicon.ico")
 async def favicon():
@@ -145,9 +142,9 @@ async def settings(request: Request):
 async def reports(request: Request):
     return templates.TemplateResponse("reports.html", {"request": request})
 
-# @app.get("/logs", response_class=HTMLResponse)
-# async def logs(request: Request):
-#     return templates.TemplateResponse("logs.html", {"request": request})
+@app.get("/logs", response_class=HTMLResponse)
+async def logs(request: Request):
+    return templates.TemplateResponse("logs.html", {"request": request})
 
 @app.get("/simple_login_test", response_class=HTMLResponse)
 async def simple_login_test(request: Request):

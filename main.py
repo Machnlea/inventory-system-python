@@ -143,25 +143,6 @@ async def reports(request: Request):
 async def logs(request: Request):
     return templates.TemplateResponse("logs.html", {"request": request})
 
-@app.get("/simple_login_test", response_class=HTMLResponse)
-async def simple_login_test(request: Request):
-    return templates.TemplateResponse("simple_login_test.html", {"request": request})
-
-@app.get("/test_settings", response_class=HTMLResponse)
-async def test_settings(request: Request):
-    return templates.TemplateResponse("test_settings.html", {"request": request})
-
-@app.get("/test_api_fix", response_class=HTMLResponse)
-async def test_api_fix(request: Request):
-    return templates.TemplateResponse("test_api_fix.html", {"request": request})
-
-@app.get("/user-permissions", response_class=HTMLResponse)
-async def user_permissions(request: Request):
-    return templates.TemplateResponse("user_permission_management.html", {"request": request})
-
-@app.get("/test_page_size_feature", response_class=HTMLResponse)
-async def test_page_size_feature(request: Request):
-    return templates.TemplateResponse("test_page_size_feature.html", {"request": request})
 
 # 部门用户页面路由
 @app.get("/department/login", response_class=HTMLResponse)

@@ -55,11 +55,8 @@ app = FastAPI(
 )
 
 # 添加中间件（注意顺序很重要）
-# 暂时注释掉自定义中间件，避免启动问题
-# from app.core.middleware import LoggingMiddleware, SecurityMiddleware, ErrorHandlingMiddleware
-# app.add_middleware(ErrorHandlingMiddleware)
-# app.add_middleware(LoggingMiddleware)
-# app.add_middleware(SecurityMiddleware, max_requests_per_minute=120)
+from app.core.middleware import LoggingMiddleware
+app.add_middleware(LoggingMiddleware)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=["*"])  # 生产环境应该限制具体域名
 
 app_logger.info("中间件配置完成")

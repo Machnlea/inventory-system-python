@@ -44,6 +44,8 @@ Thumbs.db
 
 # User uploads (moved to data directory)
 data/uploads/*
+data/logs/*
+!data/logs/.gitkeep
 !data/uploads/.gitkeep
 backups/*
 !backups/.gitkeep

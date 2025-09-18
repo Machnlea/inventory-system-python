@@ -1856,13 +1856,20 @@
                                             </tr>
                                         </thead>
                                         <tbody class="bg-white divide-y divide-gray-200">
-                                            ${Object.entries(stats.tables || {}).map(([table, info]) => `
+                                            ${Object.entries(stats.tables || {}).map(([table, info]) => {
+                                                const recordCount = info.record_count;
+                                                const isError = typeof recordCount === 'string' && recordCount === 'ERROR';
+                                                const displayText = isError ? 'ERROR' : (recordCount || 0);
+                                                const cellClass = isError ? 'text-red-600 font-medium' : 'text-gray-900';
+                                                const titleAttr = isError ? (info.error || '未知错误') : '';
+                                                return `
                                                 <tr>
                                                     <td class="px-4 py-2 text-sm text-gray-900">${table}</td>
-                                                    <td class="px-4 py-2 text-sm text-gray-900">${info.record_count || 'ERROR'}</td>
+                                                    <td class="px-4 py-2 text-sm ${cellClass}" ${titleAttr ? `title="${titleAttr}"` : ''}>${displayText}</td>
                                                     <td class="px-4 py-2 text-sm text-gray-900">${stats.indexes[table]?.length || 0}</td>
                                                 </tr>
-                                            `).join('')}
+                                                `;
+                                            }).join('')}
                                         </tbody>
                                     </table>
                                 </div>

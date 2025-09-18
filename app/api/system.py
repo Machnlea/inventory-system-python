@@ -696,7 +696,8 @@ def get_database_statistics(
         for table_name, table_sql in tables_result:
             # 获取表的记录数
             try:
-                count_result = db.execute(text(f"SELECT COUNT(*) as count FROM {table_name}"))
+                # 使用参数化查询避免SQL注入，并添加更好的错误处理
+                count_result = db.execute(text(f"SELECT COUNT(*) as count FROM \"{table_name}\""))
                 record_count = count_result.scalar()
                 total_records += record_count
                 
@@ -705,9 +706,12 @@ def get_database_statistics(
                     "sql_definition": table_sql
                 }
             except Exception as e:
+                # 添加更详细的错误信息用于调试
+                error_msg = f"表 '{table_name}' 记录数查询失败: {str(e)}"
+                print(f"数据库统计错误: {error_msg}")  # 添加日志输出
                 statistics["tables"][table_name] = {
                     "record_count": "ERROR",
-                    "error": str(e)
+                    "error": error_msg
                 }
         
         statistics["records"]["total_records"] = total_records

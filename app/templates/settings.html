@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="/static/js/session-manager.js?v=2"></script>
-    <script src="/static/js/api-client.js?v=20240816-2"></script>
+    <script src="/static/js/api-client.js?v=20250918-1"></script>
     <script src="/static/js/notification-manager.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -1422,7 +1422,7 @@
                                     <p class="text-sm text-gray-600">备份当前数据库</p>
                                 </button>
                                 
-                                <button onclick="alert('数据库优化功能开发中')" class="p-4 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors">
+                                <button onclick="performDatabaseOptimize()" class="p-4 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors">
                                     <div class="flex items-center mb-2">
                                         <i class="fas fa-wrench text-green-600 mr-2"></i>
                                         <span class="font-medium">优化数据库</span>
@@ -1430,7 +1430,7 @@
                                     <p class="text-sm text-gray-600">清理和优化数据库</p>
                                 </button>
                                 
-                                <button onclick="alert('数据统计功能开发中')" class="p-4 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition-colors">
+                                <button onclick="showDatabaseStatistics()" class="p-4 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition-colors">
                                     <div class="flex items-center mb-2">
                                         <i class="fas fa-chart-bar text-purple-600 mr-2"></i>
                                         <span class="font-medium">数据统计</span>
@@ -1438,7 +1438,7 @@
                                     <p class="text-sm text-gray-600">查看数据库统计信息</p>
                                 </button>
                                 
-                                <button onclick="alert('备份历史功能开发中')" class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg hover:bg-yellow-100 transition-colors">
+                                <button onclick="showBackupHistory()" class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg hover:bg-yellow-100 transition-colors">
                                     <div class="flex items-center mb-2">
                                         <i class="fas fa-history text-yellow-600 mr-2"></i>
                                         <span class="font-medium">备份历史</span>
@@ -1642,11 +1642,113 @@
         // 执行数据库备份
         async function performDatabaseBackup() {
             try {
-                showNotification('正在创建数据库备份...', 'info');
-                const response = await api.post('/api/system/database/backup');
+                // 显示备份选项对话框
+                const modal = document.createElement('div');
+                modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[3000]';
+                modal.innerHTML = `
+                    <div class="bg-white rounded-lg max-w-md w-full mx-4">
+                        <div class="flex items-center justify-between p-6 border-b">
+                            <h3 class="text-xl font-semibold">创建数据库备份</h3>
+                            <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+                        <div class="p-6">
+                            <div class="mb-4">
+                                <label class="flex items-center space-x-3 cursor-pointer">
+                                    <input type="checkbox" id="includeFiles" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
+                                    <span class="text-gray-700">同时备份上传的文件（证书、文档等）</span>
+                                </label>
+                                <p class="text-sm text-gray-500 mt-2 ml-7">
+                                    选择此项会将所有上传的文件一起打包到备份中，备份文件会更大但更完整
+                                </p>
+                            </div>
+                            <div class="flex justify-end space-x-3">
+                                <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">
+                                    取消
+                                </button>
+                                <button onclick="confirmDatabaseBackup()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                                    开始备份
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            } catch (error) {
+                console.error('显示备份选项失败:', error);
+                showNotification('显示备份选项失败: ' + error.message, 'error');
+            }
+        }
+
+        // 确认并执行数据库备份
+        async function confirmDatabaseBackup() {
+            const includeFiles = document.getElementById('includeFiles').checked;
+            const modal = document.querySelector('.fixed.z-\\[3000\\]');
+            
+            try {
+                // 更新模态框显示进度
+                modal.querySelector('.p-6').innerHTML = `
+                    <div class="text-center">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                        <p class="text-gray-700">${includeFiles ? '正在创建完整备份（数据库+文件）...' : '正在创建数据库备份...'}</p>
+                    </div>
+                `;
+
+                // 创建FormData发送表单数据
+                const formData = new FormData();
+                formData.append('include_files', includeFiles);
+                
+                // 直接使用fetch方式，避免API客户端版本问题
+                const headers = api.getHeaders();
+                delete headers['Content-Type'];  // 让浏览器自动设置multipart/form-data
+                
+                const response = await fetch('/api/system/database/backup', {
+                    method: 'POST',
+                    headers: headers,
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || '备份失败');
+                }
+                
+                const result = await response.json();
+                console.log('备份结果:', result);
+
+                // 显示成功结果
+                modal.querySelector('.p-6').innerHTML = `
+                    <div class="text-center">
+                        <div class="text-green-600 text-4xl mb-4">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <h4 class="text-lg font-semibold text-gray-900 mb-2">备份创建成功</h4>
+                        <p class="text-gray-600 mb-4">备份文件: ${result.backup_file}</p>
+                        <p class="text-sm text-gray-500 mb-4">文件大小: ${formatBytes(result.backup_size)}</p>
+                        ${includeFiles ? `<p class="text-sm text-blue-600 mb-4"><i class="fas fa-info-circle"></i> 备份包含数据库和所有上传文件 (${result.files_count || 0} 个文件)</p>` : ''}
+                        ${includeFiles && result.compression_ratio ? `<p class="text-sm text-green-600 mb-4">压缩率: ${result.compression_ratio}%</p>` : ''}
+                        <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                            完成
+                        </button>
+                    </div>
+                `;
+
                 showNotification('数据库备份创建成功', 'success');
             } catch (error) {
                 console.error('数据库备份失败:', error);
+                modal.querySelector('.p-6').innerHTML = `
+                    <div class="text-center">
+                        <div class="text-red-600 text-4xl mb-4">
+                            <i class="fas fa-exclamation-circle"></i>
+                        </div>
+                        <h4 class="text-lg font-semibold text-gray-900 mb-2">备份失败</h4>
+                        <p class="text-gray-600 mb-4">${error.message}</p>
+                        <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
+                            关闭
+                        </button>
+                    </div>
+                `;
                 showNotification('数据库备份失败: ' + error.message, 'error');
             }
         }
@@ -1679,6 +1781,480 @@
             } catch (error) {
                 console.error('系统清理失败:', error);
                 showNotification('系统清理失败: ' + error.message, 'error');
+            }
+        }
+
+        // 执行数据库优化
+        async function performDatabaseOptimize() {
+            try {
+                showNotification('正在优化数据库...', 'info');
+                const response = await api.post('/api/system/database/optimize');
+                showNotification('数据库优化完成', 'success');
+            } catch (error) {
+                console.error('数据库优化失败:', error);
+                showNotification('数据库优化失败: ' + error.message, 'error');
+            }
+        }
+
+        // 显示数据库统计信息 - 独立模态框
+        async function showDatabaseStatistics() {
+            try {
+                showNotification('正在获取数据库统计信息...', 'info');
+                console.log('开始调用统计API...');
+                const response = await api.get('/api/system/database/statistics');
+                console.log('统计API完整响应:', response);
+                
+                if (!response) {
+                    throw new Error('API响应为空');
+                }
+                
+                const stats = response.statistics || {};
+                
+                let statsHtml = `
+                    <div class="bg-white p-6 rounded-lg shadow-lg max-w-4xl max-h-[80vh] overflow-y-auto">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-xl font-bold text-gray-800">数据库统计信息</h3>
+                            <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="space-y-6">
+                            <div>
+                                <h4 class="font-semibold text-gray-700 mb-3">数据库概览</h4>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="bg-gray-50 p-3 rounded">
+                                        <div class="text-sm text-gray-500">数据库大小</div>
+                                        <div class="text-lg font-medium">${stats.size_info?.file_size_mb || 'N/A'} MB</div>
+                                    </div>
+                                    <div class="bg-gray-50 p-3 rounded">
+                                        <div class="text-sm text-gray-500">总记录数</div>
+                                        <div class="text-lg font-medium">${stats.records?.total_records || 0}</div>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4 mt-4">
+                                    <div class="bg-gray-50 p-3 rounded">
+                                        <div class="text-sm text-gray-500">表数量</div>
+                                        <div class="text-lg font-medium">${Object.keys(stats.tables || {}).length}</div>
+                                    </div>
+                                    <div class="bg-gray-50 p-3 rounded">
+                                        <div class="text-sm text-gray-500">文件路径</div>
+                                        <div class="text-sm font-medium">${stats.size_info?.file_path || 'N/A'}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h4 class="font-semibold text-gray-700 mb-3">表统计</h4>
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full divide-y divide-gray-200">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">表名</th>
+                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">记录数</th>
+                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">索引数</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="bg-white divide-y divide-gray-200">
+                                            ${Object.entries(stats.tables || {}).map(([table, info]) => `
+                                                <tr>
+                                                    <td class="px-4 py-2 text-sm text-gray-900">${table}</td>
+                                                    <td class="px-4 py-2 text-sm text-gray-900">${info.record_count || 'ERROR'}</td>
+                                                    <td class="px-4 py-2 text-sm text-gray-900">${stats.indexes[table]?.length || 0}</td>
+                                                </tr>
+                                            `).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // 创建模态框 - 使用更高的z-index确保显示在数据库管理工具上方
+                const modal = document.createElement('div');
+                modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[3000]';
+                modal.innerHTML = statsHtml;
+                document.body.appendChild(modal);
+                
+                // 点击背景关闭
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.remove();
+                    }
+                });
+                
+            } catch (error) {
+                console.error('获取数据库统计信息失败:', error);
+                showNotification('获取数据库统计信息失败: ' + error.message, 'error');
+            }
+        }
+
+        // 隐藏数据库工具内容区域
+        function hideDatabaseToolsContent() {
+            const contentArea = document.getElementById('database-tools-content');
+            contentArea.classList.add('hidden');
+        }
+
+        // 在数据库管理工具模态框中显示备份历史
+        async function showBackupHistoryInModal() {
+            try {
+                showNotification('正在获取备份历史...', 'info');
+                console.log('开始调用备份API...');
+                const response = await api.get('/api/system/database/backups');
+                console.log('备份API完整响应:', response);
+                
+                if (!response) {
+                    throw new Error('API响应为空');
+                }
+                
+                const backups = response.backups || [];
+                
+                // 显示内容区域
+                const contentArea = document.getElementById('database-tools-content');
+                const contentTitle = document.getElementById('content-title');
+                const contentBody = document.getElementById('content-body');
+                
+                contentTitle.textContent = '备份历史';
+                
+                let historyHtml = `
+                    ${backups.length === 0 ? 
+                        '<div class="text-center text-gray-500 py-8">暂无备份记录</div>' :
+                        `<div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">文件名</th>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">备份时间</th>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">文件大小</th>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    ${backups.map(backup => `
+                                        <tr>
+                                            <td class="px-4 py-2 text-sm text-gray-900">
+                                                <div class="flex items-center">
+                                                    ${backup.is_complete_backup ? 
+                                                        '<i class="fas fa-file-archive text-green-600 mr-2" title="完整备份（数据库+文件）"></i>' : 
+                                                        '<i class="fas fa-database text-blue-600 mr-2" title="仅数据库备份"></i>'
+                                                    }
+                                                    ${backup.file_name}
+                                                </div>
+                                            </td>
+                                            <td class="px-4 py-2 text-sm text-gray-900">${new Date(backup.created_at).toLocaleString()}</td>
+                                            <td class="px-4 py-2 text-sm text-gray-900">
+                                                <span class="${backup.is_complete_backup ? 'text-green-600 font-medium' : 'text-gray-600'}">
+                                                    ${backup.file_size_mb} MB
+                                                </span>
+                                            </td>
+                                            <td class="px-4 py-2 text-sm">
+                                                <button onclick="downloadBackup('${backup.file_name}')" class="text-blue-600 hover:text-blue-800 mr-2" title="下载备份文件">
+                                                    <i class="fas fa-download"></i> 下载
+                                                </button>
+                                                <button onclick="deleteBackupInModal('${backup.file_name}')" class="text-red-600 hover:text-red-800" title="删除备份文件">
+                                                    <i class="fas fa-trash"></i> 删除
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>`
+                    }
+                `;
+                
+                contentBody.innerHTML = historyHtml;
+                contentArea.classList.remove('hidden');
+                
+            } catch (error) {
+                console.error('获取备份历史失败:', error);
+                showNotification('获取备份历史失败: ' + error.message, 'error');
+            }
+        }
+
+        // 显示备份历史 - 独立模态框
+        async function showBackupHistory() {
+            try {
+                // 检查是否已经存在备份历史模态框
+                const existingModal = document.querySelector('.fixed.z-\\[3000\\].bg-black.bg-opacity-50');
+                if (existingModal && existingModal.querySelector('.text-xl.font-bold.text-gray-800')?.textContent === '备份历史') {
+                    // 如果已存在，先移除旧的
+                    existingModal.remove();
+                }
+                
+                showNotification('正在获取备份历史...', 'info');
+                console.log('开始调用备份API...');
+                const response = await api.get('/api/system/database/backups');
+                console.log('备份API完整响应:', response);
+                
+                if (!response) {
+                    throw new Error('API响应为空');
+                }
+                
+                const backups = response.backups || [];
+                
+                let historyHtml = `
+                    <div class="bg-white p-6 rounded-lg shadow-lg max-w-4xl max-h-[80vh] overflow-y-auto">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-xl font-bold text-gray-800">备份历史</h3>
+                            <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        
+                        ${backups.length === 0 ? 
+                            '<div class="text-center text-gray-500 py-8">暂无备份记录</div>' :
+                            `<div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">文件名</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">备份时间</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">文件大小</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-gray-200">
+                                        ${backups.map(backup => `
+                                            <tr>
+                                                <td class="px-4 py-2 text-sm text-gray-900">
+                                                    <div class="flex items-center">
+                                                        ${backup.is_complete_backup ? 
+                                                            '<i class="fas fa-file-archive text-green-600 mr-2" title="完整备份（数据库+文件）"></i>' : 
+                                                            '<i class="fas fa-database text-blue-600 mr-2" title="仅数据库备份"></i>'
+                                                        }
+                                                        ${backup.file_name}
+                                                    </div>
+                                                </td>
+                                                <td class="px-4 py-2 text-sm text-gray-900">${new Date(backup.created_at).toLocaleString()}</td>
+                                                <td class="px-4 py-2 text-sm text-gray-900">
+                                                    <span class="${backup.is_complete_backup ? 'text-green-600 font-medium' : 'text-gray-600'}">
+                                                        ${backup.file_size_mb} MB
+                                                    </span>
+                                                </td>
+                                                <td class="px-4 py-2 text-sm">
+                                                    <button onclick="downloadBackup('${backup.file_name}')" class="text-blue-600 hover:text-blue-800 mr-2" title="下载备份文件">
+                                                        <i class="fas fa-download"></i> 下载
+                                                    </button>
+                                                    <button onclick="deleteBackup('${backup.file_name}')" class="text-red-600 hover:text-red-800" title="删除备份文件">
+                                                        <i class="fas fa-trash"></i> 删除
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>`
+                        }
+                    </div>
+                `;
+                
+                // 创建模态框 - 使用更高的z-index确保显示在数据库管理工具上方
+                const modal = document.createElement('div');
+                modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[3000]';
+                modal.innerHTML = historyHtml;
+                document.body.appendChild(modal);
+                
+                // 点击背景关闭
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.remove();
+                    }
+                });
+                
+            } catch (error) {
+                console.error('获取备份历史失败:', error);
+                showNotification('获取备份历史失败: ' + error.message, 'error');
+            }
+        }
+
+        // 在模态框中删除备份文件
+        async function deleteBackupInModal(filename) {
+            if (!confirm(`确定要删除备份文件 "${filename}" 吗？此操作不可撤销。`)) {
+                return;
+            }
+            
+            try {
+                showNotification('正在删除备份文件...', 'info');
+                await api.delete(`/api/system/database/backups/${filename}`);
+                showNotification('备份文件删除成功', 'success');
+                
+                // 刷新备份历史
+                showBackupHistoryInModal();
+            } catch (error) {
+                console.error('删除备份失败:', error);
+                showNotification('删除备份失败: ' + error.message, 'error');
+            }
+        }
+
+        // 下载备份文件
+        async function downloadBackup(filename) {
+            try {
+                showNotification('正在准备下载...', 'info');
+                
+                // 获取认证令牌
+                const token = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
+                if (!token) {
+                    throw new Error('未找到认证令牌，请重新登录');
+                }
+                
+                console.log('正在使用令牌下载:', token.substring(0, 20) + '...');
+                
+                // 首先测试令牌是否有效
+                const testUrl = `/api/system/database/backups/test-token?token=${encodeURIComponent(token)}`;
+                const testResponse = await fetch(testUrl);
+                const testResult = await testResponse.json();
+                
+                console.log('令牌测试结果:', testResult);
+                
+                if (testResult.status !== 'success') {
+                    throw new Error(`令牌验证失败: ${testResult.message}`);
+                }
+                
+                // 使用fetch获取文件
+                const downloadUrl = `/api/system/database/backups/${filename}/download-with-token?token=${encodeURIComponent(token)}`;
+                
+                console.log('下载URL:', downloadUrl);
+                
+                const response = await fetch(downloadUrl);
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('下载响应错误:', errorData);
+                    throw new Error(errorData.detail || '下载失败');
+                }
+                
+                // 获取文件内容
+                const blob = await response.blob();
+                console.log('文件大小:', blob.size, 'bytes');
+                
+                // 创建下载链接
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename;
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // 清理URL对象
+                window.URL.revokeObjectURL(url);
+                
+                showNotification('备份文件下载成功', 'success');
+            } catch (error) {
+                console.error('下载备份失败:', error);
+                showNotification('下载备份失败: ' + error.message, 'error');
+            }
+        }
+
+        // 删除备份文件
+        async function deleteBackup(filename) {
+            if (!confirm(`确定要删除备份文件 "${filename}" 吗？此操作不可撤销。`)) {
+                return;
+            }
+            
+            try {
+                showNotification('正在删除备份文件...', 'info');
+                await api.delete(`/api/system/database/backups/${filename}`);
+                showNotification('备份文件删除成功', 'success');
+                
+                // 检查是否存在备份历史模态框，如果存在则刷新内容，否则创建新的
+                const existingModal = document.querySelector('.fixed.z-\\[3000\\].bg-black.bg-opacity-50');
+                if (existingModal && existingModal.querySelector('.text-xl.font-bold.text-gray-800')?.textContent === '备份历史') {
+                    // 刷新现有模态框的内容
+                    await refreshBackupHistoryModal();
+                } else {
+                    // 创建新的模态框
+                    await showBackupHistory();
+                }
+            } catch (error) {
+                console.error('删除备份失败:', error);
+                showNotification('删除备份失败: ' + error.message, 'error');
+            }
+        }
+
+        // 刷新备份历史模态框内容
+        async function refreshBackupHistoryModal() {
+            try {
+                showNotification('正在刷新备份历史...', 'info');
+                const response = await api.get('/api/system/database/backups');
+                const backups = response.backups || [];
+                
+                // 找到现有的模态框并更新内容
+                const existingModal = document.querySelector('.fixed.z-\\[3000\\].bg-black.bg-opacity-50');
+                if (!existingModal) {
+                    return;
+                }
+                
+                const modalContent = existingModal.querySelector('.bg-white');
+                if (!modalContent) {
+                    return;
+                }
+                
+                // 生成新的内容
+                let newContent = `
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-bold text-gray-800">备份历史</h3>
+                        <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    ${backups.length === 0 ? 
+                        '<div class="text-center text-gray-500 py-8">暂无备份记录</div>' :
+                        `<div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">文件名</th>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">备份时间</th>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">文件大小</th>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    ${backups.map(backup => `
+                                        <tr>
+                                            <td class="px-4 py-2 text-sm text-gray-900">
+                                                <div class="flex items-center">
+                                                    ${backup.is_complete_backup ? 
+                                                        '<i class="fas fa-file-archive text-green-600 mr-2" title="完整备份（数据库+文件）"></i>' : 
+                                                        '<i class="fas fa-database text-blue-600 mr-2" title="仅数据库备份"></i>'
+                                                    }
+                                                    ${backup.file_name}
+                                                </div>
+                                            </td>
+                                            <td class="px-4 py-2 text-sm text-gray-900">${new Date(backup.created_at).toLocaleString()}</td>
+                                            <td class="px-4 py-2 text-sm text-gray-900">
+                                                <span class="${backup.is_complete_backup ? 'text-green-600 font-medium' : 'text-gray-600'}">
+                                                    ${backup.file_size_mb} MB
+                                                </span>
+                                            </td>
+                                            <td class="px-4 py-2 text-sm">
+                                                <button onclick="downloadBackup('${backup.file_name}')" class="text-blue-600 hover:text-blue-800 mr-2" title="下载备份文件">
+                                                    <i class="fas fa-download"></i> 下载
+                                                </button>
+                                                <button onclick="deleteBackup('${backup.file_name}')" class="text-red-600 hover:text-red-800" title="删除备份文件">
+                                                    <i class="fas fa-trash"></i> 删除
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>`
+                    }
+                `;
+                
+                // 更新模态框内容
+                modalContent.innerHTML = newContent;
+                
+                showNotification('备份历史已刷新', 'success');
+            } catch (error) {
+                console.error('刷新备份历史失败:', error);
+                showNotification('刷新备份历史失败: ' + error.message, 'error');
             }
         }
 

@@ -45,6 +45,8 @@ Thumbs.db
 # User uploads (moved to data directory)
 data/uploads/*
 !data/uploads/.gitkeep
+backups/*
+!backups/.gitkeep
 
 # Temporary shell scripts (except important ones)
 # Important shell scripts (start.sh, restart_system.sh, etc.) are tracked
@@ -52,3 +54,4 @@ data/uploads/*
 
 .claude/*
 .spec-workflow/*
+

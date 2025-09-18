@@ -133,6 +133,19 @@ class ApiClient {
         });
     }
 
+    // POST表单请求（用于文件上传等）
+    async postForm(endpoint, formData) {
+        // 获取认证头（不包含Content-Type，让浏览器自动设置multipart/form-data）
+        const headers = this.getHeaders();
+        delete headers['Content-Type'];
+        
+        return this.request(endpoint, {
+            method: 'POST',
+            body: formData,
+            headers: headers
+        });
+    }
+
     // PUT请求
     async put(endpoint, data = {}) {
         return this.request(endpoint, {

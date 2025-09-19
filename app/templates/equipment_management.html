@@ -1331,9 +1331,13 @@
 
                 await initializePage();
 
-                // 设置默认显示正常设备（在用状态）
+                // 恢复搜索状态（如果有保存的状态）
+                restoreSearchState();
+
+                // 如果没有恢复的搜索状态，则设置默认显示正常设备（在用状态）
+                const savedState = sessionStorage.getItem('equipment_search_state');
                 const statusFilter = document.getElementById('status-filter');
-                if (statusFilter) {
+                if (!savedState && statusFilter) {
                     statusFilter.value = '在用';
                 }
 
@@ -1511,6 +1515,8 @@
                         if (statusFilter) {
                             statusFilter.value = '在用';
                             currentPage = 1;
+                            // 更新保存的搜索状态
+                            saveSearchState();
                             loadEquipmentData();
                             showSmartNotification('card-active', '显示正常设备', 'info');
                         }
@@ -1542,6 +1548,8 @@
                             startDateFilter.value = formatDate(today);
                             endDateFilter.value = formatDate(lastDay);
                             currentPage = 1;
+                            // 更新保存的搜索状态
+                            saveSearchState();
                             loadEquipmentData();
                             showSmartNotification('card-monthly-due', '显示待检设备', 'info');
                         }
@@ -1562,6 +1570,8 @@
                         if (startDateFilter && endDateFilter) {
                             endDateFilter.value = today.toISOString().split('T')[0];
                             currentPage = 1;
+                            // 更新保存的搜索状态
+                            saveSearchState();
                             loadEquipmentData();
                             showSmartNotification('card-overdue', '显示超期设备', 'info');
                         }
@@ -1582,10 +1592,14 @@
 
                             if (inactiveCard.clickCount % 2 === 1) {
                                 statusFilter.value = '停用';
+                                // 更新保存的搜索状态
+                                saveSearchState();
                                 loadEquipmentData();
                                 showSmartNotification('card-inactive', '显示停用设备', 'info');
                             } else {
                                 statusFilter.value = '报废';
+                                // 更新保存的搜索状态
+                                saveSearchState();
                                 loadEquipmentData();
                                 showSmartNotification('card-inactive', '显示报废设备', 'info');
                             }
@@ -1621,6 +1635,9 @@
             if (searchInput) {
                 searchInput.value = '';
             }
+            
+            // 清除保存的搜索状态
+            clearSearchState();
         }
 
         // 加载设备数据
@@ -2711,6 +2728,8 @@
                 clearTimeout(searchTimeout);
                 searchTimeout = setTimeout(() => {
                     currentPage = 1;
+                    // 更新保存的搜索状态
+                    saveSearchState();
                     loadEquipmentData();
                 }, 500);
             });
@@ -2719,6 +2738,8 @@
             ['department-filter', 'category-filter', 'start-date-filter', 'end-date-filter'].forEach(id => {
                 document.getElementById(id).addEventListener('change', function () {
                     currentPage = 1;
+                    // 更新保存的搜索状态
+                    saveSearchState();
                     loadEquipmentData();
                 });
             });
@@ -2868,13 +2889,96 @@
             window.location.href = '/equipment/edit?mode=add';
         }
 
+        // 保存当前搜索状态到sessionStorage
+        function saveSearchState() {
+            const searchInput = document.getElementById('search-input');
+            const statusFilter = document.getElementById('status-filter');
+            const categoryFilter = document.getElementById('category-filter');
+            const departmentFilter = document.getElementById('department-filter');
+            const locationFilter = document.getElementById('location-filter');
+            
+            const searchState = {
+                keyword: searchInput ? searchInput.value : '',
+                status: statusFilter ? statusFilter.value : '',
+                category: categoryFilter ? categoryFilter.value : '',
+                department: departmentFilter ? departmentFilter.value : '',
+                location: locationFilter ? locationFilter.value : '',
+                timestamp: Date.now()
+            };
+            
+            sessionStorage.setItem('equipment_search_state', JSON.stringify(searchState));
+        }
+
+        // 从sessionStorage恢复搜索状态
+        function restoreSearchState() {
+            const savedState = sessionStorage.getItem('equipment_search_state');
+            if (!savedState) return;
+            
+            try {
+                const searchState = JSON.parse(savedState);
+                
+                // 检查是否过期（超过2小时）
+                const now = Date.now();
+                const savedTime = searchState.timestamp || 0;
+                if (now - savedTime > 2 * 60 * 60 * 1000) {
+                    sessionStorage.removeItem('equipment_search_state');
+                    return;
+                }
+                
+                // 恢复搜索框
+                const searchInput = document.getElementById('search-input');
+                if (searchInput && searchState.keyword) {
+                    searchInput.value = searchState.keyword;
+                }
+                
+                // 恢复筛选器
+                const statusFilter = document.getElementById('status-filter');
+                if (statusFilter && searchState.status) {
+                    statusFilter.value = searchState.status;
+                }
+                
+                const categoryFilter = document.getElementById('category-filter');
+                if (categoryFilter && searchState.category) {
+                    categoryFilter.value = searchState.category;
+                }
+                
+                const departmentFilter = document.getElementById('department-filter');
+                if (departmentFilter && searchState.department) {
+                    departmentFilter.value = searchState.department;
+                }
+                
+                const locationFilter = document.getElementById('location-filter');
+                if (locationFilter && searchState.location) {
+                    locationFilter.value = searchState.location;
+                }
+                
+                console.log('已恢复搜索状态:', searchState);
+            } catch (error) {
+                console.error('恢复搜索状态失败:', error);
+                sessionStorage.removeItem('equipment_search_state');
+            }
+        }
+
+        // 清除搜索状态
+        function clearSearchState() {
+            sessionStorage.removeItem('equipment_search_state');
+        }
+
         // 查看设备详情
         function viewEquipment(equipmentId) {
+            // 保存当前搜索状态
+            saveSearchState();
+            
+            // 跳转到设备详情页
             window.location.href = `/equipment/view?id=${equipmentId}`;
         }
 
         // 编辑设备
         function editEquipment(equipmentId) {
+            // 保存当前搜索状态
+            saveSearchState();
+            
+            // 跳转到设备编辑页
             window.location.href = `/equipment/edit?id=${equipmentId}`;
         }
 

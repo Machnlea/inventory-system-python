@@ -972,14 +972,10 @@
             window.print();
         }
 
-        // 返回到设备管理页面并刷新数据
+        // 返回到设备管理页面
         function goBackToEquipmentList() {
-            // 导航到设备管理页面，添加刷新参数
-            const equipmentUrl = new URL('/equipment', window.location.origin);
-            equipmentUrl.searchParams.set('refresh', 'true');
-            equipmentUrl.searchParams.set('timestamp', Date.now().toString());
-            
-            window.location.href = equipmentUrl.toString();
+            // 直接返回到设备管理页面，保持搜索状态
+            window.location.href = '/equipment';
         }
 
         // 页面加载完成后的初始化（已合并到主初始化函数中）

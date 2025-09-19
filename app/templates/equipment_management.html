@@ -70,7 +70,7 @@
 
         /* 删除按钮禁用样式 */
         .equipment-action-btn.text-gray-400 {
-            opacity: 0.6;
+            opacity: 0.7;
         }
 
         .equipment-action-btn.text-gray-400.cursor-not-allowed {
@@ -78,12 +78,16 @@
         }
 
         .equipment-action-btn.text-gray-400.cursor-not-allowed:hover {
-            opacity: 0.8;
+            opacity: 0.9;
+        }
+
+        .equipment-action-btn.text-gray-400.cursor-not-allowed .fa-ban {
+            font-size: 1.1em;
         }
 
         /* 批量删除按钮禁用样式 */
         #batchDeleteBtn.text-gray-400 {
-            opacity: 0.6;
+            opacity: 0.7;
         }
 
         #batchDeleteBtn.text-gray-400.cursor-not-allowed {
@@ -91,7 +95,11 @@
         }
 
         #batchDeleteBtn.text-gray-400.cursor-not-allowed:hover {
-            opacity: 0.8;
+            opacity: 0.9;
+        }
+
+        #batchDeleteBtn.text-gray-400.cursor-not-allowed .fa-ban {
+            font-size: 1.1em;
         }
 
         /* 撤回删除通知样式 */
@@ -1331,12 +1339,16 @@
                         batchDeleteBtn.disabled = false;
                         batchDeleteBtn.classList.remove('text-gray-400', 'cursor-not-allowed');
                         batchDeleteBtn.classList.add('hover:bg-gray-50');
+                        // 恢复正常的删除图标
+                        batchDeleteBtn.innerHTML = '<i class="fas fa-trash text-red-500 mr-2"></i>批量删除';
                         batchDeleteBtn.onclick = function() { batchOperation('delete'); };
                     } else {
-                        // 普通用户：禁用的批量删除按钮
+                        // 普通用户：禁用的批量删除按钮，使用红色禁止符号
                         batchDeleteBtn.disabled = true;
                         batchDeleteBtn.classList.add('text-gray-400', 'cursor-not-allowed');
                         batchDeleteBtn.classList.remove('hover:bg-gray-50');
+                        // 更改为红色禁止符号
+                        batchDeleteBtn.innerHTML = '<i class="fas fa-ban text-red-500 mr-2"></i>批量删除';
                         batchDeleteBtn.onclick = function() { showDeletePermissionDenied(); };
                     }
                 }
@@ -3047,9 +3059,9 @@
                             <i class="fas fa-trash"></i>
                         </button>`;
             } else {
-                // 普通用户：禁用的删除按钮
+                // 普通用户：禁用的删除按钮，使用红色禁止符号
                 return `<button class="equipment-action-btn text-gray-400 cursor-not-allowed" title="仅管理员可删除设备" onclick="showDeletePermissionDenied()" disabled>
-                            <i class="fas fa-trash"></i>
+                            <i class="fas fa-ban text-red-500"></i>
                         </button>`;
             }
         }

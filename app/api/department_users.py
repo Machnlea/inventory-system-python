@@ -329,7 +329,7 @@ async def export_department_equipment(
                 '检定方式': equipment.calibration_method or '',
                 '制造厂家': equipment.manufacturer or '',
                 '出厂日期': equipment.manufacture_date or '',
-                '厂家编号': equipment.manufacturer_id or '',
+                '出厂编号': equipment.manufacturer_id or '',
                 '安装地点': equipment.installation_location or '',
                 '原值(元)': equipment.original_value or '',
                 '分度值': equipment.scale_value or '',

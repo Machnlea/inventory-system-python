@@ -74,15 +74,11 @@
         }
 
         .equipment-action-btn.text-gray-400.cursor-not-allowed {
-            cursor: not-allowed;
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="14" fill="none" stroke="red" stroke-width="3"/><line x1="10" y1="10" x2="22" y2="22" stroke="red" stroke-width="3" stroke-linecap="round"/></svg>') 16 16, auto;
         }
 
         .equipment-action-btn.text-gray-400.cursor-not-allowed:hover {
             opacity: 0.9;
-        }
-
-        .equipment-action-btn.text-gray-400.cursor-not-allowed .fa-ban {
-            font-size: 1.1em;
         }
 
         /* 批量删除按钮禁用样式 */
@@ -91,15 +87,11 @@
         }
 
         #batchDeleteBtn.text-gray-400.cursor-not-allowed {
-            cursor: not-allowed;
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="14" fill="none" stroke="red" stroke-width="3"/><line x1="10" y1="10" x2="22" y2="22" stroke="red" stroke-width="3" stroke-linecap="round"/></svg>') 16 16, auto;
         }
 
         #batchDeleteBtn.text-gray-400.cursor-not-allowed:hover {
             opacity: 0.9;
-        }
-
-        #batchDeleteBtn.text-gray-400.cursor-not-allowed .fa-ban {
-            font-size: 1.1em;
         }
 
         /* 撤回删除通知样式 */
@@ -1339,16 +1331,12 @@
                         batchDeleteBtn.disabled = false;
                         batchDeleteBtn.classList.remove('text-gray-400', 'cursor-not-allowed');
                         batchDeleteBtn.classList.add('hover:bg-gray-50');
-                        // 恢复正常的删除图标
-                        batchDeleteBtn.innerHTML = '<i class="fas fa-trash text-red-500 mr-2"></i>批量删除';
                         batchDeleteBtn.onclick = function() { batchOperation('delete'); };
                     } else {
-                        // 普通用户：禁用的批量删除按钮，使用红色禁止符号
+                        // 普通用户：禁用的批量删除按钮，使用红色禁止鼠标指针
                         batchDeleteBtn.disabled = true;
                         batchDeleteBtn.classList.add('text-gray-400', 'cursor-not-allowed');
                         batchDeleteBtn.classList.remove('hover:bg-gray-50');
-                        // 更改为红色禁止符号
-                        batchDeleteBtn.innerHTML = '<i class="fas fa-ban text-red-500 mr-2"></i>批量删除';
                         batchDeleteBtn.onclick = function() { showDeletePermissionDenied(); };
                     }
                 }
@@ -3059,9 +3047,9 @@
                             <i class="fas fa-trash"></i>
                         </button>`;
             } else {
-                // 普通用户：禁用的删除按钮，使用红色禁止符号
+                // 普通用户：禁用的删除按钮，使用红色禁止鼠标指针
                 return `<button class="equipment-action-btn text-gray-400 cursor-not-allowed" title="仅管理员可删除设备" onclick="showDeletePermissionDenied()" disabled>
-                            <i class="fas fa-ban text-red-500"></i>
+                            <i class="fas fa-trash"></i>
                         </button>`;
             }
         }

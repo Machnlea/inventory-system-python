@@ -68,6 +68,17 @@
             transition: all 0.2s ease;
         }
 
+        /* 删除按钮禁用样式 */
+        .equipment-action-btn.text-gray-400 {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .equipment-action-btn.text-gray-400.cursor-not-allowed {
+            pointer-events: auto;
+            cursor: not-allowed;
+        }
+
         /* 撤回删除通知样式 */
         .undo-notification {
             background: white;
@@ -429,7 +440,7 @@
                                 </button>
                                 <div id="batchDropdown"
                                     class="hidden absolute top-full left-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
-                                    <button class="w-full text-left px-4 py-2 hover:bg-gray-50 rounded-t-lg"
+                                    <button id="batchDeleteBtn" class="w-full text-left px-4 py-2 hover:bg-gray-50 rounded-t-lg"
                                         onclick="batchOperation('delete')">
                                         <i class="fas fa-trash text-red-500 mr-2"></i>批量删除
                                     </button>
@@ -1290,6 +1301,29 @@
                     } else if (settingsLink) {
                         settingsLink.style.display = 'none';
                     }
+
+                    // 设置批量删除按钮状态
+                    setupBatchDeletePermission(user.is_admin);
+                }
+            }
+
+            // 设置批量删除按钮权限
+            function setupBatchDeletePermission(isAdmin) {
+                const batchDeleteBtn = document.getElementById('batchDeleteBtn');
+                if (batchDeleteBtn) {
+                    if (isAdmin) {
+                        // 管理员：正常的批量删除按钮
+                        batchDeleteBtn.disabled = false;
+                        batchDeleteBtn.classList.remove('text-gray-400', 'cursor-not-allowed');
+                        batchDeleteBtn.classList.add('hover:bg-gray-50');
+                        batchDeleteBtn.onclick = function() { batchOperation('delete'); };
+                    } else {
+                        // 普通用户：禁用的批量删除按钮
+                        batchDeleteBtn.disabled = true;
+                        batchDeleteBtn.classList.add('text-gray-400', 'cursor-not-allowed');
+                        batchDeleteBtn.classList.remove('hover:bg-gray-50');
+                        batchDeleteBtn.onclick = function() { showDeletePermissionDenied(); };
+                    }
                 }
             }
 
@@ -1840,9 +1874,7 @@
                             <button class="equipment-action-btn text-purple-600 hover:text-purple-900" title="更新检定" onclick="updateCalibrationDate('${equipment.id}')">
                                 <i class="fas fa-calendar-alt"></i>
                             </button>
-                            <button class="equipment-action-btn text-red-600 hover:text-red-900" title="删除" onclick="deleteEquipment('${equipment.id}', '${equipment.name || '设备'}')">
-                                <i class="fas fa-trash"></i>
-                            </button>
+                            ${generateDeleteButton(equipment.id, equipment.name || '设备')}
                         </td>
                     </tr>
                 `;
@@ -2982,6 +3014,36 @@
             window.location.href = `/equipment/edit?id=${equipmentId}`;
         }
 
+        // 检查当前用户是否为管理员
+        function isCurrentUserAdmin() {
+            const userInfo = sessionStorage.getItem('user_info') || localStorage.getItem('user_info');
+            if (userInfo) {
+                const user = JSON.parse(userInfo);
+                return user.is_admin === true;
+            }
+            return false;
+        }
+
+        // 生成删除按钮（根据用户权限）
+        function generateDeleteButton(equipmentId, equipmentName) {
+            if (isCurrentUserAdmin()) {
+                // 管理员：正常的删除按钮
+                return `<button class="equipment-action-btn text-red-600 hover:text-red-900" title="删除" onclick="deleteEquipment('${equipmentId}', '${equipmentName}')">
+                            <i class="fas fa-trash"></i>
+                        </button>`;
+            } else {
+                // 普通用户：禁用的删除按钮
+                return `<button class="equipment-action-btn text-gray-400 cursor-not-allowed" title="仅管理员可删除设备" onclick="showDeletePermissionDenied()">
+                            <i class="fas fa-trash"></i>
+                        </button>`;
+            }
+        }
+
+        // 显示删除权限被拒绝提示
+        function showDeletePermissionDenied() {
+            showNotification('只有管理员才能删除设备，请联系管理员操作', 'warning');
+        }
+
         // 更新检定
         async function updateCalibrationDate(equipmentId) {
             try {
@@ -3028,6 +3090,12 @@
 
         // 删除设备
         function deleteEquipment(equipmentId, equipmentName) {
+            // 检查用户权限
+            if (!isCurrentUserAdmin()) {
+                showDeletePermissionDenied();
+                return;
+            }
+            
             currentDeleteEquipmentId = equipmentId;
             document.getElementById('deleteEquipmentName').textContent = equipmentName;
             document.getElementById('deleteEquipmentWarning').classList.add('hidden');

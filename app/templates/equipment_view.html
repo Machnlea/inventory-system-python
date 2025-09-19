@@ -187,7 +187,7 @@
                         <p class="text-gray-600 mt-1">查看设备的完整信息和历史记录</p>
                     </div>
                     <div class="flex gap-3">
-                        <button id="editEquipmentBtn" onclick="editEquipment()" class="btn-primary text-white px-6 py-3 rounded-lg">
+                        <button id="editEquipmentBtn" onclick="editEquipment()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
                             <i class="fas fa-edit mr-2"></i>编辑设备
                         </button>
                         <button onclick="printDetails()" class="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors duration-200">
@@ -2079,6 +2079,7 @@
         // 附件删除确认模态框点击外部关闭（已合并到setupModalEventListeners函数中）
         
     </script>
+    <script src="/static/js/tailwind-components.js"></script>
 
     <!-- 附件删除确认模态框 -->
     <div id="deleteAttachmentModal" class="modal hidden">

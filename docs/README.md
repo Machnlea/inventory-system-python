@@ -3,7 +3,7 @@
 <div align="center">
 
 ![设备台账管理系统](https://img.shields.io/badge/设备台账管理系统-v1.0-blue)
-![技术栈](https://img.shields.io/badge/技术栈-FastAPI%20%7C%20SQLite%20%7C%20Bootstrap-green)
+![技术栈](https://img.shields.io/badge/技术栈-FastAPI%20%7C%20SQLite%20%7C%20Tailwind%20CSS-green)
 ![许可证](https://img.shields.io/badge/许可证-MIT-yellow)
 
 **基于 FastAPI + SQLite 的综合设备台账管理系统**
@@ -37,7 +37,7 @@
 - ✅ **实时统计**：关键指标和设备分布实时更新
 
 ### 🎨 用户体验
-- ✅ **响应式界面**：Bootstrap 5构建的现代化Web界面
+- ✅ **响应式界面**：Tailwind CSS构建的现代化Web界面
 - ✅ **分页浏览**：大数据量的友好分页展示
 - ✅ **交互式API文档**：Swagger UI和ReDoc双重文档支持
 - ✅ **快捷操作**：便捷的启动脚本和配置管理
@@ -61,7 +61,7 @@
 
 | 技术 | 用途 | 版本 |
 |------|------|------|
-| ![Bootstrap](https://img.shields.io/badge/Bootstrap-7952B3?style=for-the-badge&logo=bootstrap) | UI框架 | 5.1+ |
+| ![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-38BDF8?style=for-the-badge&logo=tailwindcss) | UI框架 | 3.x+ |
 | ![Chart.js](https://img.shields.io/badge/Chart.js-FF6384?style=for-the-badge&logo=chart.js) | 图表库 | 3.9+ |
 | ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript) | 前端逻辑 | ES6+ |
 
@@ -111,6 +111,7 @@ cd inventory-system-python
 # 2. 安装依赖
 uv install
 uv sync -i https://mirrors.aliyun.com/pypi/simple/
+# 或
 uv sync -i https://pypi.tuna.tsinghua.edu.cn/simple/
 
 
@@ -120,7 +121,7 @@ uv run python init_db.py
 # 4. 启动服务
 uv run python main.py
 
-uv run python -m uvicorn main:app --workers 4 --host 0.0.0.0 --port 8000
+uv run python -m uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
 ### 🌐 访问地址
@@ -180,7 +181,7 @@ uv run python -m uvicorn main:app --workers 4 --host 0.0.0.0 --port 8000
 
 ### 🎨 6. 用户界面
 - **响应式设计**：适配桌面和移动设备
-- **现代化UI**：Bootstrap 5构建的专业界面
+- **现代化UI**：Tailwind CSS构建的专业界面
 - **交互体验**：直观的操作流程和用户反馈
 - **多语言支持**：中文界面，符合国内使用习惯
 

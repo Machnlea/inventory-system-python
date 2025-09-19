@@ -157,7 +157,7 @@
                 <div class="bg-white rounded-xl shadow-md p-6 mb-6">
                     <div class="flex justify-between items-center">
                         <div class="flex items-center space-x-4">
-                            <button id="add-department-btn" class="btn-primary text-white font-medium py-2 px-4 rounded-lg hover:shadow-lg transition-all duration-200">
+                            <button id="add-department-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
                                 <i class="fas fa-plus mr-2"></i>新增部门
                             </button>
                             <button id="refreshBtn" class="bg-gray-100 text-gray-700 font-medium py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors">
@@ -280,7 +280,7 @@
                         <button type="button" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400" onclick="closeDepartmentModal()">
                             取消
                         </button>
-                        <button type="submit" class="btn-primary text-white font-medium py-2 px-4 rounded-lg hover:shadow-lg transition-all duration-200">
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
                             <i class="fas fa-save mr-2"></i>保存
                         </button>
                     </div>
@@ -412,7 +412,7 @@
                     <div id="noUserContent" class="hidden text-center py-8">
                         <i class="fas fa-user-plus text-gray-300 text-4xl mb-4"></i>
                         <p class="text-gray-500 mb-4">该部门尚未创建用户账户</p>
-                        <button id="createDepartmentUser" class="btn-primary text-white font-medium py-2 px-4 rounded-lg">
+                        <button id="createDepartmentUser" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
                             <i class="fas fa-plus mr-2"></i>创建部门用户
                         </button>
                     </div>
@@ -1619,6 +1619,7 @@
             }
         }
     </script>
+    <script src="/static/js/tailwind-components.js"></script>
 
     <!-- 顶部通知容器 -->
     <div id="notification-container" class="fixed top-4 right-4 z-[99999] space-y-2 w-72"></div>

@@ -22,15 +22,7 @@
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            transition: all 0.3s ease;
-        }
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
-        }
-        .card-hover {
+          .card-hover {
             transition: all 0.3s ease;
         }
         .card-hover:hover {
@@ -127,28 +119,13 @@
             box-shadow: 0 0 0 2px #3b82f6;
         }
         .btn-action {
-            padding: 0.75rem 1.5rem;
-            border-radius: 0.5rem;
-            font-weight: 500;
-            transition: all 0.2s ease-in-out;
-        }
-        .btn-action:hover {
-            transform: translateY(-2px);
+            @apply px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:transform hover:-translate-y-1;
         }
         .btn-save {
-            background: linear-gradient(to right, #2563eb, #1d4ed8);
-            color: white;
-        }
-        .btn-save:hover {
-            box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3);
+            @apply bg-green-600 hover:bg-green-700 text-white transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2;
         }
         .btn-reset {
-            background-color: #e5e7eb;
-            color: #374151;
-        }
-        .btn-reset:hover {
-            background-color: #d1d5db;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            @apply bg-gray-600 hover:bg-gray-700 text-white transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2;
         }
         
         /* 设置项分组样式 */
@@ -320,7 +297,7 @@
                                 <!-- 修改安全问题按钮（独立于表单外） -->
                                 <div id="updateSecurityQuestionBtn" class="hidden mb-4">
                                     <button id="updateSecurityQuestion" onclick="showUpdateSecurityQuestion()" 
-                                            class="btn-action btn-save">
+                                            class="btn-action bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
                                         <i class="fas fa-edit mr-1"></i>
                                         修改安全问题
                                     </button>
@@ -339,7 +316,7 @@
                                     </div>
                                     <div class="flex space-x-3">
                                         <button id="saveSecurityQuestion" onclick="saveSecurityQuestion()" 
-                                                class="btn-action btn-save">
+                                                class="btn-action bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
                                             <i class="fas fa-save mr-1"></i>
                                             <span id="saveSecurityQuestionText">设置安全问题</span>
                                         </button>
@@ -613,11 +590,11 @@
 
                     <!-- 操作按钮 -->
                     <div class="flex justify-end space-x-4">
-                        <button onclick="resetSettings()" class="btn-action btn-reset">
+                        <button onclick="resetSettings()" class="btn-action bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
                             <i class="fas fa-undo mr-2"></i>
                             重置默认
                         </button>
-                        <button onclick="saveSettings()" class="btn-action btn-save">
+                        <button onclick="saveSettings()" class="btn-action bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
                             <i class="fas fa-save mr-2"></i>
                             保存设置
                         </button>
@@ -2289,5 +2266,6 @@
             }
         }
     </script>
+    <script src="/static/js/tailwind-components.js"></script>
 </body>
 </html>

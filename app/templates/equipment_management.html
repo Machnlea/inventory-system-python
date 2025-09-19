@@ -74,11 +74,11 @@
         }
 
         .equipment-action-btn.text-gray-400.cursor-not-allowed {
-            cursor: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSIxNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmYwMDAwIiBzdHJva2Utd2lkdGg9IjMiLz48bGluZSB4MT0iMTAiIHkxPSIxMCIgeDI9IjIyIiB5Mj0iMjIiIHN0cm9rZT0iI2ZmMDAwMCIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48L3N2Zz4=') 16 16, not-allowed;
+            cursor: not-allowed;
         }
 
         .equipment-action-btn.text-gray-400.cursor-not-allowed:hover {
-            opacity: 0.9;
+            opacity: 0.7;
         }
 
         /* 批量删除按钮禁用样式 */
@@ -87,11 +87,11 @@
         }
 
         #batchDeleteBtn.text-gray-400.cursor-not-allowed {
-            cursor: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSIxNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmYwMDAwIiBzdHJva2Utd2lkdGg9IjMiLz48bGluZSB4MT0iMTAiIHkxPSIxMCIgeDI9IjIyIiB5Mj0iMjIiIHN0cm9rZT0iI2ZmMDAwMCIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48L3N2Zz4=') 16 16, not-allowed;
+            cursor: not-allowed;
         }
 
         #batchDeleteBtn.text-gray-400.cursor-not-allowed:hover {
-            opacity: 0.9;
+            opacity: 0.7;
         }
 
         /* 撤回删除通知样式 */
@@ -218,25 +218,31 @@
 
         .equipment-action-btn {
             opacity: 0.8;
-            cursor: pointer !important;
+            cursor: pointer;
             transition: opacity 0.2s ease;
             border: none !important;
             background: none !important;
             padding: 2px 4px !important;
+        }
+        
+        /* 确保禁用的按钮显示禁止指针 */
+        .equipment-action-btn:disabled,
+        .equipment-action-btn[disabled] {
+            cursor: not-allowed !important;
         }
 
         .equipment-action-btn:hover {
             opacity: 1;
         }
 
-        /* 确保表格中的所有按钮都能正确显示指针 */
-        td .equipment-action-btn,
-        .equipment-action-btn[onclick] {
+        /* 确保表格中的启用按钮显示指针 */
+        td .equipment-action-btn:not(:disabled):not([disabled]),
+        .equipment-action-btn[onclick]:not(:disabled):not([disabled]) {
             cursor: pointer !important;
         }
 
         /* 防止其他样式覆盖 */
-        button.equipment-action-btn:not(:disabled) {
+        button.equipment-action-btn:not(:disabled):not([disabled]) {
             cursor: pointer !important;
         }
 
@@ -1333,7 +1339,8 @@
                         batchDeleteBtn.classList.add('hover:bg-gray-50');
                         batchDeleteBtn.onclick = function() { batchOperation('delete'); };
                     } else {
-                        // 普通用户：禁用的批量删除按钮，使用红色禁止鼠标指针
+                        // 普通用户：禁用的批量删除按钮
+                        batchDeleteBtn.disabled = true;
                         batchDeleteBtn.classList.add('text-gray-400', 'cursor-not-allowed');
                         batchDeleteBtn.classList.remove('hover:bg-gray-50');
                         batchDeleteBtn.onclick = function() { showDeletePermissionDenied(); };
@@ -3046,8 +3053,8 @@
                             <i class="fas fa-trash"></i>
                         </button>`;
             } else {
-                // 普通用户：禁用的删除按钮，使用红色禁止鼠标指针
-                return `<button class="equipment-action-btn text-gray-400 cursor-not-allowed" title="仅管理员可删除设备" onclick="showDeletePermissionDenied()">
+                // 普通用户：禁用的删除按钮
+                return `<button class="equipment-action-btn text-gray-400 cursor-not-allowed" title="仅管理员可删除设备" onclick="showDeletePermissionDenied()" disabled>
                             <i class="fas fa-trash"></i>
                         </button>`;
             }

@@ -70,13 +70,28 @@
 
         /* 删除按钮禁用样式 */
         .equipment-action-btn.text-gray-400 {
-            opacity: 0.5;
-            pointer-events: none;
+            opacity: 0.6;
         }
 
         .equipment-action-btn.text-gray-400.cursor-not-allowed {
-            pointer-events: auto;
             cursor: not-allowed;
+        }
+
+        .equipment-action-btn.text-gray-400.cursor-not-allowed:hover {
+            opacity: 0.8;
+        }
+
+        /* 批量删除按钮禁用样式 */
+        #batchDeleteBtn.text-gray-400 {
+            opacity: 0.6;
+        }
+
+        #batchDeleteBtn.text-gray-400.cursor-not-allowed {
+            cursor: not-allowed;
+        }
+
+        #batchDeleteBtn.text-gray-400.cursor-not-allowed:hover {
+            opacity: 0.8;
         }
 
         /* 撤回删除通知样式 */
@@ -3033,7 +3048,7 @@
                         </button>`;
             } else {
                 // 普通用户：禁用的删除按钮
-                return `<button class="equipment-action-btn text-gray-400 cursor-not-allowed" title="仅管理员可删除设备" onclick="showDeletePermissionDenied()">
+                return `<button class="equipment-action-btn text-gray-400 cursor-not-allowed" title="仅管理员可删除设备" onclick="showDeletePermissionDenied()" disabled>
                             <i class="fas fa-trash"></i>
                         </button>`;
             }

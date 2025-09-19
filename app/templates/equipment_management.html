@@ -1693,6 +1693,9 @@
             
             // 清除保存的搜索状态
             clearSearchState();
+            
+            // 重新加载统计数据以显示总的设备数量
+            loadDashboardStats();
         }
 
         // 加载设备数据
@@ -1783,6 +1786,9 @@
 
                 // 更新设备到期背景色
                 updateEquipmentExpiryBackground();
+
+                // 更新统计显示为当前过滤条件下的设备数量
+                updateFilteredEquipmentCount(total);
 
                 showNotification('设备数据加载成功', 'success');
 
@@ -2043,6 +2049,15 @@
                 case '停用': return 'bg-gray-100 text-gray-800';
                 case '报废': return 'bg-red-100 text-red-800';
                 default: return 'bg-gray-100 text-gray-800';
+            }
+        }
+
+        // 更新过滤后的设备数量统计
+        function updateFilteredEquipmentCount(filteredCount) {
+            const totalCountElement = document.getElementById('total-equipment-count');
+            if (totalCountElement) {
+                totalCountElement.textContent = filteredCount;
+                console.log(`已更新设备数量统计: ${filteredCount} 台设备`);
             }
         }
 

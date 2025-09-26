@@ -2964,6 +2964,8 @@
             const categoryFilter = document.getElementById('category-filter');
             const departmentFilter = document.getElementById('department-filter');
             const locationFilter = document.getElementById('location-filter');
+            const startDateFilter = document.getElementById('start-date-filter');
+            const endDateFilter = document.getElementById('end-date-filter');
             
             const searchState = {
                 keyword: searchInput ? searchInput.value : '',
@@ -2971,6 +2973,8 @@
                 category: categoryFilter ? categoryFilter.value : '',
                 department: departmentFilter ? departmentFilter.value : '',
                 location: locationFilter ? locationFilter.value : '',
+                startDate: startDateFilter ? startDateFilter.value : '',
+                endDate: endDateFilter ? endDateFilter.value : '',
                 timestamp: Date.now()
             };
             
@@ -3018,6 +3022,17 @@
                 const locationFilter = document.getElementById('location-filter');
                 if (locationFilter && searchState.location) {
                     locationFilter.value = searchState.location;
+                }
+                
+                // 恢复日期选择器
+                const startDateFilter = document.getElementById('start-date-filter');
+                if (startDateFilter && searchState.startDate) {
+                    startDateFilter.value = searchState.startDate;
+                }
+                
+                const endDateFilter = document.getElementById('end-date-filter');
+                if (endDateFilter && searchState.endDate) {
+                    endDateFilter.value = searchState.endDate;
                 }
                 
                 console.log('已恢复搜索状态:', searchState);

@@ -104,6 +104,88 @@
                 opacity: 1;
             }
         }
+
+        /* 用户选择下拉框样式 - 玻璃效果风格 */
+        #user-select {
+            background-image: none;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(139, 92, 246, 0.3) transparent;
+        }
+        
+        #user-select::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        #user-select::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+        
+        #user-select::-webkit-scrollbar-thumb {
+            background: rgba(139, 92, 246, 0.4);
+            border-radius: 4px;
+        }
+        
+        #user-select::-webkit-scrollbar-thumb:hover {
+            background: rgba(139, 92, 246, 0.6);
+        }
+        
+        #user-select option {
+            background-color: rgba(255, 255, 255, 0.95);
+            color: #1f2937;
+            padding: 12px 16px;
+            font-weight: 500;
+            backdrop-filter: blur(10px);
+        }
+        
+        #user-select optgroup {
+            background-color: rgba(248, 250, 252, 0.9);
+            color: #4338ca;
+            font-weight: 700;
+            padding: 10px 16px;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid rgba(226, 232, 240, 0.3);
+            backdrop-filter: blur(12px);
+        }
+        
+        #user-select option:hover,
+        #user-select option:focus,
+        #user-select option:checked {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.9) 0%, rgba(118, 75, 162, 0.9) 100%);
+            color: white;
+            backdrop-filter: blur(15px);
+        }
+        
+        /* 下拉框聚焦效果 - 增强玻璃感 */
+        #user-select:focus {
+            transform: translateY(-2px);
+            box-shadow: 
+                0 20px 25px rgba(102, 126, 234, 0.15),
+                0 0 0 1px rgba(255, 255, 255, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+        
+        /* 下拉箭头动画 */
+        #user-select:focus + div i {
+            transform: rotate(180deg);
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        /* 箭头过渡动画 */
+        #user-select + div i {
+            transition: transform 0.3s ease, color 0.3s ease;
+        }
+        
+        .glass-effect {
+            backdrop-filter: blur(20px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
     </style>
 </head>
 
@@ -135,16 +217,19 @@
 
             <!-- 登录表单 -->
             <form id="login-form" class="space-y-6" onsubmit="return false;">
-                <!-- 用户名输入 -->
+                <!-- 用户选择下拉框 -->
                 <div class="space-y-2">
-                    <label for="username" class="block text-sm font-medium text-white">
-                        <i class="fas fa-user mr-2"></i>用户名
+                    <label for="user-select" class="block text-sm font-medium text-white">
+                        <i class="fas fa-users mr-2"></i>选择用户
                     </label>
                     <div class="relative">
-                        <input type="text" id="username" name="username" required
-                            class="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg text-white placeholder-white/70 input-focus outline-none transition-all duration-200"
-                            placeholder="请输入用户名">
-                        <i class="fas fa-user absolute right-3 top-3.5 text-white/70"></i>
+                        <select id="user-select" required
+                            class="w-full px-4 py-3 glass-effect border border-white/30 rounded-lg text-white placeholder-white/70 focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all duration-300 appearance-none">
+                            <option value="" class="text-gray-900 bg-white">请选择用户</option>
+                        </select>
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <i class="fas fa-chevron-down text-white/70 text-sm"></i>
+                        </div>
                     </div>
                 </div>
 
@@ -235,8 +320,25 @@
             console.log('  typeof api:', typeof api);
             console.log('  typeof showNotification:', typeof showNotification);
 
+            // 加载用户列表
+            loadUsersList();
+            
             // 加载保存的用户名和密码
             loadSavedCredentials();
+
+            // 用户选择下拉框事件监听
+            const userSelect = document.getElementById('user-select');
+            if (userSelect) {
+                userSelect.addEventListener('change', function() {
+                    // 选择用户后自动聚焦到密码框
+                    if (this.value) {
+                        const passwordInput = document.getElementById('password');
+                        if (passwordInput) {
+                            passwordInput.focus();
+                        }
+                    }
+                });
+            }
 
             // 密码显示/隐藏切换
             const togglePasswordBtn = document.getElementById('toggle-password');
@@ -273,7 +375,7 @@
 
                 console.log('api对象已定义，开始登录流程');
 
-                const username = document.getElementById('username').value.trim();
+                const username = document.getElementById('user-select').value.trim();
                 const password = document.getElementById('password').value;
                 const rememberMe = document.getElementById('remember-me').checked;
                 const loginBtn = document.getElementById('login-btn');
@@ -282,9 +384,9 @@
 
                 if (!username || !password) {
                     if (typeof showNotification === 'function') {
-                        showNotification('请填写用户名和密码', 'warning');
+                        showNotification('请选择用户并输入密码', 'warning');
                     } else {
-                        alert('请填写用户名和密码');
+                        alert('请选择用户并输入密码');
                     }
                     return;
                 }
@@ -407,7 +509,7 @@
                     const focusedElement = document.activeElement;
                     // 如果焦点在登录表单的输入框内
                     if (focusedElement && (
-                        focusedElement.id === 'username' ||
+                        focusedElement.id === 'user-select' ||
                         focusedElement.id === 'password'
                     )) {
                         e.preventDefault();
@@ -415,6 +517,53 @@
                     }
                 }
             });
+
+            // 加载用户列表函数
+            async function loadUsersList() {
+                try {
+                    const response = await fetch('/api/auth/users/login-options');
+                    const data = await response.json();
+                    
+                    const userSelect = document.getElementById('user-select');
+                    if (userSelect && data) {
+                        // 清空现有选项（保留默认选项）
+                        userSelect.innerHTML = '<option value="" class="text-gray-900 bg-white">请选择用户</option>';
+                        
+                        // 添加管理员用户
+                        if (data.admin_users && data.admin_users.length > 0) {
+                            const adminGroup = document.createElement('optgroup');
+                            adminGroup.label = '管理员';
+                            
+                            data.admin_users.forEach(user => {
+                                const option = document.createElement('option');
+                                option.value = user.username;
+                                option.textContent = user.display_name;
+                                adminGroup.appendChild(option);
+                            });
+                            
+                            userSelect.appendChild(adminGroup);
+                        }
+                        
+                        // 添加普通用户
+                        if (data.normal_users && data.normal_users.length > 0) {
+                            const normalGroup = document.createElement('optgroup');
+                            normalGroup.label = '普通用户';
+                            
+                            data.normal_users.forEach(user => {
+                                const option = document.createElement('option');
+                                option.value = user.username;
+                                option.textContent = user.display_name;
+                                normalGroup.appendChild(option);
+                            });
+                            
+                            userSelect.appendChild(normalGroup);
+                        }
+                    }
+                } catch (error) {
+                    console.error('加载用户列表失败:', error);
+                    // 失败时不显示错误，用户仍可手动输入用户名
+                }
+            }
 
             // 记住我功能函数
             function saveCredentials(username, password) {
@@ -435,7 +584,11 @@
                         const savedPassword = localStorage.getItem('saved_password');
 
                         if (savedUsername && savedPassword) {
-                            document.getElementById('username').value = savedUsername;
+                            // 设置下拉框的值
+                            const userSelect = document.getElementById('user-select');
+                            if (userSelect) {
+                                userSelect.value = savedUsername;
+                            }
                             document.getElementById('password').value = atob(savedPassword);
                             document.getElementById('remember-me').checked = true;
                         }

@@ -349,3 +349,63 @@ async def change_password(
     
         
     return {"message": "密码修改成功"}
+
+# ========== 登录界面用户列表功能（公开接口） ==========
+
+@router.get("/users/login-options")
+async def get_login_users_list(db: Session = Depends(get_db)):
+    """获取可用于登录的用户列表（公开接口，用于登录界面）"""
+    try:
+        # 获取所有用户并按类型分类
+        from app.models.models import User as UserModel, Department
+        all_users = db.query(UserModel).all()
+        
+        # 获取所有部门名称，用于去重
+        departments_list = db.query(Department).all()
+        department_names = set(dept.name for dept in departments_list)
+        
+        # 分离管理员用户和普通用户
+        admin_users = []
+        normal_users = []
+        
+        for user in all_users:
+            # 跳过与部门同名的用户，避免重复显示
+            if user.username in department_names:
+                continue
+                
+            user_data = {
+                "id": user.id,
+                "username": user.username,
+                "display_name": user.username,
+                "user_type": "admin" if user.is_admin else "user"
+            }
+            
+            if user.is_admin:
+                admin_users.append(user_data)
+            else:
+                normal_users.append(user_data)
+        
+        result = {
+            "admin_users": admin_users,
+            "normal_users": normal_users,
+            "department_users": [
+                {
+                    "id": dept.id,
+                    "username": dept.name,
+                    "display_name": f"{dept.name}（部门）",
+                    "user_type": "department"
+                }
+                for dept in departments_list
+            ]
+        }
+        
+        return result
+        
+    except Exception as e:
+        # 如果查询失败，返回空列表，不影响登录页面加载
+        return {
+            "admin_users": [],
+            "normal_users": [],
+            "department_users": [],
+            "error": "获取用户列表失败，请手动输入用户名"
+        }

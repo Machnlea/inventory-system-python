@@ -24,7 +24,6 @@ async def get_reports_overview(
         from app.models.models import UserEquipmentPermission
         # 修复权限冲突：需要同时匹配category_id和equipment_name
         # 由于报表需要复杂的权限过滤，这里使用子查询方式
-        from app.models.models import Equipment
 
         equipment_subquery = db.query(
             Equipment.id
@@ -38,7 +37,7 @@ async def get_reports_overview(
         ).subquery()
 
         authorized_equipment_ids = select(equipment_subquery.c.id)
-        base_query = base_query.filter(Equipment.name.in_(authorized_equipment_names))
+        base_query = base_query.filter(Equipment.id.in_(authorized_equipment_ids))
     
     # 设备状态统计
     total_count = base_query.count()
@@ -74,7 +73,7 @@ async def get_reports_overview(
     ).join(Equipment).group_by(EquipmentCategory.id, EquipmentCategory.name)
     
     if not current_user.is_admin:
-        category_stats = category_stats.filter(Equipment.name.in_(authorized_equipment_names))
+        category_stats = category_stats.filter(Equipment.id.in_(authorized_equipment_ids))
     
     category_distribution = [
         {
@@ -93,7 +92,7 @@ async def get_reports_overview(
     ).join(Equipment).group_by(Department.id, Department.name)
     
     if not current_user.is_admin:
-        department_stats = department_stats.filter(Equipment.name.in_(authorized_equipment_names))
+        department_stats = department_stats.filter(Equipment.id.in_(authorized_equipment_ids))
     
     department_distribution = [
         {
@@ -138,7 +137,6 @@ async def get_calibration_stats(
         from app.models.models import UserEquipmentPermission
         # 修复权限冲突：需要同时匹配category_id和equipment_name
         # 由于报表需要复杂的权限过滤，这里使用子查询方式
-        from app.models.models import Equipment
 
         equipment_subquery = db.query(
             Equipment.id
@@ -152,7 +150,7 @@ async def get_calibration_stats(
         ).subquery()
 
         authorized_equipment_ids = select(equipment_subquery.c.id)
-        base_query = base_query.filter(Equipment.name.in_(authorized_equipment_names))
+        base_query = base_query.filter(Equipment.id.in_(authorized_equipment_ids))
     
     # 检定方式统计
     calibration_method_stats = db.query(
@@ -256,7 +254,7 @@ async def get_equipment_trends(
             authorized_equipment_names = select(UserEquipmentPermission.equipment_name).filter(
                 UserEquipmentPermission.user_id == current_user.id
             )
-            base_query = base_query.filter(Equipment.name.in_(authorized_equipment_names))
+            base_query = base_query.filter(Equipment.id.in_(authorized_equipment_ids))
         
         # 统计各状态设备数量
         total_count = base_query.filter(
@@ -310,7 +308,6 @@ async def get_department_comparison(
         from app.models.models import UserEquipmentPermission
         # 修复权限冲突：需要同时匹配category_id和equipment_name
         # 由于报表需要复杂的权限过滤，这里使用子查询方式
-        from app.models.models import Equipment
 
         equipment_subquery = db.query(
             Equipment.id
@@ -324,7 +321,7 @@ async def get_department_comparison(
         ).subquery()
 
         authorized_equipment_ids = select(equipment_subquery.c.id)
-        base_query = base_query.filter(Equipment.name.in_(authorized_equipment_names))
+        base_query = base_query.filter(Equipment.id.in_(authorized_equipment_ids))
     
     # 部门详细统计
     department_stats = db.query(
@@ -423,7 +420,6 @@ async def get_equipment_stats(
         from app.models.models import UserEquipmentPermission
         # 修复权限冲突：需要同时匹配category_id和equipment_name
         # 由于报表需要复杂的权限过滤，这里使用子查询方式
-        from app.models.models import Equipment
 
         equipment_subquery = db.query(
             Equipment.id
@@ -686,7 +682,6 @@ async def get_calibration_records(
         from app.models.models import UserEquipmentPermission
         # 修复权限冲突：需要同时匹配category_id和equipment_name
         # 由于报表需要复杂的权限过滤，这里使用子查询方式
-        from app.models.models import Equipment
 
         equipment_subquery = db.query(
             Equipment.id
@@ -869,7 +864,6 @@ async def get_instrument_quantity_stats(
         from app.models.models import UserEquipmentPermission
         # 修复权限冲突：需要同时匹配category_id和equipment_name
         # 由于报表需要复杂的权限过滤，这里使用子查询方式
-        from app.models.models import Equipment
 
         equipment_subquery = db.query(
             Equipment.id
@@ -898,7 +892,7 @@ async def get_instrument_quantity_stats(
     
     # 应用权限过滤
     if not current_user.is_admin:
-        category_stats = category_stats.filter(Equipment.name.in_(authorized_equipment_names))
+        category_stats = category_stats.filter(Equipment.id.in_(authorized_equipment_ids))
     
     # 按类别分组并按数量降序排列
     category_results = category_stats.group_by(

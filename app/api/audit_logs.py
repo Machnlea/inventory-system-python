@@ -247,8 +247,6 @@ def rollback_operation_api(
     - 管理员可回滚任何操作
     - 普通用户只能回滚自己的操作
     """
-    print(f"DEBUG API: 收到回滚请求，log_id={rollback_data.log_id}, user_id={current_user.id}, is_admin={current_user.is_admin}")
-    
     # 获取客户端IP地址
     client_ip = request.client.host if request.client else None
 
@@ -261,7 +259,6 @@ def rollback_operation_api(
     )
 
     if not rollback_log:
-        print(f"DEBUG API: 回滚操作失败，返回None")
         raise HTTPException(
             status_code=400,
             detail="回滚失败：操作不存在、已回滚过或无权限操作"

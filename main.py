@@ -3,11 +3,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.encoders import jsonable_encoder
 import logging
 import os
-from datetime import datetime
-import json
 
 # 导入日志系统和中间件
 # from app.core.logging import setup_logging
@@ -47,17 +44,6 @@ app_logger.info("正在启动设备台账管理系统...")
 # 创建数据库表
 models.Base.metadata.create_all(bind=engine)
 app_logger.info("数据库表创建完成")
-
-# 自定义JSON编码器，确保时间包含时区信息
-def custom_jsonable_encoder(obj):
-    if isinstance(obj, datetime):
-        # 如果datetime对象没有时区信息，假设它是UTC时间
-        if obj.tzinfo is None:
-            # 添加UTC时区信息
-            return obj.isoformat() + 'Z'
-        else:
-            return obj.isoformat()
-    return jsonable_encoder(obj)
 
 app = FastAPI(
     title="设备台账管理系统",

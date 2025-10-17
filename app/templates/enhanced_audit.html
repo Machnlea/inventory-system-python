@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>增强操作日志 - 设备台账管理系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/static/js/api-client.js"></script>
+    <script src="/static/js/tab-session-manager.js"></script>
+    <script src="/static/js/notification-manager.js"></script>
+    <script src="/static/js/tailwind-components.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .glass-effect {
+            backdrop-filter: blur(2px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        .sidebar-item {
+            transition: all 0.2s ease;
+        }
+        .sidebar-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
+        .sidebar-item.active {
+            background: rgba(255, 255, 255, 0.2);
+            border-left: 4px solid #667eea;
+        }
+
+        /* 操作日志特定样式 */
+        .operation-badge {
+            @apply px-2 py-1 text-xs font-semibold rounded-full;
+        }
+        .operation-equipment { @apply bg-blue-100 text-blue-800; }
+        .operation-calibration { @apply bg-green-100 text-green-800; }
+        .operation-attachment { @apply bg-purple-100 text-purple-800; }
+        .operation-system { @apply bg-gray-100 text-gray-800; }
+        .operation-rollback { @apply bg-red-100 text-red-800; }
+
+        .action-badge {
+            @apply px-2 py-1 text-xs font-medium rounded;
+        }
+        .action-create { @apply bg-green-50 text-green-700 border border-green-200; }
+        .action-update { @apply bg-blue-50 text-blue-700 border border-blue-200; }
+        .action-delete { @apply bg-red-50 text-red-700 border border-red-200; }
+        .action-rollback { @apply bg-orange-50 text-orange-700 border border-orange-200; }
+
+        .rollback-btn {
+            @apply text-orange-600 hover:text-orange-800 hover:bg-orange-50 px-2 py-1 rounded text-sm font-medium transition-colors;
+        }
+        .rollback-btn:disabled {
+            @apply text-gray-400 cursor-not-allowed hover:bg-transparent hover:text-gray-400;
+        }
+
+        .history-modal {
+            backdrop-filter: blur(4px);
+        }
+
+        .json-viewer {
+            @apply bg-gray-50 border border-gray-200 rounded p-3 font-mono text-xs overflow-x-auto max-h-60 overflow-y-auto;
+        }
+
+        .log-entry:hover {
+            @apply bg-gray-50 transition-colors;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="flex h-screen">
+        <!-- 左侧导航栏 -->
+        <div class="w-64 gradient-bg shadow-xl fixed left-0 top-0 h-full z-10">
+            <div class="flex flex-col h-full">
+                <!-- Logo和标题 -->
+                <div class="flex items-center justify-center h-16 px-4 border-b border-white/20">
+                    <div class="flex items-center">
+                        <i class="fas fa-clipboard-list text-white text-2xl mr-3"></i>
+                        <h1 class="text-white text-lg font-bold">设备台账管理系统</h1>
+                    </div>
+                </div>
+
+                <!-- 导航菜单 -->
+                <nav class="flex-1 px-4 py-6 space-y-2">
+                    <a href="/dashboard" class="sidebar-item flex items-center px-4 py-3 text-white rounded-lg" id="dashboard-link">
+                        <i class="fas fa-home mr-3 text-lg"></i>
+                        <span>仪表盘</span>
+                    </a>
+                    <a href="/equipment" class="sidebar-item flex items-center px-4 py-3 text-white/90 rounded-lg" id="equipment-link">
+                        <i class="fas fa-cogs mr-3 text-lg"></i>
+                        <span>设备管理</span>
+                    </a>
+                    <a href="/reports" class="sidebar-item flex items-center px-4 py-3 text-white/90 rounded-lg" id="reports-link">
+                        <i class="fas fa-chart-bar mr-3 text-lg"></i>
+                        <span>统计报表</span>
+                    </a>
+
+                    <!-- 系统管理下拉菜单 -->
+                    <div class="relative">
+                        <button class="sidebar-item flex items-center justify-between w-full px-4 py-3 text-white/90 rounded-lg" id="system-menu-btn">
+                            <div class="flex items-center">
+                                <i class="fas fa-cog mr-3 text-lg"></i>
+                                <span>系统管理</span>
+                            </div>
+                            <i class="fas fa-chevron-down text-sm transition-transform duration-200" id="system-menu-arrow"></i>
+                        </button>
+                        <div class="ml-4 mt-1 space-y-1 hidden" id="system-submenu">
+                            <a href="/categories" class="sidebar-item flex items-center px-4 py-2 text-white/80 rounded-lg text-sm" id="categories-link">
+                                <i class="fas fa-tags mr-3"></i>
+                                <span>设备类别</span>
+                            </a>
+                            <a href="/departments" class="sidebar-item flex items-center px-4 py-2 text-white/80 rounded-lg text-sm">
+                                <i class="fas fa-building mr-3"></i>
+                                <span>部门管理</span>
+                            </a>
+                            <a href="/users" class="sidebar-item flex items-center px-4 py-2 text-white/80 rounded-lg text-sm" id="users-link">
+                                <i class="fas fa-users mr-3"></i>
+                                <span>用户管理</span>
+                            </a>
+                            <a href="/audit" class="sidebar-item flex items-center px-4 py-2 text-white/80 rounded-lg text-sm active" id="audit-link">
+                                <i class="fas fa-history mr-3"></i>
+                                <span>操作日志</span>
+                            </a>
+
+                            <!-- 系统设置 - 仅管理员可见 -->
+                            <a href="/settings" class="sidebar-item flex items-center px-4 py-2 text-white rounded-lg text-sm" id="settings-link" style="display: none;">
+                                <i class="fas fa-cog mr-3"></i>
+                                <span>系统设置</span>
+                            </a>
+                        </div>
+                    </div>
+                </nav>
+
+                <!-- 用户信息 -->
+                <div class="border-t border-white/20 p-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <i class="fas fa-user-circle text-white text-xl mr-3"></i>
+                            <div>
+                                <p class="text-white text-base font-medium" id="current-user"></p>
+                            </div>
+                        </div>
+                        <button class="text-white/70 hover:text-white transition-colors" id="logout-btn">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="flex-1 ml-64 overflow-hidden">
+            <div class="h-full overflow-y-auto">
+                <!-- 顶部通知容器 -->
+                <div id="notification-container" class="fixed top-4 right-4 z-[99999] space-y-2 w-72"></div>
+
+                <!-- 主要内容 -->
+                <div class="p-8">
+                    <!-- 页面标题 -->
+                    <div class="mb-8">
+                        <h1 class="text-3xl font-bold text-gray-900 mb-2">增强操作日志</h1>
+                        <p class="text-gray-600">查看系统操作历史，支持回滚操作和权限控制</p>
+                    </div>
+
+                    <!-- 统计卡片 -->
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+                        <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-600">总日志数</p>
+                                    <p class="text-2xl font-bold text-gray-900" id="totalLogs">--</p>
+                                </div>
+                                <div class="bg-blue-100 rounded-full p-3">
+                                    <i class="fas fa-list text-blue-600 text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-600">设备操作</p>
+                                    <p class="text-2xl font-bold text-blue-600" id="equipmentOps">--</p>
+                                </div>
+                                <div class="bg-blue-100 rounded-full p-3">
+                                    <i class="fas fa-tools text-blue-600 text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-600">检定记录</p>
+                                    <p class="text-2xl font-bold text-green-600" id="calibrationOps">--</p>
+                                </div>
+                                <div class="bg-green-100 rounded-full p-3">
+                                    <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-600">回滚操作</p>
+                                    <p class="text-2xl font-bold text-orange-600" id="rollbackOps">--</p>
+                                </div>
+                                <div class="bg-orange-100 rounded-full p-3">
+                                    <i class="fas fa-undo text-orange-600 text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-600">最近7天</p>
+                                    <p class="text-2xl font-bold text-purple-600" id="recentOps">--</p>
+                                </div>
+                                <div class="bg-purple-100 rounded-full p-3">
+                                    <i class="fas fa-clock text-purple-600 text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 筛选器 -->
+                    <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">筛选条件</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">用户</label>
+                                <select id="userFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="">全部用户</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">操作类型</label>
+                                <select id="operationTypeFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="">全部类型</option>
+                                    <option value="equipment">设备操作</option>
+                                    <option value="calibration">检定操作</option>
+                                    <option value="attachment">附件操作</option>
+                                    <option value="system">系统操作</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">动作</label>
+                                <select id="actionFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="">全部动作</option>
+                                    <option value="创建">创建</option>
+                                    <option value="更新">更新</option>
+                                    <option value="删除">删除</option>
+                                    <option value="检定">检定</option>
+                                    <option value="状态变更">状态变更</option>
+                                    <option value="更新检定信息">更新检定信息</option>
+                                    <option value="回滚">回滚</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">是否回滚</label>
+                                <select id="rollbackFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="">全部</option>
+                                    <option value="false">否</option>
+                                    <option value="true">是</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">开始日期</label>
+                                <input type="date" id="startDate" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">结束日期</label>
+                                <input type="date" id="endDate" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center mt-6">
+                            <div class="flex space-x-3">
+                                <button onclick="applyFilters()" class="btn-primary text-white px-6 py-2 rounded-lg hover:shadow-lg">
+                                    <i class="fas fa-filter mr-2"></i>应用筛选
+                                </button>
+                                <button onclick="resetFilters()" class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
+                                    <i class="fas fa-redo mr-2"></i>重置
+                                </button>
+                            </div>
+                            <div class="text-sm text-gray-600">
+                                显示 <span id="showingCount">0</span> / <span id="totalCount">0</span> 条记录
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 操作日志表格 -->
+                    <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+                            <h3 class="text-lg font-semibold text-gray-900">操作日志记录</h3>
+                            <div class="flex space-x-2">
+                                <button onclick="refreshLogs()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm">
+                                    <i class="fas fa-sync-alt mr-1"></i>刷新
+                                </button>
+                                <button onclick="exportLogs()" class="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm">
+                                    <i class="fas fa-download mr-1"></i>导出
+                                </button>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">时间</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">用户</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作类型</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">动作</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">描述</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">设备</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IP地址</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="auditLogsTableBody" class="bg-white divide-y divide-gray-200">
+                                    <tr>
+                                        <td colspan="8" class="px-6 py-12 text-center text-gray-500">
+                                            <i class="fas fa-spinner fa-spin mr-2"></i>加载中...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- 分页 -->
+                        <div class="px-6 py-4 border-t border-gray-200 flex justify-between items-center bg-gray-50">
+                            <div class="text-sm text-gray-700">
+                                每页显示
+                                <select id="pageSize" onchange="changePageSize()" class="mx-2 px-2 py-1 border border-gray-300 rounded">
+                                    <option value="20">20</option>
+                                    <option value="50" selected>50</option>
+                                    <option value="100">100</option>
+                                </select>
+                                条
+                            </div>
+                            <div class="flex space-x-2" id="pagination">
+                                <!-- 分页按钮将在这里动态生成 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 历史记录模态框 -->
+    <div id="historyModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 history-modal">
+        <div class="bg-white rounded-xl max-w-4xl w-full mx-4 max-h-[80vh] overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-900">操作历史记录</h3>
+                <button onclick="closeHistoryModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto max-h-[60vh]">
+                <div id="historyContent">
+                    <!-- 历史记录内容将在这里动态生成 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 回滚确认模态框 -->
+    <div id="rollbackModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl max-w-md w-full mx-4">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">确认回滚操作</h3>
+            </div>
+            <div class="p-6">
+                <p class="text-gray-600 mb-4">确定要回滚这个操作吗？这将恢复设备到操作前的状态。</p>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">回滚原因</label>
+                    <textarea id="rollbackReason" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="请输入回滚原因..."></textarea>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button onclick="closeRollbackModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
+                        取消
+                    </button>
+                    <button onclick="confirmRollback()" class="btn-primary text-white px-6 py-2 rounded-lg">
+                        <i class="fas fa-undo mr-2"></i>确认回滚
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let currentPage = 0;
+        let pageSize = 50;
+        let totalCount = 0;
+        let auditLogs = [];
+        let users = [];
+        let currentLogId = null;
+        let filters = {};
+
+        // API客户端 - 使用全局api对象
+        const EnhancedAuditAPI = {
+            async getAuditLogs(params = {}) {
+                const queryParams = new URLSearchParams();
+                Object.keys(params).forEach(key => {
+                    if (params[key] !== undefined && params[key] !== '') {
+                        queryParams.append(key, params[key]);
+                    }
+                });
+
+                const endpoint = `/api/audit/${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+                return api.get(endpoint);
+            },
+
+            async getAuditLogById(logId) {
+                return api.get(`/api/audit/${logId}`);
+            },
+
+            async getOperationHistory(logId) {
+                return api.get(`/api/audit/history/${logId}`);
+            },
+
+            async rollbackOperation(logId, reason) {
+                return api.post('/api/audit/rollback', {
+                    log_id: logId,
+                    rollback_reason: reason
+                });
+            },
+
+            async getAuditStatistics() {
+                return api.get('/api/audit/statistics');
+            },
+
+            async getAuditUsers() {
+                return api.get('/api/audit/users');
+            }
+        };
+
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', async function() {
+            await initializePage();
+            await loadStatistics();
+            await loadUsers();
+            await loadAuditLogs();
+            setupEventListeners();
+        });
+
+        async function initializePage() {
+            try {
+                // 设置当前用户信息 - 使用api对象获取当前用户
+                const userInfo = await api.get('/api/auth/me');
+                if (userInfo) {
+                    document.getElementById('current-user').textContent = userInfo.username;
+
+                    // 根据用户权限显示/隐藏菜单项
+                    if (userInfo.is_admin) {
+                        document.getElementById('settings-link').style.display = 'flex';
+                    }
+                }
+
+                // 设置页面激活状态
+                updateActiveNav();
+            } catch (error) {
+                console.error('页面初始化失败:', error);
+            }
+        }
+
+        function updateActiveNav() {
+            // 移除所有激活状态
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.classList.remove('active');
+            });
+
+            // 设置当前页面为激活状态
+            document.getElementById('audit-link').classList.add('active');
+        }
+
+        // 加载统计信息
+        async function loadStatistics() {
+            try {
+                const stats = await EnhancedAuditAPI.getAuditStatistics();
+                document.getElementById('totalLogs').textContent = stats.total_logs || 0;
+                document.getElementById('equipmentOps').textContent = stats.operation_stats?.equipment || 0;
+                document.getElementById('calibrationOps').textContent = stats.operation_stats?.calibration || 0;
+                document.getElementById('rollbackOps').textContent = stats.rollback_count || 0;
+                document.getElementById('recentOps').textContent = stats.recent_logs || 0;
+            } catch (error) {
+                console.error('加载统计信息失败:', error);
+                showNotification('加载统计信息失败: ' + error.message, 'error');
+            }
+        }
+
+        // 加载用户列表
+        async function loadUsers() {
+            try {
+                users = await EnhancedAuditAPI.getAuditUsers();
+                const userFilter = document.getElementById('userFilter');
+                userFilter.innerHTML = '<option value="">全部用户</option>';
+                users.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.id;
+                    option.textContent = `${user.username}${user.is_admin ? ' (管理员)' : ''}`;
+                    userFilter.appendChild(option);
+                });
+            } catch (error) {
+                console.error('加载用户列表失败:', error);
+                showNotification('加载用户列表失败: ' + error.message, 'error');
+            }
+        }
+
+        // 加载操作日志
+        async function loadAuditLogs() {
+            try {
+                showLoading();
+
+                const params = {
+                    skip: currentPage * pageSize,
+                    limit: pageSize,
+                    ...filters
+                };
+
+                const response = await EnhancedAuditAPI.getAuditLogs(params);
+                auditLogs = response.items;
+                totalCount = response.total;
+
+                // 数据加载成功
+
+                renderAuditLogs();
+                updatePagination();
+                updateCounts();
+
+            } catch (error) {
+                console.error('加载操作日志失败:', error);
+                showNotification('加载操作日志失败: ' + error.message, 'error');
+            }
+        }
+
+        // 渲染操作日志表格
+        function renderAuditLogs() {
+            const tbody = document.getElementById('auditLogsTableBody');
+
+            if (auditLogs.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="px-6 py-12 text-center text-gray-500">
+                            <i class="fas fa-inbox mr-2"></i>暂无操作日志
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = auditLogs.map(log => {
+                // 直接使用API返回的用户对象
+                const user = log.user;
+                const operationTypeClass = `operation-${log.operation_type}`;
+                const actionClass = `action-${log.action.toLowerCase().replace(/\s+/g, '-')}`;
+                const canRollback = !log.is_rollback &&
+                    ['创建', '更新', '检定', '状态变更', '更新检定信息'].includes(log.action) &&
+                    !log.rollback_log_id;
+
+                return `
+                    <tr class="log-entry">
+                        <td class="px-6 py-4 text-sm text-gray-900">
+                            <div>${formatDateTime(log.created_at)}</div>
+                        </td>
+                        <td class="px-6 py-4 text-sm">
+                            <div class="font-medium text-gray-900">${user?.username || '未知用户'}</div>
+                            ${user?.is_admin ? '<span class="text-xs text-gray-500">管理员</span>' : ''}
+                        </td>
+                        <td class="px-6 py-4 text-sm">
+                            <span class="operation-badge ${operationTypeClass}">
+                                ${getOperationTypeLabel(log.operation_type)}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-sm">
+                            <span class="action-badge ${actionClass}">${log.action}</span>
+                            ${log.is_rollback ? '<i class="fas fa-undo text-orange-500 ml-1" title="回滚操作"></i>' : ''}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-900 max-w-xs truncate" title="${log.description}">
+                            ${log.description}
+                        </td>
+                        <td class="px-6 py-4 text-sm">
+                            ${log.equipment ?
+                                `<a href="/equipment/view?id=${log.equipment.id}" class="text-blue-600 hover:text-blue-800">
+                                    ${log.equipment.internal_id}
+                                </a>` :
+                                '<span class="text-gray-400">-</span>'
+                            }
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-500">
+                            ${log.ip_address || '-'}
+                        </td>
+                        <td class="px-6 py-4 text-sm">
+                            <div class="flex space-x-2">
+                                <button onclick="viewHistory(${log.id})" class="text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-1 rounded text-sm font-medium transition-colors" title="查看历史">
+                                    <i class="fas fa-history"></i>
+                                </button>
+                                ${canRollback ? `
+                                    <button onclick="showRollbackModal(${log.id})" class="rollback-btn" title="回滚操作">
+                                        <i class="fas fa-undo mr-1"></i>回滚
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // 应用筛选器
+        function applyFilters() {
+            currentPage = 0;
+            filters = {
+                user_id: document.getElementById('userFilter').value,
+                operation_type: document.getElementById('operationTypeFilter').value,
+                action: document.getElementById('actionFilter').value,
+                is_rollback: document.getElementById('rollbackFilter').value,
+                start_date: document.getElementById('startDate').value,
+                end_date: document.getElementById('endDate').value
+            };
+
+            // 清除空值
+            Object.keys(filters).forEach(key => {
+                if (!filters[key]) delete filters[key];
+            });
+
+            loadAuditLogs();
+        }
+
+        // 重置筛选器
+        function resetFilters() {
+            document.getElementById('userFilter').value = '';
+            document.getElementById('operationTypeFilter').value = '';
+            document.getElementById('actionFilter').value = '';
+            document.getElementById('rollbackFilter').value = '';
+            document.getElementById('startDate').value = '';
+            document.getElementById('endDate').value = '';
+
+            filters = {};
+            currentPage = 0;
+            loadAuditLogs();
+        }
+
+        // 刷新日志
+        function refreshLogs() {
+            loadAuditLogs();
+            loadStatistics();
+        }
+
+        // 查看历史记录
+        async function viewHistory(logId) {
+            try {
+                currentLogId = logId;
+                const history = await EnhancedAuditAPI.getOperationHistory(logId);
+                showHistoryModal(history);
+            } catch (error) {
+                console.error('加载历史记录失败:', error);
+                showNotification('加载历史记录失败: ' + error.message, 'error');
+            }
+        }
+
+        // 显示历史记录模态框
+        function showHistoryModal(history) {
+            const modal = document.getElementById('historyModal');
+            const content = document.getElementById('historyContent');
+
+            let html = `
+                <div class="space-y-6">
+                    <div>
+                        <h4 class="text-lg font-semibold text-gray-900 mb-3">原始操作</h4>
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <span class="text-sm font-medium text-blue-800">
+                                        ${history.original_log.user?.username} - ${history.original_log.action}
+                                    </span>
+                                    <span class="ml-2 text-xs text-blue-600">
+                                        ${formatDateTime(history.original_log.created_at)}
+                                    </span>
+                                </div>
+                                ${history.original_log.is_rollback ?
+                                    '<span class="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded">回滚操作</span>' :
+                                    ''
+                                }
+                            </div>
+                            <p class="text-gray-700 text-sm mb-2">${history.original_log.description}</p>
+                            ${history.original_log.equipment ?
+                                `<p class="text-xs text-gray-600">设备: ${history.original_log.equipment.internal_id} - ${history.original_log.equipment.name}</p>` :
+                                ''
+                            }
+                        </div>
+                    </div>
+            `;
+
+            if (history.current_state) {
+                html += `
+                    <div>
+                        <h4 class="text-lg font-semibold text-gray-900 mb-3">当前状态</h4>
+                        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                            <pre class="text-xs text-gray-700 whitespace-pre-wrap">${JSON.stringify(history.current_state, null, 2)}</pre>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (history.original_log.old_value || history.original_log.new_value) {
+                html += `
+                    <div>
+                        <h4 class="text-lg font-semibold text-gray-900 mb-3">变更详情</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            ${history.original_log.old_value ? `
+                                <div>
+                                    <h5 class="text-sm font-medium text-gray-700 mb-2">变更前</h5>
+                                    <div class="json-viewer">${formatJSON(history.original_log.old_value)}</div>
+                                </div>
+                            ` : ''}
+                            ${history.original_log.new_value ? `
+                                <div>
+                                    <h5 class="text-sm font-medium text-gray-700 mb-2">变更后</h5>
+                                    <div class="json-viewer">${formatJSON(history.original_log.new_value)}</div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (history.rollback_logs && history.rollback_logs.length > 0) {
+                html += `
+                    <div>
+                        <h4 class="text-lg font-semibold text-gray-900 mb-3">回滚记录</h4>
+                        <div class="space-y-3">
+                            ${history.rollback_logs.map(rollback => `
+                                <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <div>
+                                            <span class="text-sm font-medium text-orange-800">
+                                                ${rollback.user?.username} 回滚操作
+                                            </span>
+                                            <span class="ml-2 text-xs text-orange-600">
+                                                ${formatDateTime(rollback.created_at)}
+                                            </span>
+                                        </div>
+                                        <span class="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded">回滚</span>
+                                    </div>
+                                    <p class="text-gray-700 text-sm">${rollback.description}</p>
+                                    ${rollback.rollback_reason ?
+                                        `<p class="text-xs text-gray-600 mt-1">原因: ${rollback.rollback_reason}</p>` :
+                                        ''
+                                    }
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += '</div>';
+            content.innerHTML = html;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        // 关闭历史记录模态框
+        function closeHistoryModal() {
+            const modal = document.getElementById('historyModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            currentLogId = null;
+        }
+
+        // 显示回滚确认模态框
+        function showRollbackModal(logId) {
+            currentLogId = logId;
+            document.getElementById('rollbackReason').value = '';
+            document.getElementById('rollbackModal').classList.remove('hidden');
+            document.getElementById('rollbackModal').classList.add('flex');
+        }
+
+        // 关闭回滚确认模态框
+        function closeRollbackModal() {
+            document.getElementById('rollbackModal').classList.add('hidden');
+            document.getElementById('rollbackModal').classList.remove('flex');
+            currentLogId = null;
+        }
+
+        // 确认回滚
+        async function confirmRollback() {
+            if (!currentLogId) return;
+
+            const reason = document.getElementById('rollbackReason').value.trim();
+            if (!reason) {
+                showNotification('请输入回滚原因', 'error');
+                return;
+            }
+
+            try {
+                const result = await EnhancedAuditAPI.rollbackOperation(currentLogId, reason);
+                showNotification('操作已成功回滚', 'success');
+                closeRollbackModal();
+                refreshLogs();
+            } catch (error) {
+                console.error('回滚操作失败:', error);
+                
+                // 显示更详细的错误信息
+                let errorMessage = '回滚操作失败';
+                if (error.message) {
+                    errorMessage += ': ' + error.message;
+                }
+                
+                showNotification(errorMessage, 'error');
+            }
+        }
+
+        // 导出日志
+        function exportLogs() {
+            // TODO: 实现导出功能
+            showNotification('导出功能开发中...', 'info');
+        }
+
+        // 分页功能
+        function updatePagination() {
+            const totalPages = Math.ceil(totalCount / pageSize);
+            const pagination = document.getElementById('pagination');
+
+            if (totalPages <= 1) {
+                pagination.innerHTML = '';
+                return;
+            }
+
+            let html = '';
+
+            // 上一页按钮
+            html += `
+                <button onclick="goToPage(${currentPage - 1})"
+                        ${currentPage === 0 ? 'disabled' : ''}
+                        class="px-3 py-1 text-sm border border-gray-300 rounded ${currentPage === 0 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+            `;
+
+            // 页码按钮
+            const startPage = Math.max(0, currentPage - 2);
+            const endPage = Math.min(totalPages - 1, currentPage + 2);
+
+            if (startPage > 0) {
+                html += `<button onclick="goToPage(0)" class="px-3 py-1 text-sm border border-gray-300 rounded bg-white text-gray-700 hover:bg-gray-50">1</button>`;
+                if (startPage > 1) {
+                    html += `<span class="px-2 text-gray-500">...</span>`;
+                }
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                html += `
+                    <button onclick="goToPage(${i})"
+                            class="px-3 py-1 text-sm border border-gray-300 rounded ${i === currentPage ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}">
+                        ${i + 1}
+                    </button>
+                `;
+            }
+
+            if (endPage < totalPages - 1) {
+                if (endPage < totalPages - 2) {
+                    html += `<span class="px-2 text-gray-500">...</span>`;
+                }
+                html += `<button onclick="goToPage(${totalPages - 1})" class="px-3 py-1 text-sm border border-gray-300 rounded bg-white text-gray-700 hover:bg-gray-50">${totalPages}</button>`;
+            }
+
+            // 下一页按钮
+            html += `
+                <button onclick="goToPage(${currentPage + 1})"
+                        ${currentPage === totalPages - 1 ? 'disabled' : ''}
+                        class="px-3 py-1 text-sm border border-gray-300 rounded ${currentPage === totalPages - 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            `;
+
+            pagination.innerHTML = html;
+        }
+
+        function goToPage(page) {
+            const totalPages = Math.ceil(totalCount / pageSize);
+            if (page < 0 || page >= totalPages) return;
+
+            currentPage = page;
+            loadAuditLogs();
+        }
+
+        function changePageSize() {
+            pageSize = parseInt(document.getElementById('pageSize').value);
+            currentPage = 0;
+            loadAuditLogs();
+        }
+
+        // 更新计数显示
+        function updateCounts() {
+            document.getElementById('showingCount').textContent = auditLogs.length;
+            document.getElementById('totalCount').textContent = totalCount;
+        }
+
+        // 设置事件监听器
+        function setupEventListeners() {
+            // 系统菜单展开/收起
+            const systemMenuBtn = document.getElementById('system-menu-btn');
+            const systemSubmenu = document.getElementById('system-submenu');
+            const systemMenuArrow = document.getElementById('system-menu-arrow');
+
+            if (systemMenuBtn) {
+                systemMenuBtn.addEventListener('click', function() {
+                    systemSubmenu.classList.toggle('hidden');
+                    systemMenuArrow.classList.toggle('rotate-180');
+                });
+            }
+
+            // 登出按钮
+            const logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', logout);
+            }
+
+            // 模态框背景点击关闭
+            document.getElementById('historyModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeHistoryModal();
+                }
+            });
+
+            document.getElementById('rollbackModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeRollbackModal();
+                }
+            });
+
+            // ESC键关闭模态框
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    closeHistoryModal();
+                    closeRollbackModal();
+                }
+            });
+        }
+
+        // 工具函数
+        function formatDateTime(dateStr) {
+            if (!dateStr) return '-';
+            
+            let date;
+            
+            // 如果时间字符串没有时区信息，假设它是UTC时间
+            if (dateStr.includes('T') && !dateStr.includes('+') && !dateStr.includes('Z')) {
+                // 添加Z表示UTC时间
+                date = new Date(dateStr + 'Z');
+            } else {
+                date = new Date(dateStr);
+            }
+            
+            // 检查日期是否有效
+            if (isNaN(date.getTime())) {
+                return dateStr; // 如果无法解析，返回原始字符串
+            }
+            
+            // 使用本地时区格式化时间
+            return date.toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+
+        function getOperationTypeLabel(type) {
+            const labels = {
+                'equipment': '设备',
+                'calibration': '检定',
+                'attachment': '附件',
+                'system': '系统',
+                'user': '用户'
+            };
+            return labels[type] || type;
+        }
+
+        function formatJSON(jsonStr) {
+            try {
+                const obj = JSON.parse(jsonStr);
+                return JSON.stringify(obj, null, 2);
+            } catch (e) {
+                return jsonStr;
+            }
+        }
+
+        function showLoading() {
+            const tbody = document.getElementById('auditLogsTableBody');
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="px-6 py-12 text-center text-gray-500">
+                        <i class="fas fa-spinner fa-spin mr-2"></i>加载中...
+                    </td>
+                </tr>
+            `;
+        }
+
+        function logout() {
+            sessionStorage.removeItem('access_token');
+            localStorage.removeItem('access_token');
+            window.location.href = '/login';
+        }
+    </script>
+</body>
+</html>

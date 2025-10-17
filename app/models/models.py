@@ -152,19 +152,33 @@ class Equipment(Base):
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     equipment_id = Column(Integer, ForeignKey("equipments.id"))
-    action = Column(String(50), nullable=False)  # 操作类型
+    action = Column(String(50), nullable=False)  # 操作类型：创建/更新/删除/检定/状态变更/回滚
     description = Column(Text, nullable=False)  # 操作描述
-    old_value = Column(Text)  # 旧值
-    new_value = Column(Text)  # 新值
+    old_value = Column(Text)  # 旧值（JSON格式，包含完整的历史数据）
+    new_value = Column(Text)  # 新值（JSON格式，包含完整的更新后数据）
+    operation_type = Column(String(20), default="equipment")  # 操作类型：equipment/calibration/attachment/user/system
+    target_table = Column(String(50))  # 目标数据表名
+    target_id = Column(Integer)  # 目标记录ID
+    parent_log_id = Column(Integer, ForeignKey("audit_logs.id"))  # 父操作ID（用于回滚关联）
+    rollback_log_id = Column(Integer, ForeignKey("audit_logs.id"))  # 回滚操作关联ID
+    is_rollback = Column(Boolean, default=False)  # 是否为回滚操作
+    rollback_reason = Column(Text)  # 回滚原因
+    ip_address = Column(String(45))  # 操作IP地址
+    user_agent = Column(Text)  # 用户代理信息
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    
+
     # 关联
     user = relationship("User")
     equipment = relationship("Equipment", back_populates="audit_logs")
+    # 完全移除循环引用关系，避免递归错误
+    # parent_log = relationship("AuditLog", remote_side=[id], foreign_keys=[parent_log_id],
+    #                          viewonly=True, lazy="noload")
+    # rollback_log = relationship("AuditLog", remote_side=[id], foreign_keys=[rollback_log_id],
+    #                           viewonly=True, lazy="noload")
 
 
 class EquipmentAttachment(Base):

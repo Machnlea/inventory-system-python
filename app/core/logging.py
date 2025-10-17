@@ -255,6 +255,13 @@ def log_database_operation(logger, operation: str, table: str, record_id: Option
         message += f" (ID: {record_id})"
     log_manager.app_logger.info(message)
 
+def log_file_operation(logger, operation: str, file_path: str, user_id: Optional[int] = None, **kwargs):
+    """记录文件操作（兼容性函数）"""
+    message = f"文件操作: {operation} - {file_path}"
+    if user_id:
+        message += f" (User: {user_id})"
+    log_manager.app_logger.info(message)
+
 def log_file_operation(logger, operation: str, file_path: str, user_id: Optional[int] = None, 
                       equipment_id: Optional[int] = None, **kwargs):
     """记录文件操作（兼容性函数）"""

@@ -321,22 +321,85 @@ class UserEquipmentPermission(UserEquipmentPermissionBase):
         from_attributes = True
 
 # 操作日志
+# ========== 增强操作日志相关 ==========
+
 class AuditLogBase(BaseModel):
     action: str
     description: str
     old_value: Optional[str] = None
     new_value: Optional[str] = None
+    operation_type: Optional[str] = "equipment"
+    target_table: Optional[str] = None
+    target_id: Optional[int] = None
+    is_rollback: Optional[bool] = False
+    rollback_reason: Optional[str] = None
+    ip_address: Optional[str] = None
 
+class AuditLogCreate(AuditLogBase):
+    user_id: int
+    equipment_id: Optional[int] = None
+    parent_log_id: Optional[int] = None
+    user_agent: Optional[str] = None
+
+class AuditLogUpdate(BaseModel):
+    description: Optional[str] = None
+    rollback_reason: Optional[str] = None
+
+# 完全独立的操作日志响应模型，避免循环引用
+class AuditLogResponse(BaseModel):
+    id: int
+    user_id: int
+    equipment_id: Optional[int] = None
+    action: str
+    description: str
+    old_value: Optional[str] = None
+    new_value: Optional[str] = None
+    operation_type: Optional[str] = "equipment"
+    target_table: Optional[str] = None
+    target_id: Optional[int] = None
+    parent_log_id: Optional[int] = None
+    rollback_log_id: Optional[int] = None
+    is_rollback: Optional[bool] = False
+    rollback_reason: Optional[str] = None
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
+    created_at: datetime
+    # 平面化的用户和设备信息，避免循环引用
+    user: Optional[Dict[str, Any]] = None
+    equipment: Optional[Dict[str, Any]] = None
+
+# 内部使用的AuditLog（不用于API响应）
 class AuditLog(AuditLogBase):
     id: int
     user_id: int
     equipment_id: Optional[int] = None
+    parent_log_id: Optional[int] = None
+    rollback_log_id: Optional[int] = None
+    user_agent: Optional[str] = None
     created_at: datetime
-    user: User
-    equipment: Optional[Equipment] = None
-    
+    # 完全移除关系字段，避免任何循环引用可能
+    # user: User
+    # equipment: Optional[Equipment] = None
+    # parent_log: Optional["AuditLog"] = None
+    # rollback_log: Optional["AuditLog"] = None
+
     class Config:
         from_attributes = True
+
+class AuditLogRollback(BaseModel):
+    log_id: int
+    rollback_reason: str
+
+class AuditLogHistory(BaseModel):
+    original_log: AuditLogResponse
+    rollback_logs: List[AuditLogResponse] = []
+    current_state: Optional[Dict[str, Any]] = None
+
+class PaginatedAuditLog(BaseModel):
+    items: List[AuditLogResponse]
+    total: int
+    skip: int
+    limit: int
 
 # 认证相关
 class Token(BaseModel):
@@ -349,12 +412,6 @@ class TokenData(BaseModel):
 # 分页响应
 class PaginatedEquipment(BaseModel):
     items: List[Equipment]
-    total: int
-    skip: int
-    limit: int
-
-class PaginatedAuditLog(BaseModel):
-    items: List[AuditLog]
     total: int
     skip: int
     limit: int

@@ -8,7 +8,7 @@ from urllib.parse import quote
 from app.db.database import get_db
 from app.crud import equipment
 from app.schemas.schemas import Equipment, EquipmentCreate, EquipmentUpdate, EquipmentFilter, EquipmentSearch, PaginatedEquipment
-from app.api.audit_logs import create_audit_log
+from app.api.audit_logs import log_equipment_operation
 from app.api.auth import get_current_user
 from app.utils.auto_id import generate_internal_id
 from app.core.logging import get_context_logger, log_database_operation
@@ -34,6 +34,7 @@ def read_equipments(skip: int = 0, limit: int = 999999,
 @router.post("/", response_model=Equipment)
 def create_equipment(equipment_data: EquipmentCreate,
                     db: Session = Depends(get_db),
+                    request: Request = Request,
                     current_user = Depends(get_current_user)):
     # 检查用户是否有该设备的权限（修复权限冲突）
     if not current_user.is_admin:
@@ -50,29 +51,34 @@ def create_equipment(equipment_data: EquipmentCreate,
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Not authorized to manage this equipment type"
             )
-    
+
+    # 保存新值用于日志记录
+    new_data = equipment_data.model_dump()
+
     try:
         # 生成自动编号
         internal_id = generate_internal_id(db, equipment_data.category_id, equipment_data.name)
-        
+
         # 创建equipment_data的副本并设置自动编号
         equipment_dict = equipment_data.model_dump()
         equipment_dict['internal_id'] = internal_id
-        
+
         # 创建设备
         new_equipment = equipment.create_equipment(db=db, equipment=EquipmentCreate(**equipment_dict))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    
-    # 记录操作日志
-    create_audit_log(
+
+    # 记录增强操作日志
+    log_equipment_operation(
         db=db,
         user_id=current_user.id,
         equipment_id=new_equipment.id,
         action="创建",
-        description=f"创建设备: {new_equipment.name} ({new_equipment.internal_id})"
+        description=f"创建设备: {new_equipment.name} ({new_equipment.internal_id})",
+        new_data=new_data,
+        request=request
     )
-    
+
     return new_equipment
 
 @router.get("/{equipment_id}", response_model=Equipment)
@@ -90,6 +96,7 @@ def read_equipment(equipment_id: int,
 @router.put("/{equipment_id}", response_model=Equipment)
 def update_equipment(equipment_id: int, equipment_update: EquipmentUpdate,
                     db: Session = Depends(get_db),
+                    request: Request = Request,
                     current_user = Depends(get_current_user)):
     # 检查设备是否存在且用户有权限
     db_equipment = equipment.get_equipment(
@@ -102,26 +109,43 @@ def update_equipment(equipment_id: int, equipment_update: EquipmentUpdate,
     # 记录更新前的状态
     old_status = db_equipment.status
     
+    # 准备操作日志数据（在更新前获取旧数据）
+    changes = []
+
+    # 准备干净的旧数据和新数据（不包含SQLAlchemy内部字段）
+    def clean_dict(data):
+        return {k: v for k, v in data.items() if not k.startswith('_sa_instance_state')}
+
+    # 在更新前保存原始状态
+    old_data = clean_dict(db_equipment.__dict__.copy())
+
+    # 构建预期的新数据用于日志
+    new_data = old_data.copy()
+    for key, value in equipment_update.model_dump(exclude_unset=True).items():
+        new_data[key] = value
+
+    if equipment_update.status and equipment_update.status != old_status:
+        changes.append(f"状态从'{old_status}'改为'{equipment_update.status}'")
+
+    description = f"更新设备: {db_equipment.name} ({db_equipment.internal_id})"
+    if changes:
+        description += f" - {', '.join(changes)}"
+
     try:
         updated_equipment = equipment.update_equipment(db, equipment_id=equipment_id, equipment_update=equipment_update)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    
-    # 记录操作日志
-    changes = []
-    if equipment_update.status and equipment_update.status != old_status:
-        changes.append(f"状态从'{old_status}'改为'{equipment_update.status}'")
-    
-    description = f"更新设备: {updated_equipment.name if updated_equipment else '未知设备'} ({updated_equipment.internal_id if updated_equipment else '未知编号'})"
-    if changes:
-        description += f" - {', '.join(changes)}"
-    
-    create_audit_log(
+
+    # 使用增强日志记录，包含详细状态数据
+    log_equipment_operation(
         db=db,
         user_id=current_user.id,
         equipment_id=equipment_id,
         action="更新",
-        description=description
+        description=description,
+        old_data=old_data,
+        new_data=new_data,
+        request=request
     )
     
     return updated_equipment

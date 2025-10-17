@@ -157,10 +157,24 @@ async def update_equipment_calibration(
     try:
         # 计算有效期
         valid_until_date = calculate_valid_until(
-            calibration_data.calibration_date, 
+            calibration_data.calibration_date,
             equipment.calibration_cycle
         )
-        
+
+        # 保存更新前的设备状态，用于回滚
+        old_data = {
+            "calibration_date": equipment.calibration_date.isoformat() if equipment.calibration_date else None,
+            "valid_until": equipment.valid_until.isoformat() if equipment.valid_until else None,
+            "current_calibration_result": equipment.current_calibration_result,
+            "certificate_number": equipment.certificate_number,
+            "certificate_form": equipment.certificate_form,
+            "verification_agency": equipment.verification_agency,
+            "calibration_notes": equipment.calibration_notes,
+            "status": equipment.status,
+            "status_change_date": equipment.status_change_date.isoformat() if equipment.status_change_date else None,
+            "disposal_reason": equipment.disposal_reason
+        }
+
         # 更新设备基础信息
         equipment.calibration_date = calibration_data.calibration_date
         equipment.valid_until = valid_until_date
@@ -216,8 +230,19 @@ async def update_equipment_calibration(
             equipment_id=equipment_id,
             action="更新检定信息",
             description=f"更新检定信息，结果：{calibration_data.calibration_result}，有效期至：{valid_until_date}",
-            old_value=None,
-            new_value=f"检定结果: {calibration_data.calibration_result}, 有效期: {valid_until_date}"
+            old_value=json.dumps(old_data, ensure_ascii=False, default=str),
+            new_value=json.dumps({
+                "calibration_date": calibration_data.calibration_date.isoformat(),
+                "valid_until": valid_until_date.isoformat(),
+                "current_calibration_result": calibration_data.calibration_result,
+                "certificate_number": calibration_data.certificate_number,
+                "certificate_form": calibration_data.certificate_form,
+                "verification_agency": calibration_data.verification_agency,
+                "calibration_notes": calibration_data.notes,
+                "status": equipment.status,
+                "status_change_date": equipment.status_change_date.isoformat() if equipment.status_change_date else None,
+                "disposal_reason": equipment.disposal_reason
+            }, ensure_ascii=False, default=str)
         )
         
         return db_history
@@ -327,7 +352,21 @@ async def update_equipment_calibration_with_files(
     try:
         # 计算有效期
         valid_until_date = calculate_valid_until(cal_date, equipment.calibration_cycle)
-        
+
+        # 保存更新前的设备状态，用于回滚
+        old_data = {
+            "calibration_date": equipment.calibration_date.isoformat() if equipment.calibration_date else None,
+            "valid_until": equipment.valid_until.isoformat() if equipment.valid_until else None,
+            "current_calibration_result": equipment.current_calibration_result,
+            "certificate_number": equipment.certificate_number,
+            "certificate_form": equipment.certificate_form,
+            "verification_agency": equipment.verification_agency,
+            "calibration_notes": equipment.calibration_notes,
+            "status": equipment.status,
+            "status_change_date": equipment.status_change_date.isoformat() if equipment.status_change_date else None,
+            "disposal_reason": equipment.disposal_reason
+        }
+
         # 更新设备基础信息
         equipment.calibration_date = cal_date
         equipment.valid_until = valid_until_date
@@ -425,15 +464,27 @@ async def update_equipment_calibration_with_files(
         # 记录审计日志
         file_names = [att.original_filename for att in uploaded_files if att.original_filename]
         file_desc = f", 上传文件: {', '.join(file_names)}" if file_names else ""
-        
+
         log_audit(
             db=db,
             user_id=current_user.id,
             equipment_id=equipment_id,
             action="更新检定信息（含文件）",
             description=f"更新检定信息，结果：{calibration_result}，有效期至：{valid_until_date}{file_desc}",
-            old_value=None,
-            new_value=f"检定结果: {calibration_result}, 有效期: {valid_until_date}, 文件数: {len(uploaded_files)}"
+            old_value=json.dumps(old_data, ensure_ascii=False, default=str),
+            new_value=json.dumps({
+                "calibration_date": cal_date.isoformat(),
+                "valid_until": valid_until_date.isoformat(),
+                "current_calibration_result": calibration_result,
+                "certificate_number": certificate_number,
+                "certificate_form": certificate_form,
+                "verification_agency": verification_agency,
+                "calibration_notes": notes,
+                "status": equipment.status,
+                "status_change_date": equipment.status_change_date.isoformat() if equipment.status_change_date else None,
+                "disposal_reason": equipment.disposal_reason,
+                "uploaded_files": file_names
+            }, ensure_ascii=False, default=str)
         )
         
         return db_history

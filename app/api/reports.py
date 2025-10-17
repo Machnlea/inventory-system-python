@@ -251,9 +251,20 @@ async def get_equipment_trends(
         base_query = db.query(Equipment)
         if not current_user.is_admin:
             from app.models.models import UserEquipmentPermission
-            authorized_equipment_names = select(UserEquipmentPermission.equipment_name).filter(
-                UserEquipmentPermission.user_id == current_user.id
-            )
+            # 修复权限冲突：需要同时匹配category_id和equipment_name
+            # 由于报表需要复杂的权限过滤，这里使用子查询方式
+            equipment_subquery = db.query(
+                Equipment.id
+            ).join(
+                UserEquipmentPermission,
+                and_(
+                    Equipment.category_id == UserEquipmentPermission.category_id,
+                    Equipment.name == UserEquipmentPermission.equipment_name,
+                    UserEquipmentPermission.user_id == current_user.id
+                )
+            ).subquery()
+
+            authorized_equipment_ids = select(equipment_subquery.c.id)
             base_query = base_query.filter(Equipment.id.in_(authorized_equipment_ids))
         
         # 统计各状态设备数量
@@ -411,16 +422,14 @@ async def get_equipment_stats(
     current_user = Depends(get_current_user)
 ):
     """获取设备统计数据，支持按原值排序"""
-    
-    # 基础查询
-    query = db.query(Equipment)
-    
-    # 权限控制
-    if not current_user.is_admin:
-        from app.models.models import UserEquipmentPermission
-        # 修复权限冲突：需要同时匹配category_id和equipment_name
-        # 由于报表需要复杂的权限过滤，这里使用子查询方式
 
+    # 确保所有需要的模型都已导入
+    from app.models.models import UserEquipmentPermission
+
+    # 权限控制：普通用户只能查看授权设备的统计
+    query = db.query(Equipment)
+    if not current_user.is_admin:
+        # 修复权限冲突：需要同时匹配category_id和equipment_name
         equipment_subquery = db.query(
             Equipment.id
         ).join(
@@ -434,6 +443,8 @@ async def get_equipment_stats(
 
         authorized_equipment_ids = select(equipment_subquery.c.id)
         query = query.filter(Equipment.id.in_(authorized_equipment_ids))
+
+    # 获取总数
     
     # 获取总数
     total = query.count()
@@ -764,11 +775,21 @@ async def export_reports(
         
         # 权限控制
         if not current_user.is_admin:
-            from app.models.models import UserCategory
-            authorized_categories = select(UserCategory.category_id).filter(
-                UserCategory.user_id == current_user.id
-            )
-            query = query.filter(Equipment.category_id.in_(authorized_categories))
+            from app.models.models import UserEquipmentPermission
+            # 修复权限冲突：需要同时匹配category_id和equipment_name
+            equipment_subquery = db.query(
+                Equipment.id
+            ).join(
+                UserEquipmentPermission,
+                and_(
+                    Equipment.category_id == UserEquipmentPermission.category_id,
+                    Equipment.name == UserEquipmentPermission.equipment_name,
+                    UserEquipmentPermission.user_id == current_user.id
+                )
+            ).subquery()
+
+            authorized_equipment_ids = select(equipment_subquery.c.id)
+            query = query.filter(Equipment.id.in_(authorized_equipment_ids))
         
         # 日期范围过滤
         if start_date:

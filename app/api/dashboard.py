@@ -26,11 +26,23 @@ def get_dashboard_stats(db: Session = Depends(get_db),
     if not current_user.is_admin:
         from app.crud import users
         from app.models.models import UserEquipmentPermission
-        authorized_equipment_names = select(UserEquipmentPermission.equipment_name).filter(
-            UserEquipmentPermission.user_id == current_user.id
-        )
-        active_query = active_query.filter(Equipment.name.in_(authorized_equipment_names))
-    
+        from sqlalchemy import and_
+
+        # 修复权限冲突：需要同时匹配category_id和equipment_name
+        equipment_subquery = db.query(
+            Equipment.id
+        ).join(
+            UserEquipmentPermission,
+            and_(
+                Equipment.category_id == UserEquipmentPermission.category_id,
+                Equipment.name == UserEquipmentPermission.equipment_name,
+                UserEquipmentPermission.user_id == current_user.id
+            )
+        ).subquery()
+
+        authorized_equipment_ids = select(equipment_subquery.c.id)
+        active_query = active_query.filter(Equipment.id.in_(authorized_equipment_ids))
+
     active_equipment_count = active_query.count()
     
     # 计算待检设备的日期范围：从当前日期到月底
@@ -55,10 +67,20 @@ def get_dashboard_stats(db: Session = Depends(get_db),
     inactive_query = db.query(Equipment).filter(Equipment.status.in_(["停用", "报废"]))
     if not current_user.is_admin:
         from app.models.models import UserEquipmentPermission
-        authorized_equipment_names = select(UserEquipmentPermission.equipment_name).filter(
-            UserEquipmentPermission.user_id == current_user.id
-        )
-        inactive_query = inactive_query.filter(Equipment.name.in_(authorized_equipment_names))
+        # 修复权限冲突：需要同时匹配category_id和equipment_name
+        equipment_subquery = db.query(
+            Equipment.id
+        ).join(
+            UserEquipmentPermission,
+            and_(
+                Equipment.category_id == UserEquipmentPermission.category_id,
+                Equipment.name == UserEquipmentPermission.equipment_name,
+                UserEquipmentPermission.user_id == current_user.id
+            )
+        ).subquery()
+
+        authorized_equipment_ids = select(equipment_subquery.c.id)
+        inactive_query = inactive_query.filter(Equipment.id.in_(authorized_equipment_ids))
     
     inactive_count = inactive_query.count()
     
@@ -70,10 +92,20 @@ def get_dashboard_stats(db: Session = Depends(get_db),
     
     if not current_user.is_admin:
         from app.models.models import UserEquipmentPermission
-        authorized_equipment_names = select(UserEquipmentPermission.equipment_name).filter(
-            UserEquipmentPermission.user_id == current_user.id
-        )
-        equipment_query = equipment_query.filter(Equipment.name.in_(authorized_equipment_names))
+        # 修复权限冲突：需要同时匹配category_id和equipment_name
+        equipment_subquery = db.query(
+            Equipment.id
+        ).join(
+            UserEquipmentPermission,
+            and_(
+                Equipment.category_id == UserEquipmentPermission.category_id,
+                Equipment.name == UserEquipmentPermission.equipment_name,
+                UserEquipmentPermission.user_id == current_user.id
+            )
+        ).subquery()
+
+        authorized_equipment_ids = select(equipment_subquery.c.id)
+        equipment_query = equipment_query.filter(Equipment.id.in_(authorized_equipment_ids))
     
     category_distribution = [
         {"name": name, "count": count} 
@@ -88,10 +120,20 @@ def get_dashboard_stats(db: Session = Depends(get_db),
     
     if not current_user.is_admin:
         from app.models.models import UserEquipmentPermission
-        authorized_equipment_names = select(UserEquipmentPermission.equipment_name).filter(
-            UserEquipmentPermission.user_id == current_user.id
-        )
-        department_query = department_query.filter(Equipment.name.in_(authorized_equipment_names))
+        # 修复权限冲突：需要同时匹配category_id和equipment_name
+        equipment_subquery = db.query(
+            Equipment.id
+        ).join(
+            UserEquipmentPermission,
+            and_(
+                Equipment.category_id == UserEquipmentPermission.category_id,
+                Equipment.name == UserEquipmentPermission.equipment_name,
+                UserEquipmentPermission.user_id == current_user.id
+            )
+        ).subquery()
+
+        authorized_equipment_ids = select(equipment_subquery.c.id)
+        department_query = department_query.filter(Equipment.id.in_(authorized_equipment_ids))
     
     department_distribution = [
         {"name": name, "count": count} 

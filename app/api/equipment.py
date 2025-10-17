@@ -35,15 +35,16 @@ def read_equipments(skip: int = 0, limit: int = 999999,
 def create_equipment(equipment_data: EquipmentCreate,
                     db: Session = Depends(get_db),
                     current_user = Depends(get_current_user)):
-    # 检查用户是否有该设备的权限
+    # 检查用户是否有该设备的权限（修复权限冲突）
     if not current_user.is_admin:
         from app.models.models import UserEquipmentPermission
-        
+
         user_equipment_permission = db.query(UserEquipmentPermission).filter(
             UserEquipmentPermission.user_id == current_user.id,
+            UserEquipmentPermission.category_id == equipment_data.category_id,
             UserEquipmentPermission.equipment_name == equipment_data.name
         ).first()
-        
+
         if not user_equipment_permission:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

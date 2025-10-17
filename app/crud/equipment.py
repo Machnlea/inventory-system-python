@@ -5,6 +5,29 @@ from app.schemas.schemas import EquipmentCreate, EquipmentUpdate, EquipmentFilte
 from datetime import date, timedelta
 from typing import List, Optional
 
+def get_user_equipment_permissions(db: Session, user_id: int):
+    """
+    获取用户的设备权限列表，返回(category_id, equipment_name)的元组列表
+    这样可以确保权限检查同时考虑类别和器具名称
+    """
+    permissions = db.query(UserEquipmentPermission.category_id, UserEquipmentPermission.equipment_name).filter(
+        UserEquipmentPermission.user_id == user_id
+    ).all()
+
+    return [(perm.category_id, perm.equipment_name) for perm in permissions]
+
+def has_equipment_permission(db: Session, user_id: int, category_id: int, equipment_name: str) -> bool:
+    """
+    检查用户是否有指定类别和器具名称的设备权限
+    """
+    permission = db.query(UserEquipmentPermission).filter(
+        UserEquipmentPermission.user_id == user_id,
+        UserEquipmentPermission.category_id == category_id,
+        UserEquipmentPermission.equipment_name == equipment_name
+    ).first()
+
+    return permission is not None
+
 def get_equipments_for_external_api(
     db: Session,
     skip: int = 0,
@@ -69,14 +92,19 @@ def get_equipments_count(db: Session, user_id: Optional[int] = None, is_admin: b
     
     # 如果不是管理员，只能看到被授权的设备
     if not is_admin and user_id:
-        authorized_equipment_names = db.execute(
-            select(UserEquipmentPermission.equipment_name).filter(
-                UserEquipmentPermission.user_id == user_id
-            )
-        ).scalars().all()
-        
-        if authorized_equipment_names:
-            query = query.filter(Equipment.name.in_(authorized_equipment_names))
+        user_permissions = get_user_equipment_permissions(db, user_id)
+
+        if user_permissions:
+            # 使用更复杂的权限检查：同时检查category_id和equipment_name
+            permission_conditions = []
+            for category_id, equipment_name in user_permissions:
+                permission_conditions.append(
+                    and_(
+                        Equipment.category_id == category_id,
+                        Equipment.name == equipment_name
+                    )
+                )
+            query = query.filter(or_(*permission_conditions))
         else:
             # 如果没有权限，返回空结果
             return 0
@@ -94,14 +122,19 @@ def get_equipments(db: Session, skip: int = 0, limit: int = 100,
     
     # 如果不是管理员，只能看到被授权的设备
     if not is_admin and user_id:
-        authorized_equipment_names = db.execute(
-            select(UserEquipmentPermission.equipment_name).filter(
-                UserEquipmentPermission.user_id == user_id
-            )
-        ).scalars().all()
-        
-        if authorized_equipment_names:
-            query = query.filter(Equipment.name.in_(authorized_equipment_names))
+        user_permissions = get_user_equipment_permissions(db, user_id)
+
+        if user_permissions:
+            # 使用更复杂的权限检查：同时检查category_id和equipment_name
+            permission_conditions = []
+            for category_id, equipment_name in user_permissions:
+                permission_conditions.append(
+                    and_(
+                        Equipment.category_id == category_id,
+                        Equipment.name == equipment_name
+                    )
+                )
+            query = query.filter(or_(*permission_conditions))
         else:
             # 如果没有权限，返回空结果
             return []
@@ -152,27 +185,23 @@ def get_equipments_paginated(db: Session, skip: int = 0, limit: int = 100,
         "limit": limit
     }
 
-def get_equipment(db: Session, equipment_id: int, user_id: Optional[int] = None, 
+def get_equipment(db: Session, equipment_id: int, user_id: Optional[int] = None,
                  is_admin: bool = False):
     query = db.query(Equipment).options(
         joinedload(Equipment.department),
         joinedload(Equipment.category)
     ).filter(Equipment.id == equipment_id)
-    
+
     if not is_admin and user_id:
-        # 只使用设备权限检查
-        authorized_equipment_names = db.execute(
-            select(UserEquipmentPermission.equipment_name).filter(
-                UserEquipmentPermission.user_id == user_id
-            )
-        ).scalars().all()
-        
-        if authorized_equipment_names:
-            query = query.filter(Equipment.name.in_(authorized_equipment_names))
+        # 使用更精确的权限检查：同时检查category_id和equipment_name
+        # 首先获取设备信息以进行权限检查
+        temp_equipment = query.first()
+        if temp_equipment:
+            if not has_equipment_permission(db, user_id, temp_equipment.category_id, temp_equipment.name):
+                return None
         else:
-            # 如果没有权限，返回空结果
-            return []
-    
+            return None
+
     return query.first()
 
 def create_equipment(db: Session, equipment: EquipmentCreate):
@@ -313,25 +342,24 @@ def filter_equipments_count(db: Session, filters: EquipmentFilter, user_id: Opti
     """获取筛选后的设备总数"""
     query = db.query(Equipment)
     
-    # 权限控制 - 临时简化以测试
+    # 权限控制 - 修复权限冲突问题
     if not is_admin and user_id:
-        try:
-            result = db.execute(
-                select(UserEquipmentPermission.equipment_name).filter(
-                    UserEquipmentPermission.user_id == user_id
+        user_permissions = get_user_equipment_permissions(db, user_id)
+
+        if user_permissions:
+            # 使用更复杂的权限检查：同时检查category_id和equipment_name
+            permission_conditions = []
+            for category_id, equipment_name in user_permissions:
+                permission_conditions.append(
+                    and_(
+                        Equipment.category_id == category_id,
+                        Equipment.name == equipment_name
+                    )
                 )
-            )
-            authorized_equipment_names = [row[0] for row in result.fetchall()]
-            
-            if authorized_equipment_names:
-                query = query.filter(Equipment.name.in_(authorized_equipment_names))
-            else:
-                # 如果没有权限，返回空结果
-                return 0
-        except Exception as e:
-            # 如果权限查询出错，暂时允许所有权限用于调试
-            print(f"权限查询错误: {e}")
-            pass
+            query = query.filter(or_(*permission_conditions))
+        else:
+            # 如果没有权限，返回空结果
+            return 0
     
     # 应用筛选条件
     if filters.department_id:
@@ -360,25 +388,24 @@ def filter_equipments(db: Session, filters: EquipmentFilter, user_id: Optional[i
         joinedload(Equipment.category)
     )
     
-    # 权限控制 - 临时简化以测试
+    # 权限控制 - 修复权限冲突问题
     if not is_admin and user_id:
-        try:
-            result = db.execute(
-                select(UserEquipmentPermission.equipment_name).filter(
-                    UserEquipmentPermission.user_id == user_id
+        user_permissions = get_user_equipment_permissions(db, user_id)
+
+        if user_permissions:
+            # 使用更复杂的权限检查：同时检查category_id和equipment_name
+            permission_conditions = []
+            for category_id, equipment_name in user_permissions:
+                permission_conditions.append(
+                    and_(
+                        Equipment.category_id == category_id,
+                        Equipment.name == equipment_name
+                    )
                 )
-            )
-            authorized_equipment_names = [row[0] for row in result.fetchall()]
-            
-            if authorized_equipment_names:
-                query = query.filter(Equipment.name.in_(authorized_equipment_names))
-            else:
-                # 如果没有权限，返回空结果
-                return []
-        except Exception as e:
-            # 如果权限查询出错，暂时允许所有权限用于调试
-            print(f"权限查询错误: {e}")
-            pass
+            query = query.filter(or_(*permission_conditions))
+        else:
+            # 如果没有权限，返回空结果
+            return []
     
     # 应用筛选条件
     if filters.department_id:
@@ -456,15 +483,19 @@ def get_equipments_due_for_calibration(db: Session, start_date: date, end_date: 
     )
     
     if not is_admin and user_id:
-        # 只使用设备权限检查
-        authorized_equipment_names = db.execute(
-            select(UserEquipmentPermission.equipment_name).filter(
-                UserEquipmentPermission.user_id == user_id
-            )
-        ).scalars().all()
-        
-        if authorized_equipment_names:
-            query = query.filter(Equipment.name.in_(authorized_equipment_names))
+        # 修复权限冲突：同时检查category_id和equipment_name
+        user_permissions = get_user_equipment_permissions(db, user_id)
+
+        if user_permissions:
+            permission_conditions = []
+            for category_id, equipment_name in user_permissions:
+                permission_conditions.append(
+                    and_(
+                        Equipment.category_id == category_id,
+                        Equipment.name == equipment_name
+                    )
+                )
+            query = query.filter(or_(*permission_conditions))
         else:
             # 如果没有权限，返回空结果
             return []
@@ -485,15 +516,19 @@ def get_overdue_equipments(db: Session, user_id: Optional[int] = None, is_admin:
     )
     
     if not is_admin and user_id:
-        # 只使用设备权限检查
-        authorized_equipment_names = db.execute(
-            select(UserEquipmentPermission.equipment_name).filter(
-                UserEquipmentPermission.user_id == user_id
-            )
-        ).scalars().all()
-        
-        if authorized_equipment_names:
-            query = query.filter(Equipment.name.in_(authorized_equipment_names))
+        # 修复权限冲突：同时检查category_id和equipment_name
+        user_permissions = get_user_equipment_permissions(db, user_id)
+
+        if user_permissions:
+            permission_conditions = []
+            for category_id, equipment_name in user_permissions:
+                permission_conditions.append(
+                    and_(
+                        Equipment.category_id == category_id,
+                        Equipment.name == equipment_name
+                    )
+                )
+            query = query.filter(or_(*permission_conditions))
         else:
             # 如果没有权限，返回空结果
             return []
@@ -511,16 +546,21 @@ def search_equipments_count(db: Session, search: EquipmentSearch, user_id: Optio
         joinedload(Equipment.category)
     )
     
-    # 权限控制
+    # 权限控制 - 修复权限冲突问题
     if not is_admin and user_id:
-        authorized_equipment_names = db.execute(
-            select(UserEquipmentPermission.equipment_name).filter(
-                UserEquipmentPermission.user_id == user_id
-            )
-        ).scalars().all()
-        
-        if authorized_equipment_names:
-            query = query.filter(Equipment.name.in_(authorized_equipment_names))
+        user_permissions = get_user_equipment_permissions(db, user_id)
+
+        if user_permissions:
+            # 使用更复杂的权限检查：同时检查category_id和equipment_name
+            permission_conditions = []
+            for category_id, equipment_name in user_permissions:
+                permission_conditions.append(
+                    and_(
+                        Equipment.category_id == category_id,
+                        Equipment.name == equipment_name
+                    )
+                )
+            query = query.filter(or_(*permission_conditions))
         else:
             # 如果没有权限，返回空结果
             return 0
@@ -616,16 +656,21 @@ def search_equipments(db: Session, search: EquipmentSearch, user_id: Optional[in
         joinedload(Equipment.category)
     )
     
-    # 权限控制
+    # 权限控制 - 修复权限冲突问题
     if not is_admin and user_id:
-        authorized_equipment_names = db.execute(
-            select(UserEquipmentPermission.equipment_name).filter(
-                UserEquipmentPermission.user_id == user_id
-            )
-        ).scalars().all()
-        
-        if authorized_equipment_names:
-            query = query.filter(Equipment.name.in_(authorized_equipment_names))
+        user_permissions = get_user_equipment_permissions(db, user_id)
+
+        if user_permissions:
+            # 使用更复杂的权限检查：同时检查category_id和equipment_name
+            permission_conditions = []
+            for category_id, equipment_name in user_permissions:
+                permission_conditions.append(
+                    and_(
+                        Equipment.category_id == category_id,
+                        Equipment.name == equipment_name
+                    )
+                )
+            query = query.filter(or_(*permission_conditions))
         else:
             # 如果没有权限，返回空结果
             return []

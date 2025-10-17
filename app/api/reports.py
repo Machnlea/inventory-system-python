@@ -22,9 +22,22 @@ async def get_reports_overview(
     base_query = db.query(Equipment)
     if not current_user.is_admin:
         from app.models.models import UserEquipmentPermission
-        authorized_equipment_names = select(UserEquipmentPermission.equipment_name).filter(
-            UserEquipmentPermission.user_id == current_user.id
-        )
+        # 修复权限冲突：需要同时匹配category_id和equipment_name
+        # 由于报表需要复杂的权限过滤，这里使用子查询方式
+        from app.models.models import Equipment
+
+        equipment_subquery = db.query(
+            Equipment.id
+        ).join(
+            UserEquipmentPermission,
+            and_(
+                Equipment.category_id == UserEquipmentPermission.category_id,
+                Equipment.name == UserEquipmentPermission.equipment_name,
+                UserEquipmentPermission.user_id == current_user.id
+            )
+        ).subquery()
+
+        authorized_equipment_ids = select(equipment_subquery.c.id)
         base_query = base_query.filter(Equipment.name.in_(authorized_equipment_names))
     
     # 设备状态统计
@@ -123,9 +136,22 @@ async def get_calibration_stats(
     base_query = db.query(Equipment).filter(Equipment.status == "在用")
     if not current_user.is_admin:
         from app.models.models import UserEquipmentPermission
-        authorized_equipment_names = select(UserEquipmentPermission.equipment_name).filter(
-            UserEquipmentPermission.user_id == current_user.id
-        )
+        # 修复权限冲突：需要同时匹配category_id和equipment_name
+        # 由于报表需要复杂的权限过滤，这里使用子查询方式
+        from app.models.models import Equipment
+
+        equipment_subquery = db.query(
+            Equipment.id
+        ).join(
+            UserEquipmentPermission,
+            and_(
+                Equipment.category_id == UserEquipmentPermission.category_id,
+                Equipment.name == UserEquipmentPermission.equipment_name,
+                UserEquipmentPermission.user_id == current_user.id
+            )
+        ).subquery()
+
+        authorized_equipment_ids = select(equipment_subquery.c.id)
         base_query = base_query.filter(Equipment.name.in_(authorized_equipment_names))
     
     # 检定方式统计
@@ -282,9 +308,22 @@ async def get_department_comparison(
     base_query = db.query(Equipment)
     if not current_user.is_admin:
         from app.models.models import UserEquipmentPermission
-        authorized_equipment_names = select(UserEquipmentPermission.equipment_name).filter(
-            UserEquipmentPermission.user_id == current_user.id
-        )
+        # 修复权限冲突：需要同时匹配category_id和equipment_name
+        # 由于报表需要复杂的权限过滤，这里使用子查询方式
+        from app.models.models import Equipment
+
+        equipment_subquery = db.query(
+            Equipment.id
+        ).join(
+            UserEquipmentPermission,
+            and_(
+                Equipment.category_id == UserEquipmentPermission.category_id,
+                Equipment.name == UserEquipmentPermission.equipment_name,
+                UserEquipmentPermission.user_id == current_user.id
+            )
+        ).subquery()
+
+        authorized_equipment_ids = select(equipment_subquery.c.id)
         base_query = base_query.filter(Equipment.name.in_(authorized_equipment_names))
     
     # 部门详细统计
@@ -382,10 +421,23 @@ async def get_equipment_stats(
     # 权限控制
     if not current_user.is_admin:
         from app.models.models import UserEquipmentPermission
-        authorized_equipment_names = select(UserEquipmentPermission.equipment_name).filter(
-            UserEquipmentPermission.user_id == current_user.id
-        )
-        query = query.filter(Equipment.name.in_(authorized_equipment_names))
+        # 修复权限冲突：需要同时匹配category_id和equipment_name
+        # 由于报表需要复杂的权限过滤，这里使用子查询方式
+        from app.models.models import Equipment
+
+        equipment_subquery = db.query(
+            Equipment.id
+        ).join(
+            UserEquipmentPermission,
+            and_(
+                Equipment.category_id == UserEquipmentPermission.category_id,
+                Equipment.name == UserEquipmentPermission.equipment_name,
+                UserEquipmentPermission.user_id == current_user.id
+            )
+        ).subquery()
+
+        authorized_equipment_ids = select(equipment_subquery.c.id)
+        query = query.filter(Equipment.id.in_(authorized_equipment_ids))
     
     # 获取总数
     total = query.count()
@@ -632,10 +684,23 @@ async def get_calibration_records(
     # 权限控制
     if not current_user.is_admin:
         from app.models.models import UserEquipmentPermission
-        authorized_equipment_names = select(UserEquipmentPermission.equipment_name).filter(
-            UserEquipmentPermission.user_id == current_user.id
-        )
-        query = query.filter(Equipment.name.in_(authorized_equipment_names))
+        # 修复权限冲突：需要同时匹配category_id和equipment_name
+        # 由于报表需要复杂的权限过滤，这里使用子查询方式
+        from app.models.models import Equipment
+
+        equipment_subquery = db.query(
+            Equipment.id
+        ).join(
+            UserEquipmentPermission,
+            and_(
+                Equipment.category_id == UserEquipmentPermission.category_id,
+                Equipment.name == UserEquipmentPermission.equipment_name,
+                UserEquipmentPermission.user_id == current_user.id
+            )
+        ).subquery()
+
+        authorized_equipment_ids = select(equipment_subquery.c.id)
+        query = query.filter(Equipment.id.in_(authorized_equipment_ids))
     
     # 日期范围过滤
     if start_date:
@@ -802,10 +867,23 @@ async def get_instrument_quantity_stats(
     # 权限控制
     if not current_user.is_admin:
         from app.models.models import UserEquipmentPermission
-        authorized_equipment_names = select(UserEquipmentPermission.equipment_name).filter(
-            UserEquipmentPermission.user_id == current_user.id
-        )
-        query = query.filter(Equipment.name.in_(authorized_equipment_names))
+        # 修复权限冲突：需要同时匹配category_id和equipment_name
+        # 由于报表需要复杂的权限过滤，这里使用子查询方式
+        from app.models.models import Equipment
+
+        equipment_subquery = db.query(
+            Equipment.id
+        ).join(
+            UserEquipmentPermission,
+            and_(
+                Equipment.category_id == UserEquipmentPermission.category_id,
+                Equipment.name == UserEquipmentPermission.equipment_name,
+                UserEquipmentPermission.user_id == current_user.id
+            )
+        ).subquery()
+
+        authorized_equipment_ids = select(equipment_subquery.c.id)
+        query = query.filter(Equipment.id.in_(authorized_equipment_ids))
     
     # 按设备类别统计数量，优化查询性能
     category_stats = db.query(

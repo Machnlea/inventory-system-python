@@ -940,6 +940,10 @@ const ReportsAPI = {
         
         const endpoint = `/api/reports/equipment-stats?${params.toString()}`;
         return api.get(endpoint);
+    },
+    // 获取器具数量统计数据
+    async getInstrumentQuantityStats() {
+        return api.get('/api/reports/instrument-quantity-stats');
     }
 };
 

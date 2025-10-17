@@ -293,11 +293,13 @@
                         </div>
                     </div>
 
-                    <!-- 图表区域 -->
+                    <!-- 器具数量柱状图 -->
                     <div class="bg-white rounded-xl shadow-md p-6 mb-8">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-4">设备状态分布</h3>
-                        <div class="chart-container" style="height: 300px;">
-                            <canvas id="equipmentStatusChart"></canvas>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                            <i class="fas fa-chart-bar text-green-500 mr-2"></i>各类器具数量统计
+                        </h3>
+                        <div class="chart-container" style="height: 400px;">
+                            <canvas id="instrumentQuantityChart"></canvas>
                         </div>
                     </div>
 
@@ -599,9 +601,11 @@
                 updateEquipmentStats(equipmentStats.statistics);
                 
                 // 创建图表
-                createEquipmentStatusChart(equipmentStats.statistics.status_distribution);
                 createDepartmentStatsChart(equipmentStats.statistics.department_stats);
                 createCategoryStatsChart(equipmentStats.statistics.category_stats);
+                
+                // 加载和创建器具数量柱状图
+                await loadInstrumentQuantityChart();
                 
                 // 加载设备明细
                 updateEquipmentTable(equipmentStats.equipment_list);
@@ -659,68 +663,6 @@
         }
 
     
-        // 创建设备状态分布图
-        function createEquipmentStatusChart(data) {
-            const ctx = document.getElementById('equipmentStatusChart').getContext('2d');
-            
-            if (chartInstances.equipmentStatus) {
-                chartInstances.equipmentStatus.destroy();
-            }
-
-            // 如果数据为空或undefined，创建空图表
-            if (!data || !Array.isArray(data) || data.length === 0) {
-                chartInstances.equipmentStatus = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['暂无数据'],
-                        datasets: [{
-                            data: [1],
-                            backgroundColor: ['#E5E7EB']
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'bottom'
-                            },
-                            title: {
-                                display: true,
-                                text: '设备状态分布 (暂无数据)'
-                            }
-                        }
-                    }
-                });
-                return;
-            }
-
-            chartInstances.equipmentStatus = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: data.map(item => item.status),
-                    datasets: [{
-                        data: data.map(item => item.count),
-                        backgroundColor: [
-                            '#10B981', // 在用 - 绿色
-                            '#6B7280', // 停用 - 灰色
-                            '#EF4444', // 报废 - 红色
-                            '#F59E0B'  // 其他 - 黄色
-                        ]
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom'
-                        }
-                    }
-                }
-            });
-        }
-
         // 创建部门统计图
         function createDepartmentStatsChart(data) {
             const ctx = document.getElementById('departmentStatsChart').getContext('2d');
@@ -809,11 +751,12 @@
             // 如果数据为空或undefined，创建空图表
             if (!data || !Array.isArray(data) || data.length === 0) {
                 chartInstances.categoryStats = new Chart(ctx, {
-                    type: 'pie',
+                    type: 'bar',
                     data: {
                         labels: ['暂无数据'],
                         datasets: [{
-                            data: [1],
+                            label: '设备数量',
+                            data: [0],
                             backgroundColor: ['#E5E7EB']
                         }]
                     },
@@ -822,11 +765,19 @@
                         maintainAspectRatio: false,
                         plugins: {
                             legend: {
-                                position: 'bottom'
+                                position: 'top'
                             },
                             title: {
                                 display: true,
-                                text: '设备类别分布 (暂无数据)'
+                                text: '设备类别统计 (暂无数据)'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1
+                                }
                             }
                         }
                     }
@@ -835,15 +786,21 @@
             }
 
             chartInstances.categoryStats = new Chart(ctx, {
-                type: 'pie',
+                type: 'bar',
                 data: {
                     labels: data.map(item => item.category),
                     datasets: [{
+                        label: '设备数量',
                         data: data.map(item => item.count),
                         backgroundColor: [
                             '#3B82F6', '#10B981', '#F59E0B', '#EF4444', 
                             '#8B5CF6', '#06B6D4', '#84CC16', '#F97316'
-                        ]
+                        ],
+                        borderColor: [
+                            '#2563EB', '#059669', '#D97706', '#DC2626',
+                            '#7C3AED', '#0891B2', '#65A30D', '#EA580C'
+                        ],
+                        borderWidth: 1
                     }]
                 },
                 options: {
@@ -852,10 +809,152 @@
                     plugins: {
                         title: {
                             display: true,
-                            text: '设备类别分布'
+                            text: '设备类别统计'
                         },
                         legend: {
-                            position: 'bottom'
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                afterLabel: function(context) {
+                                    return `总数量: ${context.parsed.y} 台`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: '设备类别'
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '设备数量'
+                            },
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 加载器具数量柱状图
+        async function loadInstrumentQuantityChart() {
+            try {
+                // 使用仪表盘API获取数据，与仪表盘的饼图数据保持一致
+                const response = await DashboardAPI.getStats();
+                createInstrumentQuantityChart(response.category_distribution);
+            } catch (error) {
+                console.error('加载器具数量统计失败:', error);
+                // 创建空图表
+                createInstrumentQuantityChart([]);
+            }
+        }
+
+        // 创建器具数量柱状图
+        function createInstrumentQuantityChart(data) {
+            const ctx = document.getElementById('instrumentQuantityChart').getContext('2d');
+            
+            if (chartInstances.instrumentQuantity) {
+                chartInstances.instrumentQuantity.destroy();
+            }
+
+            // 如果数据为空或undefined，创建空图表
+            if (!data || !Array.isArray(data) || data.length === 0) {
+                chartInstances.instrumentQuantity = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['暂无数据'],
+                        datasets: [{
+                            label: '设备数量',
+                            data: [0],
+                            backgroundColor: '#E5E7EB'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: '器具数量统计 (暂无数据)'
+                            },
+                            legend: {
+                                position: 'top'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1
+                                }
+                            }
+                        }
+                    }
+                });
+                return;
+            }
+
+            // 准备图表数据
+            const labels = data.map(item => item.name);
+            const counts = data.map(item => item.count);
+
+            chartInstances.instrumentQuantity = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '在用设备数量',
+                            data: counts,
+                            backgroundColor: '#10B981',
+                            borderColor: '#059669',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '各类器具数量统计'
+                        },
+                        legend: {
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                afterLabel: function(context) {
+                                    return `总数量: ${context.parsed.y} 台`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: '设备名称'
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '设备数量'
+                            },
+                            ticks: {
+                                stepSize: 1
+                            }
                         }
                     }
                 }

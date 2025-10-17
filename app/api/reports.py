@@ -787,3 +787,81 @@ async def export_reports(
             
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+
+
+@router.get("/instrument-quantity-stats")
+async def get_instrument_quantity_stats(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """获取每种器具数量的统计数据，用于柱状图展示"""
+    
+    # 基础查询
+    query = db.query(Equipment)
+    
+    # 权限控制
+    if not current_user.is_admin:
+        from app.models.models import UserEquipmentPermission
+        authorized_equipment_names = select(UserEquipmentPermission.equipment_name).filter(
+            UserEquipmentPermission.user_id == current_user.id
+        )
+        query = query.filter(Equipment.name.in_(authorized_equipment_names))
+    
+    # 按设备类别统计数量，优化查询性能
+    category_stats = db.query(
+        EquipmentCategory.name.label('category_name'),
+        func.count(Equipment.id).label('total_count'),
+        func.sum(case((Equipment.status == "在用", 1), else_=0)).label('active_count'),
+        func.sum(case((Equipment.status == "停用", 1), else_=0)).label('inactive_count'),
+        func.sum(case((Equipment.status == "报废", 1), else_=0)).label('scrap_count'),
+        func.sum(Equipment.original_value).label('total_value'),
+        func.avg(Equipment.original_value).label('avg_value')
+    ).join(Equipment, EquipmentCategory.id == Equipment.category_id)
+    
+    # 应用权限过滤
+    if not current_user.is_admin:
+        category_stats = category_stats.filter(Equipment.name.in_(authorized_equipment_names))
+    
+    # 按类别分组并按数量降序排列
+    category_results = category_stats.group_by(
+        EquipmentCategory.id, 
+        EquipmentCategory.name
+    ).order_by(func.count(Equipment.id).desc()).all()
+    
+    # 构建返回数据
+    instrument_stats = []
+    total_instruments = 0
+    total_value = 0.0
+    
+    for result in category_results:
+        category_data = {
+            "category": result.category_name,
+            "total_count": result.total_count,
+            "active_count": result.active_count or 0,
+            "inactive_count": result.inactive_count or 0,
+            "scrap_count": result.scrap_count or 0,
+            "total_value": float(result.total_value) if result.total_value else 0.0,
+            "avg_value": float(result.avg_value) if result.avg_value else 0.0,
+            "status_distribution": {
+                "在用": result.active_count or 0,
+                "停用": result.inactive_count or 0,
+                "报废": result.scrap_count or 0
+            }
+        }
+        
+        instrument_stats.append(category_data)
+        total_instruments += result.total_count
+        total_value += float(result.total_value) if result.total_value else 0.0
+    
+    # 计算统计汇总
+    summary = {
+        "total_categories": len(instrument_stats),
+        "total_instruments": total_instruments,
+        "total_value": total_value,
+        "avg_instruments_per_category": total_instruments / len(instrument_stats) if instrument_stats else 0
+    }
+    
+    return {
+        "instrument_stats": instrument_stats,
+        "summary": summary
+    }

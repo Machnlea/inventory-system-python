@@ -358,7 +358,8 @@ async def get_login_users_list(db: Session = Depends(get_db)):
     try:
         # 获取所有用户并按类型分类
         from app.models.models import User as UserModel, Department
-        all_users = db.query(UserModel).all()
+        
+        all_users = db.query(UserModel).filter(UserModel.is_active == True).all()
         
         # 获取所有部门名称，用于去重
         departments_list = db.query(Department).all()

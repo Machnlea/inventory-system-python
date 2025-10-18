@@ -94,65 +94,196 @@
             }
         }
 
-        /* 部门选择下拉框样式 - 玻璃效果风格 */
+        /* 部门选择下拉框样式 - 与用户登录页面保持一致 */
         #department-select {
-            background-image: none;
+            /* 强制覆盖所有样式，确保圆角和可见性 */
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%) !important;
+            backdrop-filter: blur(20px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.3) !important;
+            border-radius: 0.5rem !important; /* 强制应用圆角 */
+            box-shadow:
+                0 8px 32px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.1) !important;
+            color: white !important; /* 使用纯白色确保可见 */
+            font-weight: 500 !important;
+            letter-spacing: 0.025em;
             scrollbar-width: thin;
-            scrollbar-color: rgba(59, 130, 246, 0.3) transparent;
+            scrollbar-color: rgba(139, 92, 246, 0.4) transparent;
+            background-image: none !important;
+            cursor: pointer;
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            appearance: none !important;
         }
-        
-        #department-select::-webkit-scrollbar {
-            width: 8px;
+
+        /* 强制设置所有状态下的文字颜色 */
+        #department-select,
+        #department-select:invalid,
+        #department-select:valid,
+        #department-select:focus,
+        #department-select:hover {
+            color: white !important;
         }
-        
-        #department-select::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
+
+        /* 选项样式 - 与页面紫色渐变风格匹配 */
+        #department-select optgroup {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            background-color: #667eea !important;
+            color: rgba(255, 255, 255, 0.95) !important;
+            font-weight: 700 !important;
+            padding: 12px 16px 8px 16px !important;
+            font-size: 0.8rem !important;
+            letter-spacing: 0.05em !important;
+            border: none !important;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
         }
-        
-        #department-select::-webkit-scrollbar-thumb {
-            background: rgba(59, 130, 246, 0.4);
-            border-radius: 4px;
-        }
-        
-        #department-select::-webkit-scrollbar-thumb:hover {
-            background: rgba(59, 130, 246, 0.6);
-        }
-        
+
+        /* 选项样式 - 使用简单的白色背景确保可读性 */
         #department-select option {
-            background-color: rgba(255, 255, 255, 0.95);
-            color: #1f2937;
-            padding: 12px 16px;
-            font-weight: 500;
-            backdrop-filter: blur(10px);
+            background: white !important;
+            background-color: white !important;
+            color: #1f2937 !important;
+            padding: 12px 16px !important;
+            font-weight: 500 !important;
+            font-size: 0.95rem !important;
+            border: none !important;
         }
-        
+
         #department-select option:hover,
-        #department-select option:focus,
-        #department-select option:checked {
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.9) 0%, rgba(30, 64, 175, 0.9) 100%);
-            color: white;
-            backdrop-filter: blur(15px);
+        #department-select option:focus {
+            background: #667eea !important;
+            background-color: #667eea !important;
+            color: white !important;
         }
-        
-        /* 下拉框聚焦效果 - 增强玻璃感 */
+
+        #department-select option:checked,
+        #department-select option:selected {
+            background: #5a67d8 !important;
+            background-color: #5a67d8 !important;
+            color: white !important;
+            font-weight: 600 !important;
+        }
+
+        /* 默认选项样式 - 确保可见性 */
+        #department-select option[value=""] {
+            background: white !important;
+            background-color: white !important;
+            color: #6b7280 !important;
+            font-style: italic !important;
+            font-weight: 400 !important;
+        }
+
+        /* 下拉框状态效果 - 与输入框保持一致 */
+        #department-select:hover {
+            border-color: rgba(255, 255, 255, 0.45) !important;
+            box-shadow:
+                0 12px 40px rgba(102, 126, 234, 0.15),
+                0 0 0 1px rgba(255, 255, 255, 0.25),
+                inset 0 1px 0 rgba(255, 255, 255, 0.18),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.05) !important;
+            transform: translateY(-1px);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.08) 100%) !important;
+        }
+
         #department-select:focus {
+            /* 与input-focus类保持一致的聚焦效果 */
+            border-color: #667eea !important;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
             transform: translateY(-2px);
-            box-shadow: 
-                0 20px 25px rgba(59, 130, 246, 0.15),
-                0 0 0 1px rgba(255, 255, 255, 0.2),
-                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.12) 100%) !important;
         }
-        
+
         /* 下拉箭头动画 */
         #department-select:focus + div i {
             transform: rotate(180deg);
             color: rgba(255, 255, 255, 0.9);
         }
-        
+
         /* 箭头过渡动画 */
         #department-select + div i {
             transition: transform 0.3s ease, color 0.3s ease;
+        }
+
+        /* 强制样式 - 确保在所有浏览器中生效 */
+        select#department-select {
+            border-radius: 0.5rem !important;
+            color: white !important;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%) !important;
+        }
+
+        /* 确保下拉框选项在所有浏览器中都有深色背景 */
+        select#department-select {
+            color-scheme: dark;
+        }
+
+        /* 额外的浏览器兼容性样式 */
+        #department-select option,
+        #department-select optgroup {
+            background-image: none !important;
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            appearance: none !important;
+        }
+
+        /* WebKit浏览器特定样式 */
+        @media screen and (-webkit-min-device-pixel-ratio:0) {
+            #department-select {
+                border-radius: 0.5rem !important;
+                color: white !important;
+            }
+            
+            #department-select option {
+                background: white;
+                color: #1f2937;
+            }
+
+            #department-select option:hover {
+                background: #667eea;
+                color: white;
+            }
+        }
+
+        /* Firefox特定样式 */
+        @-moz-document url-prefix() {
+            #department-select {
+                border-radius: 0.5rem !important;
+                color: white !important;
+            }
+            
+            #department-select option {
+                background-color: white;
+                color: #1f2937;
+            }
+        }
+
+        /* Edge浏览器特定样式 */
+        @supports (-ms-ime-align: auto) {
+            #department-select option {
+                background-color: white !important;
+                color: #1f2937 !important;
+            }
+        }
+
+        /* Safari特定样式 */
+        @media not all and (min-resolution:.001dpcm) {
+            @supports (-webkit-appearance:none) {
+                #department-select option {
+                    background: white;
+                    color: #1f2937;
+                }
+            }
+        }
+
+        /* 移动设备优化 */
+        @media (max-width: 768px) {
+            #department-select {
+                font-size: 16px; /* 防止iOS缩放 */
+            }
+            
+            #department-select option {
+                padding: 18px 20px !important; /* 增加触摸目标 */
+            }
         }
         
         .glass-effect {
@@ -189,8 +320,9 @@
                 </label>
                 <div class="relative">
                     <select id="department-select" required
-                        class="w-full px-4 py-3 glass-effect border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent appearance-none transition-all duration-300">
-                        <option value="" class="text-gray-900 bg-white">请选择部门</option>
+                        class="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg text-white placeholder-white/70 outline-none transition-all duration-300 appearance-none"
+                        style="border-radius: 0.5rem !important; color: white !important; background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%) !important;">
+                        <option value="" style="color: #1f2937 !important; background: white !important;">请选择部门</option>
                     </select>
                     <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                         <i class="fas fa-chevron-down text-white/50 text-sm"></i>
@@ -403,26 +535,70 @@
 
         // 加载部门列表函数
         async function loadDepartmentsList() {
+            const departmentSelect = document.getElementById('department-select');
+            if (!departmentSelect) return;
+
             try {
+                // 显示加载状态
+                departmentSelect.innerHTML = '<option value="" style="color: #1f2937 !important; background: white !important;">正在加载部门列表...</option>';
+                departmentSelect.disabled = true;
+
                 const response = await fetch('/api/auth/users/login-options');
                 const data = await response.json();
                 
-                const departmentSelect = document.getElementById('department-select');
-                if (departmentSelect && data && data.department_users) {
-                    // 清空现有选项（保留默认选项）
-                    departmentSelect.innerHTML = '<option value="" class="text-gray-900 bg-white">请选择部门</option>';
-                    
+                // 清空现有选项
+                departmentSelect.innerHTML = '<option value="" style="color: #1f2937 !important; background: white !important;">请选择部门</option>';
+                
+                let totalDepts = 0;
+                
+                if (data && data.department_users) {
                     // 添加部门用户
                     data.department_users.forEach(dept => {
                         const option = document.createElement('option');
                         option.value = dept.username;
-                        option.textContent = dept.username; // 只显示部门名称，不显示"（部门）"后缀
+                        option.textContent = dept.username; // 直接显示部门名称，不使用图标
+                        // 设置选项样式 - 使用深色背景和白色文字
+                        option.style.cssText = 'color: #1f2937 !important; background: white !important; padding: 12px 16px !important;';
                         departmentSelect.appendChild(option);
                     });
+                    totalDepts = data.department_users.length;
                 }
+                
+                // 如果没有部门，显示提示
+                if (totalDepts === 0) {
+                    departmentSelect.innerHTML = '<option value="" style="color: #1f2937 !important; background: white !important;">暂无可用部门</option>';
+                }
+                
+                // 添加加载成功的视觉反馈
+                if (totalDepts > 0) {
+                    departmentSelect.style.borderColor = 'rgba(34, 197, 94, 0.4)';
+                    setTimeout(() => {
+                        departmentSelect.style.borderColor = '';
+                    }, 2000);
+                }
+                
             } catch (error) {
                 console.error('加载部门列表失败:', error);
-                // 失败时不显示错误，用户仍可手动输入部门名称
+                // 失败时显示错误提示
+                departmentSelect.innerHTML = '<option value="" style="color: #1f2937 !important; background: white !important;">加载失败，请刷新页面重试</option>';
+                
+                // 添加重试按钮（通过选项实现）
+                const retryOption = document.createElement('option');
+                retryOption.value = 'retry';
+                retryOption.textContent = '↻ 点击重新加载部门列表';
+                retryOption.style.cssText = 'color: white !important; background: #f59e0b !important; padding: 12px 16px !important;';
+                departmentSelect.appendChild(retryOption);
+                
+                // 监听重试
+                departmentSelect.addEventListener('change', function(e) {
+                    if (e.target.value === 'retry') {
+                        e.target.value = '';
+                        loadDepartmentsList();
+                    }
+                }, { once: true });
+                
+            } finally {
+                departmentSelect.disabled = false;
             }
         }
 
@@ -434,13 +610,49 @@
             // 部门选择下拉框事件监听
             const departmentSelect = document.getElementById('department-select');
             if (departmentSelect) {
+                // 强制设置样式确保可见性和圆角
+                departmentSelect.style.borderRadius = '0.5rem';
+                departmentSelect.style.color = 'white';
+                departmentSelect.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%)';
+                
+                // 确保默认选项可见
+                const defaultOption = departmentSelect.querySelector('option[value=""]');
+                if (defaultOption) {
+                    defaultOption.style.color = '#1f2937';
+                    defaultOption.style.background = 'white';
+                }
+
                 departmentSelect.addEventListener('change', function() {
                     // 选择部门后自动聚焦到密码框
                     if (this.value) {
+                        // 添加选择成功的视觉反馈
+                        this.style.borderColor = 'rgba(34, 197, 94, 0.6)';
+                        this.style.boxShadow = '0 0 0 2px rgba(34, 197, 94, 0.2), 0 8px 32px rgba(34, 197, 94, 0.1)';
+                        
+                        // 显示成功提示
+                        if (typeof showNotification === 'function') {
+                            const selectedOption = this.options[this.selectedIndex];
+                            let deptName = selectedOption.textContent;
+                            // 移除可能的图标前缀
+                            deptName = deptName.replace(/^[🏢↻⟲]\s*/, '').trim();
+                            showNotification(`已选择部门: ${deptName}`, 'success');
+                        }
+
                         const passwordInput = document.getElementById('password');
                         if (passwordInput) {
                             passwordInput.focus();
+                            // 添加密码框的聚焦动画
+                            passwordInput.style.transform = 'scale(1.02)';
+                            setTimeout(() => {
+                                passwordInput.style.transform = '';
+                            }, 200);
                         }
+
+                        // 恢复原始样式
+                        setTimeout(() => {
+                            this.style.borderColor = '';
+                            this.style.boxShadow = '';
+                        }, 2000);
                     }
                 });
             }

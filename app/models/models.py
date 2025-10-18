@@ -238,8 +238,13 @@ class CalibrationHistory(Base):
     notes = Column(Text)  # 检定备注
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     created_by = Column(Integer, ForeignKey("users.id"))
+    is_rolled_back = Column(Boolean, default=False)  # 是否已被回滚
+    rolled_back_at = Column(DateTime(timezone=True), nullable=True)  # 回滚时间
+    rolled_back_by = Column(Integer, ForeignKey("users.id"), nullable=True)  # 回滚操作者
+    rollback_reason = Column(Text, nullable=True)  # 回滚原因
     
     # 关联
     equipment = relationship("Equipment", back_populates="calibration_history")
-    creator = relationship("User")
+    creator = relationship("User", foreign_keys=[created_by])
+    rollback_user = relationship("User", foreign_keys=[rolled_back_by])
     attachments = relationship("EquipmentAttachment", back_populates="calibration_history")

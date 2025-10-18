@@ -591,20 +591,37 @@ async def get_equipment_calibration_history(
     # 组装详细信息
     result = []
     for history in histories:
-        history_dict = CalibrationHistoryResponse.from_orm(history).__dict__
+        # 手动构建响应数据，避免序列化问题
+        history_data = {
+            "id": history.id,
+            "equipment_id": history.equipment_id,
+            "calibration_date": history.calibration_date,
+            "valid_until": history.valid_until,
+            "calibration_method": history.calibration_method,
+            "calibration_result": history.calibration_result,
+            "certificate_number": history.certificate_number,
+            "certificate_form": history.certificate_form,
+            "verification_agency": history.verification_agency,
+            "notes": history.notes,
+            "created_at": history.created_at,
+            "created_by": history.created_by,
+            "is_rolled_back": getattr(history, 'is_rolled_back', False),
+            "rolled_back_at": getattr(history, 'rolled_back_at', None),
+            "rolled_back_by": getattr(history, 'rolled_back_by', None),
+            "rollback_reason": getattr(history, 'rollback_reason', None),
+            # 设备信息
+            "equipment_name": equipment.name,
+            "equipment_internal_id": equipment.internal_id,
+            "equipment_model": equipment.model,
+            "department_name": equipment.department.name if equipment.department else None,
+            "category_name": equipment.category.name if equipment.category else None,
+            # 创建者信息
+            "creator_username": history.creator.username if history.creator else None,
+            # 回滚操作者信息
+            "rolled_back_by_username": history.rollback_user.username if getattr(history, 'rollback_user', None) else None
+        }
         
-        # 添加设备信息
-        history_dict["equipment_name"] = equipment.name
-        history_dict["equipment_internal_id"] = equipment.internal_id
-        history_dict["equipment_model"] = equipment.model
-        history_dict["department_name"] = equipment.department.name if equipment.department else None
-        history_dict["category_name"] = equipment.category.name if equipment.category else None
-        
-        # 添加创建者信息
-        if history.creator:
-            history_dict["creator_username"] = history.creator.username
-        
-        result.append(CalibrationHistoryWithDetails(**history_dict))
+        result.append(CalibrationHistoryWithDetails(**history_data))
     
     return result
 
@@ -643,21 +660,37 @@ async def get_calibration_histories(
     
     result = []
     for history in histories_with_details:
-        history_dict = CalibrationHistoryResponse.from_orm(history).__dict__
+        # 手动构建响应数据，避免序列化问题
+        history_data = {
+            "id": history.id,
+            "equipment_id": history.equipment_id,
+            "calibration_date": history.calibration_date,
+            "valid_until": history.valid_until,
+            "calibration_method": history.calibration_method,
+            "calibration_result": history.calibration_result,
+            "certificate_number": history.certificate_number,
+            "certificate_form": history.certificate_form,
+            "verification_agency": history.verification_agency,
+            "notes": history.notes,
+            "created_at": history.created_at,
+            "created_by": history.created_by,
+            "is_rolled_back": getattr(history, 'is_rolled_back', False),
+            "rolled_back_at": getattr(history, 'rolled_back_at', None),
+            "rolled_back_by": getattr(history, 'rolled_back_by', None),
+            "rollback_reason": getattr(history, 'rollback_reason', None),
+            # 设备信息
+            "equipment_name": history.equipment.name if history.equipment else None,
+            "equipment_internal_id": history.equipment.internal_id if history.equipment else None,
+            "equipment_model": history.equipment.model if history.equipment else None,
+            "department_name": history.equipment.department.name if history.equipment and history.equipment.department else None,
+            "category_name": history.equipment.category.name if history.equipment and history.equipment.category else None,
+            # 创建者信息
+            "creator_username": history.creator.username if history.creator else None,
+            # 回滚操作者信息
+            "rolled_back_by_username": history.rollback_user.username if getattr(history, 'rollback_user', None) else None
+        }
         
-        # 添加设备信息
-        if history.equipment:
-            history_dict["equipment_name"] = history.equipment.name
-            history_dict["equipment_internal_id"] = history.equipment.internal_id
-            history_dict["equipment_model"] = history.equipment.model
-            history_dict["department_name"] = history.equipment.department.name if history.equipment.department else None
-            history_dict["category_name"] = history.equipment.category.name if history.equipment.category else None
-        
-        # 添加创建者信息
-        if history.creator:
-            history_dict["creator_username"] = history.creator.username
-        
-        result.append(CalibrationHistoryWithDetails(**history_dict))
+        result.append(CalibrationHistoryWithDetails(**history_data))
     
     return result
 

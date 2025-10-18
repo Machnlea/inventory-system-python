@@ -1637,23 +1637,43 @@
                 const displayTitle = isLatest ? '最新检定' : 
                                    isOldest && histories.length > 2 ? '首次检定' : '历史检定';
                 
+                // 检查是否已被回滚
+                const isRolledBack = history.is_rolled_back;
+                const rollbackBadge = isRolledBack ? 
+                    `<span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded-full ml-2">
+                        <i class="fas fa-undo mr-1"></i>已回滚
+                    </span>` : '';
+
                 timelineHtml += `
-                    <div class="timeline-item">
-                        <div class="timeline-dot ${dotClass}"></div>
+                    <div class="timeline-item ${isRolledBack ? 'opacity-75' : ''}">
+                        <div class="timeline-dot ${dotClass} ${isRolledBack ? 'ring-2 ring-orange-300' : ''}"></div>
                         <div class="flex justify-between items-center">
                             <div>
-                                <div class="font-medium text-gray-900">${displayTitle}</div>
+                                <div class="font-medium text-gray-900">
+                                    ${displayTitle}
+                                    ${rollbackBadge}
+                                </div>
                                 <div class="text-sm text-gray-600">${formatDate(history.calibration_date)}</div>
                                 ${history.valid_until ? `<div class="text-xs text-gray-500">有效期至: ${formatDate(history.valid_until)}</div>` : ''}
+                                ${isRolledBack && history.rolled_back_at ? 
+                                    `<div class="text-xs text-orange-600 mt-1">
+                                        <i class="fas fa-info-circle mr-1"></i>
+                                        回滚时间: ${formatDateTime(history.rolled_back_at)}
+                                    </div>` : ''}
                             </div>
                             <div class="text-right">
-                                <div class="text-sm font-medium ${resultClass}">${history.calibration_result}</div>
+                                <div class="text-sm font-medium ${resultClass} ${isRolledBack ? 'line-through' : ''}">${history.calibration_result}</div>
                                 <div class="text-xs text-gray-500">${history.calibration_method}</div>
                                 ${history.certificate_number ? `<div class="text-xs text-gray-400">证书: ${history.certificate_number}</div>` : ''}
                                 ${history.certificate_form ? `<div class="text-xs text-gray-400">形式: ${history.certificate_form}</div>` : ''}
                             </div>
                         </div>
                         ${history.notes ? `<div class="mt-2 text-xs text-gray-600 bg-gray-50 p-2 rounded">${history.notes}</div>` : ''}
+                        ${isRolledBack && history.rollback_reason ? 
+                            `<div class="mt-2 text-xs text-orange-700 bg-orange-50 p-2 rounded border-l-2 border-orange-300">
+                                <i class="fas fa-exclamation-triangle mr-1"></i>
+                                回滚原因: ${history.rollback_reason}
+                            </div>` : ''}
                         <div class="mt-2 flex flex-wrap gap-2" id="calibration-attachments-${history.id}">
                             <!-- 附件按钮将在这里动态加载 -->
                         </div>
@@ -1923,6 +1943,7 @@
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">有效期至</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">检定方式</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">检定结果</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">回滚状态</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">证书编号</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">证书形式</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">检定机构</th>
@@ -1933,30 +1954,50 @@
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
                                 ${histories.map(history => `
-                                    <tr class="hover:bg-gray-50">
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                    <tr class="hover:bg-gray-50 ${history.is_rolled_back ? 'bg-orange-50' : ''}">
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 ${history.is_rolled_back ? 'line-through text-gray-500' : ''}">
                                             ${formatDate(history.calibration_date)}
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 ${history.is_rolled_back ? 'line-through text-gray-500' : ''}">
                                             ${formatDate(history.valid_until)}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${history.calibration_method === '内检' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}">
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${history.calibration_method === '内检' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'} ${history.is_rolled_back ? 'opacity-60' : ''}">
                                                 ${history.calibration_method}
                                             </span>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${history.calibration_result === '合格' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${history.calibration_result === '合格' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} ${history.is_rolled_back ? 'opacity-60 line-through' : ''}">
                                                 ${history.calibration_result}
                                             </span>
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            ${history.is_rolled_back ? 
+                                                `<div class="flex flex-col">
+                                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800 mb-1">
+                                                        <i class="fas fa-undo mr-1"></i>已回滚
+                                                    </span>
+                                                    ${history.rolled_back_at ? 
+                                                        `<span class="text-xs text-gray-500">${formatDateTime(history.rolled_back_at)}</span>` : ''
+                                                    }
+                                                    ${history.rollback_reason ? 
+                                                        `<span class="text-xs text-orange-600 mt-1" title="${history.rollback_reason}">
+                                                            <i class="fas fa-info-circle mr-1"></i>原因
+                                                        </span>` : ''
+                                                    }
+                                                </div>` : 
+                                                `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                                    <i class="fas fa-check mr-1"></i>有效
+                                                </span>`
+                                            }
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 ${history.is_rolled_back ? 'line-through text-gray-500' : ''}">
                                             ${history.certificate_number || '-'}
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 ${history.is_rolled_back ? 'line-through text-gray-500' : ''}">
                                             ${history.certificate_form || '-'}
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 ${history.is_rolled_back ? 'line-through text-gray-500' : ''}">
                                             ${history.verification_agency || '-'}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -1964,8 +2005,21 @@
                                                 <span class="text-gray-400 text-xs">加载中...</span>
                                             </div>
                                         </td>
-                                        <td class="px-6 py-4 text-sm text-gray-900 max-w-xs truncate" title="${history.notes || ''}">
-                                            ${history.notes || '-'}
+                                        <td class="px-6 py-4 text-sm text-gray-900 max-w-xs">
+                                            <div class="space-y-1">
+                                                ${history.notes ? 
+                                                    `<div class="truncate ${history.is_rolled_back ? 'line-through text-gray-500' : ''}" title="${history.notes}">
+                                                        ${history.notes}
+                                                    </div>` : 
+                                                    '<span class="text-gray-400">-</span>'
+                                                }
+                                                ${history.is_rolled_back && history.rollback_reason ? 
+                                                    `<div class="text-xs text-orange-700 bg-orange-50 p-1 rounded border-l-2 border-orange-300" title="${history.rollback_reason}">
+                                                        <i class="fas fa-exclamation-triangle mr-1"></i>
+                                                        回滚原因: ${history.rollback_reason.length > 20 ? history.rollback_reason.substring(0, 20) + '...' : history.rollback_reason}
+                                                    </div>` : ''
+                                                }
+                                            </div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                             ${formatDateTime(history.created_at)}

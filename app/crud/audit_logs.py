@@ -332,12 +332,58 @@ def _rollback_equipment_operation(db: Session, original_log: AuditLog) -> bool:
                 except Exception:
                     continue  # 跳过设置失败的字段
 
+        # 如果回滚涉及检定信息，也标记检定历史记录
+        if any(field in old_data for field in ['calibration_date', 'valid_until', 'current_calibration_result']):
+            _mark_calibration_history_as_rolled_back(db, original_log)
+
         db.commit()
         return True
 
     except Exception:
         db.rollback()
         return False
+
+
+def _mark_calibration_history_as_rolled_back(db: Session, original_log: AuditLog) -> None:
+    """标记检定历史记录为已回滚"""
+    try:
+        from app.models.models import CalibrationHistory
+        from datetime import datetime
+        
+        # 解析操作日志中的新值，获取检定信息
+        if original_log.new_value:
+            new_data = json.loads(original_log.new_value)
+            calibration_date = new_data.get('calibration_date')
+            
+            if calibration_date:
+                # 查找对应的检定历史记录
+                # 根据设备ID、检定日期和创建时间来匹配
+                calibration_history = db.query(CalibrationHistory).filter(
+                    CalibrationHistory.equipment_id == original_log.equipment_id,
+                    CalibrationHistory.calibration_date == calibration_date,
+                    CalibrationHistory.is_rolled_back == False
+                ).order_by(CalibrationHistory.created_at.desc()).first()
+                
+                if calibration_history:
+                    # 标记为已回滚
+                    calibration_history.is_rolled_back = True
+                    calibration_history.rolled_back_at = datetime.utcnow()
+                    calibration_history.rollback_reason = f"操作回滚：{original_log.description}"
+                    
+                    # 如果能获取到回滚操作的用户ID，也记录下来
+                    # 这里需要从回滚日志中获取用户ID
+                    rollback_log = db.query(AuditLog).filter(
+                        AuditLog.parent_log_id == original_log.id,
+                        AuditLog.is_rollback == True
+                    ).first()
+                    
+                    if rollback_log:
+                        calibration_history.rolled_back_by = rollback_log.user_id
+                        calibration_history.rollback_reason = rollback_log.rollback_reason or calibration_history.rollback_reason
+    
+    except Exception as e:
+        # 记录错误但不影响主要的回滚操作
+        print(f"WARNING: 标记检定历史记录失败: {e}")
 
 
 def _rollback_calibration_operation(db: Session, original_log: AuditLog) -> bool:
@@ -366,6 +412,9 @@ def _rollback_calibration_operation(db: Session, original_log: AuditLog) -> bool
                         field_value = datetime.fromisoformat(field_value).date()
                 setattr(equipment, field, field_value)
 
+        # 标记相关的检定历史记录为已回滚
+        _mark_calibration_history_as_rolled_back(db, original_log)
+
         db.commit()
         return True
 
@@ -375,7 +424,7 @@ def _rollback_calibration_operation(db: Session, original_log: AuditLog) -> bool
 
 
 def cleanup_old_audit_logs(db: Session, days: int = 365) -> int:
-    """清理指定天数之前的��作日志"""
+    """清理指定天数之前的操作日志"""
     from datetime import timedelta
 
     cutoff_date = datetime.now() - timedelta(days=days)

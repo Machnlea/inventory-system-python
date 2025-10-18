@@ -71,6 +71,10 @@ class CalibrationHistoryResponse(CalibrationHistoryBase):
     id: int
     created_at: datetime
     created_by: Optional[int]
+    is_rolled_back: bool = Field(False, description="是否已被回滚")
+    rolled_back_at: Optional[datetime] = Field(None, description="回滚时间")
+    rolled_back_by: Optional[int] = Field(None, description="回滚操作者ID")
+    rollback_reason: Optional[str] = Field(None, description="回滚原因")
 
     class Config:
         from_attributes = True
@@ -87,6 +91,9 @@ class CalibrationHistoryWithDetails(CalibrationHistoryResponse):
     
     # 创建者信息
     creator_username: Optional[str] = None
+    
+    # 回滚操作者信息
+    rolled_back_by_username: Optional[str] = None
 
     class Config:
         from_attributes = True

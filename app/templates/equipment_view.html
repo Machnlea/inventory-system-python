@@ -217,6 +217,10 @@
                                 <span id="equipmentSerial" class="info-value font-mono bg-gray-100 px-3 py-1 rounded">加载中...</span>
                             </div>
                             <div class="info-row">
+                                <span class="info-label">出厂编号</span>
+                                <span id="equipmentFactorySerial" class="info-value font-mono bg-blue-50 px-3 py-1 rounded">加载中...</span>
+                            </div>
+                            <div class="info-row">
                                 <span class="info-label">型号/规格</span>
                                 <span id="equipmentModel" class="info-value">加载中...</span>
                             </div>
@@ -728,6 +732,7 @@
                 document.getElementById('equipmentName').textContent = equipmentData.name || '-';
                 document.getElementById('equipmentModel').textContent = equipmentData.model || '-';
                 document.getElementById('equipmentSerial').textContent = equipmentData.internal_id || '-';
+                document.getElementById('equipmentFactorySerial').textContent = equipmentData.manufacturer_id || '-';
                 document.getElementById('equipmentDepartment').textContent = equipmentData.department?.name || '-';
                 document.getElementById('equipmentCategory').textContent = equipmentData.category?.name || '-';
                 document.getElementById('equipmentAccuracy').textContent = equipmentData.accuracy_level || '-';

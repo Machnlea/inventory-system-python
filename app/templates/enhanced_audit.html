@@ -119,14 +119,14 @@
 
                     <!-- 系统管理下拉菜单 -->
                     <div class="relative">
-                        <button class="sidebar-item flex items-center justify-between w-full px-4 py-3 text-white/90 rounded-lg" id="system-menu-btn">
+                        <button class="sidebar-item flex items-center justify-between w-full px-4 py-3 text-white/90 rounded-lg active" id="system-menu-btn">
                             <div class="flex items-center">
                                 <i class="fas fa-cog mr-3 text-lg"></i>
                                 <span>系统管理</span>
                             </div>
-                            <i class="fas fa-chevron-down text-sm transition-transform duration-200" id="system-menu-arrow"></i>
+                            <i class="fas fa-chevron-down text-sm transition-transform duration-200" id="system-menu-arrow" style="transform: rotate(180deg);"></i>
                         </button>
-                        <div class="ml-4 mt-1 space-y-1 hidden" id="system-submenu">
+                        <div class="ml-4 mt-1 space-y-1" id="system-submenu">
                             <a href="/categories" class="sidebar-item flex items-center px-4 py-2 text-white/80 rounded-lg text-sm" id="categories-link">
                                 <i class="fas fa-tags mr-3"></i>
                                 <span>设备类别</span>
@@ -1025,6 +1025,95 @@
             sessionStorage.removeItem('access_token');
             localStorage.removeItem('access_token');
             window.location.href = '/login';
+        }
+
+        // 页面初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化侧边栏菜单
+            initializeSidebar();
+            
+            // 设置用户信息
+            setupUserInfo();
+            
+            // 这里可以添加其他页面特定的初始化代码
+            // 比如加载审计日志数据等
+        });
+
+        // 初始化侧边栏菜单
+        function initializeSidebar() {
+            // 设置当前页面的活跃状态
+            const currentPath = window.location.pathname;
+            
+            // 移除所有活跃状态
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // 设置当前页面的活跃状态
+            if (currentPath === '/audit') {
+                // 展开系统管理菜单
+                const systemSubmenu = document.getElementById('system-submenu');
+                const systemMenuBtn = document.getElementById('system-menu-btn');
+                const systemMenuArrow = document.getElementById('system-menu-arrow');
+                
+                if (systemSubmenu && systemMenuBtn && systemMenuArrow) {
+                    systemSubmenu.classList.remove('hidden');
+                    systemMenuBtn.classList.add('active');
+                    systemMenuArrow.style.transform = 'rotate(180deg)';
+                }
+                
+                // 设置操作日志链接为活跃状态
+                const auditLink = document.getElementById('audit-link');
+                if (auditLink) {
+                    auditLink.classList.add('active');
+                }
+            }
+            
+            // 添加系统管理菜单的点击事件
+            const systemMenuBtn = document.getElementById('system-menu-btn');
+            if (systemMenuBtn) {
+                systemMenuBtn.addEventListener('click', function() {
+                    const systemSubmenu = document.getElementById('system-submenu');
+                    const systemMenuArrow = document.getElementById('system-menu-arrow');
+                    
+                    if (systemSubmenu && systemMenuArrow) {
+                        const isHidden = systemSubmenu.classList.contains('hidden');
+                        
+                        if (isHidden) {
+                            systemSubmenu.classList.remove('hidden');
+                            systemMenuArrow.style.transform = 'rotate(180deg)';
+                        } else {
+                            systemSubmenu.classList.add('hidden');
+                            systemMenuArrow.style.transform = 'rotate(0deg)';
+                        }
+                    }
+                });
+            }
+            
+            // 添加登出按钮事件
+            const logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', logout);
+            }
+        }
+
+        // 设置用户信息
+        function setupUserInfo() {
+            const currentUserElement = document.getElementById('current-user');
+            if (currentUserElement) {
+                // 从sessionStorage获取用户信息
+                const userInfo = sessionStorage.getItem('user_info');
+                if (userInfo) {
+                    try {
+                        const user = JSON.parse(userInfo);
+                        currentUserElement.textContent = user.username || '未知用户';
+                    } catch (e) {
+                        currentUserElement.textContent = '未知用户';
+                    }
+                } else {
+                    currentUserElement.textContent = '未知用户';
+                }
+            }
         }
     </script>
 </body>

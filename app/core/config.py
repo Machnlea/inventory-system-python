@@ -13,4 +13,10 @@ class Settings:
     ADMIN_USERNAME: str = os.getenv("ADMIN_USERNAME", "admin")
     ADMIN_PASSWORD: str = os.getenv("ADMIN_PASSWORD", "admin123")
 
+    # 导入任务与临时目录配置
+    IMPORT_TEMP_DIR: str = os.getenv("IMPORT_TEMP_DIR", "data/imports")
+    IMPORT_BATCH_SIZE: int = int(os.getenv("IMPORT_BATCH_SIZE", "1000"))
+    IMPORT_ERROR_MAX_LINES: int = int(os.getenv("IMPORT_ERROR_MAX_LINES", "50"))
+    IMPORT_CLEANUP_AFTER_HOURS: int = int(os.getenv("IMPORT_CLEANUP_AFTER_HOURS", "72"))
+
 settings = Settings()

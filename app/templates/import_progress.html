@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>导入进度</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="max-w-3xl mx-auto py-10 px-4">
+        <div class="mb-6">
+            <h1 class="text-2xl font-bold text-gray-800">Excel 导入进度</h1>
+            <p class="text-gray-500">任务ID: <span id="job-id">{{ job_id }}</span></p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow p-6">
+            <div class="mb-4">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-gray-600">进度</span>
+                    <span id="progress-text" class="text-gray-800 font-semibold">0%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-3">
+                    <div id="progress-bar" class="bg-blue-600 h-3 rounded-full" style="width: 0%;"></div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <div class="text-gray-500">状态</div>
+                    <div id="status" class="text-gray-800 font-medium">queued</div>
+                </div>
+                <div>
+                    <div class="text-gray-500">文件名</div>
+                    <div id="filename" class="text-gray-800 font-medium">-</div>
+                </div>
+                <div>
+                    <div class="text-gray-500">已处理/总行数</div>
+                    <div class="text-gray-800 font-medium"><span id="processed">0</span>/<span id="total">0</span></div>
+                </div>
+                <div>
+                    <div class="text-gray-500">创建时间</div>
+                    <div id="created-at" class="text-gray-800 font-medium">-</div>
+                </div>
+            </div>
+
+            <div id="error-summary" class="text-red-600 text-sm whitespace-pre-wrap hidden mb-4"></div>
+
+            <div class="flex items-center space-x-3">
+                <a id="error-link" href="#" target="_blank" class="hidden text-sm text-blue-600 hover:underline">下载错误明细</a>
+                <button id="cancel-btn" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-md text-sm">取消导入</button>
+                <a href="/equipment" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-md text-sm">返回设备列表</a>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification-container" class="fixed top-4 right-4 space-y-3 z-50"></div>
+
+    <script>var JOB_ID = "{{ job_id }}";</script>
+    <script src="/static/js/session-manager.js"></script>
+    <script src="/static/js/import_progress.js"></script>
+</body>
+</html>

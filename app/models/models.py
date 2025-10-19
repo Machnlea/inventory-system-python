@@ -248,3 +248,21 @@ class CalibrationHistory(Base):
     creator = relationship("User", foreign_keys=[created_by])
     rollback_user = relationship("User", foreign_keys=[rolled_back_by])
     attachments = relationship("EquipmentAttachment", back_populates="calibration_history")
+
+
+class ImportJob(Base):
+    __tablename__ = "import_jobs"
+    
+    id = Column(String(36), primary_key=True, index=True)
+    uploader_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    filename = Column(String(255), nullable=False)
+    status = Column(String(20), nullable=False, default="queued")  # queued/running/succeeded/failed/canceled
+    progress = Column(Integer, default=0)
+    total_rows = Column(Integer, default=0)
+    processed_rows = Column(Integer, default=0)
+    error_summary = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    started_at = Column(DateTime(timezone=True), nullable=True)
+    finished_at = Column(DateTime(timezone=True), nullable=True)
+
+    uploader = relationship("User")

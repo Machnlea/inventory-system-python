@@ -6,7 +6,7 @@ from urllib.parse import quote
 from datetime import datetime
 from app.db.database import get_db
 from app.crud import equipment, departments, categories
-from app.schemas.schemas import Equipment, ImportTemplate
+from app.schemas.schemas import Equipment, ImportTemplate, AuditLogCreate
 from app.api.auth import get_current_admin_user, get_current_user
 from app.api.audit_logs import create_audit_log
 
@@ -557,13 +557,16 @@ async def import_equipment_data(
                         )
                         
                         # 记录操作日志
-                        create_audit_log(
-                            db=db,
+                        log_data = AuditLogCreate(
                             user_id=current_user.id,
                             equipment_id=int(float(existing_equipment.id)),
                             action="导入更新",
-                            description=f"通过Excel导入更新设备: {updated_equipment.name if updated_equipment else '未知设备'}"
+                            description=f"通过Excel导入更新设备: {updated_equipment.name if updated_equipment else '未知设备'}",
+                            operation_type="equipment",
+                            target_table="equipments",
+                            target_id=int(float(existing_equipment.id))
                         )
+                        create_audit_log(db=db, log_data=log_data)
                         
                         result["status"] = "更新"
                         result["message"] = "成功覆盖更新现有设备"
@@ -580,13 +583,16 @@ async def import_equipment_data(
                 new_equipment = equipment.create_equipment(db, equipment_data)
                 
                 # 记录操作日志
-                create_audit_log(
-                    db=db,
+                log_data = AuditLogCreate(
                     user_id=current_user.id,
                     equipment_id=int(float(new_equipment.id)),
                     action="导入",
-                    description=f"通过Excel导入设备: {new_equipment.name}"
+                    description=f"通过Excel导入设备: {new_equipment.name}",
+                    operation_type="equipment",
+                    target_table="equipments",
+                    target_id=int(float(new_equipment.id))
                 )
+                create_audit_log(db=db, log_data=log_data)
                 
                 result["status"] = "成功"
                 result["message"] = "成功导入新设备"
@@ -601,12 +607,14 @@ async def import_equipment_data(
                 continue
         
         # 记录总体操作日志
-        create_audit_log(
-            db=db,
+        log_data = AuditLogCreate(
             user_id=current_user.id,
             action="批量导入",
-            description=f"批量导入设备数据，新增{success_count}条，更新{update_count}条，失败{error_count}条"
+            description=f"批量导入设备数据，新增{success_count}条，更新{update_count}条，失败{error_count}条",
+            operation_type="equipment",
+            target_table="equipments"
         )
+        create_audit_log(db=db, log_data=log_data)
         
         return {
             "message": "导入完成",
@@ -674,12 +682,14 @@ def export_all_equipments(
     encoded_filename = quote(filename, safe='')
     
     # 记录操作日志
-    create_audit_log(
-        db=db,
+    log_data = AuditLogCreate(
         user_id=current_user.id,
         action="导出全部",
-        description=f"导出全部设备数据，共{len(equipments)}台"
+        description=f"��出全部设备数据，共{len(equipments)}台",
+        operation_type="equipment",
+        target_table="equipments"
     )
+    create_audit_log(db=db, log_data=log_data)
     
     return Response(
         content=output.getvalue(),
@@ -707,12 +717,14 @@ def export_filtered_equipments(
         )
         
         # 记录操作日志
-        create_audit_log(
-            db=db,
+        log_data = AuditLogCreate(
             user_id=current_user.id,
             action="导出搜索结果",
-            description=f"导出搜索结果，查询词: '{filters['query']}'，共{len(equipments)}台"
+            description=f"导出搜索结果，查询词: '{filters['query']}'，共{len(equipments)}台",
+            operation_type="equipment",
+            target_table="equipments"
         )
+        create_audit_log(db=db, log_data=log_data)
     else:
         # 否则使用传统筛选API
         from app.schemas.schemas import EquipmentFilter
@@ -724,12 +736,14 @@ def export_filtered_equipments(
         )
         
         # 记录操作日志
-        create_audit_log(
-            db=db,
+        log_data = AuditLogCreate(
             user_id=current_user.id,
             action="导出筛选",
-            description=f"导出筛选设备数据，共{len(equipments)}台"
+            description=f"导出筛选设备数据，共{len(equipments)}台",
+            operation_type="equipment",
+            target_table="equipments"
         )
+        create_audit_log(db=db, log_data=log_data)
     
     df, dynamic_columns = generate_export_data(equipments, db)
     

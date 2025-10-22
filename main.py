@@ -30,7 +30,6 @@ from app.api.external_api import router as external_api_router
 from app.api.calibration import router as calibration_router
 from app.api.logs import router as logs_router
 from app.api.system import router as system_router
-from app.api.imports import router as imports_router
 from app.db.database import engine
 from app.models import models
 
@@ -76,7 +75,6 @@ app.include_router(departments_router, prefix="/api/departments", tags=["部门�
 app.include_router(dashboard_router, prefix="/api/dashboard", tags=["仪表盘"])
 app.include_router(audit_logs_router, prefix="/api/audit", tags=["操作日志"])
 app.include_router(import_export_router, prefix="/api/import", tags=["数据导入导出"])
-app.include_router(imports_router, prefix="/api/imports", tags=["导入任务"])
 app.include_router(attachments_router, prefix="/api/attachments", tags=["附件管理"])
 app.include_router(settings_router, prefix="/api/settings", tags=["系统设置"])
 app.include_router(reports_router, prefix="/api/reports", tags=["统计报表"])
@@ -148,11 +146,6 @@ async def reports(request: Request):
 @app.get("/logs", response_class=HTMLResponse)
 async def logs(request: Request):
     return templates.TemplateResponse("logs.html", {"request": request})
-
-# 导入进度页面
-@app.get("/imports/excel/{job_id}", response_class=HTMLResponse)
-async def import_progress_page(request: Request, job_id: str):
-    return templates.TemplateResponse("import_progress.html", {"request": request, "job_id": job_id})
 
 
 # 部门用户页面路由

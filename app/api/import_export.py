@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Response, Form
+from typing import Optional
 from sqlalchemy.orm import Session
 import pandas as pd
 import io
@@ -225,25 +226,74 @@ def download_import_template():
 async def import_equipment_data(
     file: UploadFile = File(...),
     overwrite: str = Form("false"),  # 使用Form字段
+    session_id: Optional[int] = Form(None),  # 导入会话ID
     db: Session = Depends(get_db),
     current_user = Depends(get_current_admin_user)
 ):
     """导入设备数据"""
-    
+
     # 手动转换overwrite参数为布尔值
     overwrite_bool = overwrite.lower() in ['true', '1', 'yes', 'on']
-    
-    
+
     if not file.filename or not file.filename.endswith(('.xlsx', '.xls')):
         raise HTTPException(status_code=400, detail="只支持Excel文件格式")
-    
+
     try:
         # 读取Excel文件
         contents = await file.read()
         df = pd.read_excel(io.BytesIO(contents))
-        
+
         # 将所有NaN值替换为空字符串，避免空单元格显示为"nan"
         df = df.fillna('')
+
+        # 创建或更新导入会话
+        from app.crud import import_session as import_crud
+        from app.schemas.schemas import ImportSessionCreate
+        from app.models.import_session import ImportStatus
+
+        if session_id:
+            # 使用现有会话
+            import_session = import_crud.get_import_session(db, session_id)
+            if not import_session or import_session.user_id != current_user.id:
+                raise HTTPException(status_code=404, detail="导入会话不存在或无权访问")
+
+            # 更新会话状态为处理中
+            import_crud.update_import_session(db, session_id, {
+                "status": ImportStatus.PROCESSING,
+                "total_rows": len(df)
+            })
+        else:
+            # 创建新会话
+            session_data = ImportSessionCreate(
+                user_id=current_user.id,
+                filename=file.filename,
+                file_size=len(contents),
+                overwrite_existing=overwrite_bool,
+                total_rows=len(df),
+                notes="通过Web界面导入"
+            )
+            import_session = import_crud.create_import_session(db, session_data)
+            session_id = import_session.id
+
+            # 标记开始处理
+            import_crud.update_import_session(db, session_id, {
+                "status": ImportStatus.PROCESSING
+            })
+
+            # 立即提交一次，确保状态及时更新
+            db.commit()
+
+        # 立即更新初始进度，确保前端能获取到正确的会话状态
+        import_crud.update_progress(
+            db, session_id,
+            processed_rows=0,
+            success_count=0,
+            update_count=0,
+            error_count=0
+        )
+
+        # 再次提交，确保进度更新生效
+        db.commit()
         
         # 验证必需的列（内部编号由系统自动生成，出厂编号为可选）
         required_columns = [
@@ -260,11 +310,27 @@ async def import_equipment_data(
         
         success_count = 0
         update_count = 0
+        skip_count = 0  # 新增跳过计数器
         error_count = 0
+        processed_rows = 0
         detailed_results = []
-        
+
         for index, row in df.iterrows():
             row_number = int(float(index)) + 2  # Excel行号从2开始（第1行是标题）
+            processed_rows += 1
+
+            # 定期更新进度（每处理3行更新一次，提高实时性）
+            if processed_rows % 3 == 0:
+                import_crud.update_progress(
+                    db, session_id,
+                    processed_rows=processed_rows,
+                    success_count=success_count,
+                    update_count=update_count,
+                    error_count=error_count
+                )
+                # 添加调试日志
+                print(f"进度更新: {processed_rows}/{len(df)} 成功:{success_count} 更新:{update_count} 错误:{error_count}")
+
             result = {
                 "row": row_number,
                 "internal_id": "",  # 将在生成后填充
@@ -462,12 +528,9 @@ async def import_equipment_data(
                             continue
                     # 如果没有提供状态变更时间，保持为None（可选填）
                 
-                # 自动生成内部编号
+                # 自动生成内部编号（仅在新建设备时生成）
                 from app.utils.auto_id import generate_internal_id
-                generated_internal_id = generate_internal_id(db, int(float(category.id)), str(row['计量器具名称']))
-                
-                # 更新result对象中的internal_id
-                result["internal_id"] = generated_internal_id
+                generated_internal_id = None
                 
                 # 安全地转换原值字段
                 original_value = None
@@ -477,9 +540,38 @@ async def import_equipment_data(
                     except (ValueError, TypeError):
                         original_value = None
                 
+                # 先检查是否存在相同设备，以决定是否需要生成内部编号
+                from app.models.models import Equipment
+                manufacturer_id = str(row.get('出厂编号', '')).strip()
+                existing_equipment = None
+
+                # 验证出厂编号必须填写且不能为空
+                if not manufacturer_id:
+                    result["status"] = "失败"
+                    result["message"] = "出厂编号为必填项，不能为空"
+                    detailed_results.append(result)
+                    error_count += 1
+                    continue
+
+                # 检查出厂编号唯一性
+                existing_equipment = db.query(Equipment).filter(
+                    Equipment.manufacturer_id == manufacturer_id
+                ).first()
+
+                # 根据是否覆盖现有设备来决定内部编号
+                if existing_equipment:
+                    # 覆盖模式：保留现有内部编号
+                    generated_internal_id = existing_equipment.internal_id
+                else:
+                    # 新建设备：生成新的内部编号
+                    generated_internal_id = generate_internal_id(db, int(float(category.id)), str(row['计量器具名称']))
+
+                # 更新result对象中的internal_id
+                result["internal_id"] = generated_internal_id
+
                 # 创建设备数据
                 from app.schemas.schemas import EquipmentCreate, EquipmentUpdate
-                
+
                 equipment_data = EquipmentCreate(
                     department_id=int(float(department.id)),
                     category_id=int(float(category.id)),
@@ -492,7 +584,7 @@ async def import_equipment_data(
                     calibration_method=calibration_method,
                     current_calibration_result=calibration_result,
                     internal_id=generated_internal_id,
-                    manufacturer_id=str(row.get('出厂编号', '')) if pd.notna(row.get('出厂编号')) else None,
+                    manufacturer_id=manufacturer_id,
                     installation_location=str(row.get('安装地点', '')) if pd.notna(row.get('安装地点')) else '',
                     manufacturer=str(row.get('制造厂家', '')) if pd.notna(row.get('制造厂家')) else '',
                     manufacture_date=manufacture_date,
@@ -507,71 +599,91 @@ async def import_equipment_data(
                     notes=str(row.get('备注', '')) if pd.notna(row.get('备注')) else ''
                 )
                 
-                # 检查是否已存在相同的设备
-                from app.models.models import Equipment
-                manufacturer_id = str(row.get('出厂编号', '')).strip()
-                existing_equipment = None
-                
-                # 验证出厂编号必须填写且不能为空
-                if not manufacturer_id:
-                    result["status"] = "失败"
-                    result["message"] = "出厂编号为必填项，不能为空"
-                    detailed_results.append(result)
-                    error_count += 1
-                    continue
-                
-                # 检查出厂编号唯一性
-                existing_equipment = db.query(Equipment).filter(
-                    Equipment.manufacturer_id == manufacturer_id
-                ).first()
-                
                 if existing_equipment:
                     if overwrite_bool:
-                        # 覆盖现有设备
-                        update_data = EquipmentUpdate(
-                            department_id=equipment_data.department_id,
-                            category_id=equipment_data.category_id,
-                            name=equipment_data.name,
-                            model=equipment_data.model,
-                            accuracy_level=equipment_data.accuracy_level,
-                            measurement_range=equipment_data.measurement_range,
-                            calibration_cycle=equipment_data.calibration_cycle,
-                            calibration_date=equipment_data.calibration_date,
-                            calibration_method=equipment_data.calibration_method,
-                            installation_location=equipment_data.installation_location,
-                            manufacturer=equipment_data.manufacturer,
-                            manufacture_date=equipment_data.manufacture_date,
-                            scale_value=equipment_data.scale_value,
-                            management_level=equipment_data.management_level,
-                            original_value=equipment_data.original_value,
-                            status=equipment_data.status,
-                            status_change_date=equipment_data.status_change_date,
-                            certificate_number=equipment_data.certificate_number,
-                            verification_agency=equipment_data.verification_agency,
-                            certificate_form=equipment_data.certificate_form,
-                            notes=equipment_data.notes
-                        )
+                        # 智能覆盖：只更新有变化的字段
+                        update_fields = {}
+
+                        # 比较各个字段，只包含有变化的
+                        if existing_equipment.department_id != equipment_data.department_id:
+                            update_fields["department_id"] = equipment_data.department_id
+                        if existing_equipment.category_id != equipment_data.category_id:
+                            update_fields["category_id"] = equipment_data.category_id
+                        if existing_equipment.name != equipment_data.name:
+                            update_fields["name"] = equipment_data.name
+                        if existing_equipment.model != equipment_data.model:
+                            update_fields["model"] = equipment_data.model
+                        if existing_equipment.accuracy_level != equipment_data.accuracy_level:
+                            update_fields["accuracy_level"] = equipment_data.accuracy_level
+                        if existing_equipment.measurement_range != equipment_data.measurement_range:
+                            update_fields["measurement_range"] = equipment_data.measurement_range
+                        if existing_equipment.calibration_cycle != equipment_data.calibration_cycle:
+                            update_fields["calibration_cycle"] = equipment_data.calibration_cycle
+                        if existing_equipment.calibration_date != equipment_data.calibration_date:
+                            update_fields["calibration_date"] = equipment_data.calibration_date
+                        if existing_equipment.calibration_method != equipment_data.calibration_method:
+                            update_fields["calibration_method"] = equipment_data.calibration_method
+                        if existing_equipment.current_calibration_result != equipment_data.current_calibration_result:
+                            update_fields["current_calibration_result"] = equipment_data.current_calibration_result
+                        if existing_equipment.installation_location != equipment_data.installation_location:
+                            update_fields["installation_location"] = equipment_data.installation_location
+                        if existing_equipment.manufacturer != equipment_data.manufacturer:
+                            update_fields["manufacturer"] = equipment_data.manufacturer
+                        if existing_equipment.manufacture_date != equipment_data.manufacture_date:
+                            update_fields["manufacture_date"] = equipment_data.manufacture_date
+                        if existing_equipment.scale_value != equipment_data.scale_value:
+                            update_fields["scale_value"] = equipment_data.scale_value
+                        if existing_equipment.management_level != equipment_data.management_level:
+                            update_fields["management_level"] = equipment_data.management_level
+                        if existing_equipment.original_value != equipment_data.original_value:
+                            update_fields["original_value"] = equipment_data.original_value
+                        if existing_equipment.status != equipment_data.status:
+                            update_fields["status"] = equipment_data.status
+                        if existing_equipment.status_change_date != equipment_data.status_change_date:
+                            update_fields["status_change_date"] = equipment_data.status_change_date
+                        if existing_equipment.certificate_number != equipment_data.certificate_number:
+                            update_fields["certificate_number"] = equipment_data.certificate_number
+                        if existing_equipment.verification_agency != equipment_data.verification_agency:
+                            update_fields["verification_agency"] = equipment_data.verification_agency
+                        if existing_equipment.certificate_form != equipment_data.certificate_form:
+                            update_fields["certificate_form"] = equipment_data.certificate_form
+                        if existing_equipment.notes != equipment_data.notes:
+                            update_fields["notes"] = equipment_data.notes
+
+                        # 如果有字段需要更新
+                        if update_fields:
+                            update_data = EquipmentUpdate(**update_fields)
+                            updated_equipment = equipment.update_equipment(
+                                db, equipment_id=int(float(existing_equipment.id)), equipment_update=update_data, preserve_internal_id=True
+                            )
+                        else:
+                            # 没有变化，跳过更新
+                            updated_equipment = existing_equipment
                         
-                        updated_equipment = equipment.update_equipment(
-                            db, equipment_id=int(float(existing_equipment.id)), equipment_update=update_data
-                        )
-                        
-                        # 记录操作日志
-                        log_data = AuditLogCreate(
-                            user_id=current_user.id,
-                            equipment_id=int(float(existing_equipment.id)),
-                            action="导入更新",
-                            description=f"通过Excel导入更新设备: {updated_equipment.name if updated_equipment else '未知设备'}",
-                            operation_type="equipment",
-                            target_table="equipments",
-                            target_id=int(float(existing_equipment.id))
-                        )
-                        create_audit_log(db=db, log_data=log_data)
-                        
-                        result["status"] = "更新"
-                        result["message"] = "成功覆盖更新现有设备"
+                        # 导入操作不记录单个设备的审计日志，避免产生大量通知
+                        # log_data = AuditLogCreate(
+                        #     user_id=current_user.id,
+                        #     equipment_id=int(float(existing_equipment.id)),
+                        #     action="导入更新",
+                        #     description=f"通过Excel导入更新设备: {updated_equipment.name if updated_equipment else '未知设备'}",
+                        #     operation_type="equipment",
+                        #     target_table="equipments",
+                        #     target_id=int(float(existing_equipment.id))
+                        # )
+                        # create_audit_log(db=db, log_data=log_data)
+
+                        if update_fields:
+                            # 有实际更新
+                            result["status"] = "更新"
+                            result["message"] = f"成功更新{len(update_fields)}个字段"
+                            update_count += 1
+                        else:
+                            # 无变化
+                            result["status"] = "跳过"
+                            result["message"] = "设备数据无变化，跳过更新"
+                            skip_count += 1
+
                         detailed_results.append(result)
-                        update_count += 1
                     else:
                         result["status"] = "失败"
                         result["message"] = f"出厂编号'{manufacturer_id}'的设备已存在，无法重复导入"
@@ -582,17 +694,17 @@ async def import_equipment_data(
                 # 创建新设备
                 new_equipment = equipment.create_equipment(db, equipment_data)
                 
-                # 记录操作日志
-                log_data = AuditLogCreate(
-                    user_id=current_user.id,
-                    equipment_id=int(float(new_equipment.id)),
-                    action="导入",
-                    description=f"通过Excel导入设备: {new_equipment.name}",
-                    operation_type="equipment",
-                    target_table="equipments",
-                    target_id=int(float(new_equipment.id))
-                )
-                create_audit_log(db=db, log_data=log_data)
+                # 导入操作不记录单个设备的审计日志，避免产生大量通知
+                # log_data = AuditLogCreate(
+                #     user_id=current_user.id,
+                #     equipment_id=int(float(new_equipment.id)),
+                #     action="导入",
+                #     description=f"通过Excel导入设备: {new_equipment.name}",
+                #     operation_type="equipment",
+                #     target_table="equipments",
+                #     target_id=int(float(new_equipment.id))
+                # )
+                # create_audit_log(db=db, log_data=log_data)
                 
                 result["status"] = "成功"
                 result["message"] = "成功导入新设备"
@@ -606,30 +718,54 @@ async def import_equipment_data(
                 error_count += 1
                 continue
         
+        # 完成导入会话
+        import_crud.complete_import_session(
+            db, session_id,
+            success_count=success_count,
+            update_count=update_count,
+            error_count=error_count,
+            detailed_results=detailed_results
+        )
+
+        # 最终更新processed_rows
+        import_crud.update_progress(
+            db, session_id,
+            processed_rows=processed_rows,
+            success_count=success_count,
+            update_count=update_count,
+            error_count=error_count
+        )
+
         # 记录总体操作日志
         log_data = AuditLogCreate(
             user_id=current_user.id,
             action="批量导入",
-            description=f"批量导入设备数据，新增{success_count}条，更新{update_count}条，失败{error_count}条",
+            description=f"批量导入设备数据，新增{success_count}条，更新{update_count}条，跳过{skip_count}条，失败{error_count}条",
             operation_type="equipment",
             target_table="equipments"
         )
         create_audit_log(db=db, log_data=log_data)
-        
+
         return {
             "message": "导入完成",
+            "session_id": session_id,
             "success_count": success_count,
             "update_count": update_count,
+            "skip_count": skip_count,  # 新增跳过计数
             "error_count": error_count,
             "detailed_results": detailed_results,
             "summary": {
                 "total_rows": len(df),
-                "processed": success_count + update_count + error_count,
-                "success_rate": round((success_count + update_count) / len(df) * 100, 2) if len(df) > 0 else 0
+                "processed": success_count + update_count + skip_count + error_count,
+                "success_rate": round((success_count + update_count) / len(df) * 100, 2) if len(df) > 0 else 0,
+                "skip_rate": round(skip_count / len(df) * 100, 2) if len(df) > 0 else 0
             }
         }
         
     except Exception as e:
+        # 标记导入会话失败
+        if 'session_id' in locals():
+            import_crud.fail_import_session(db, session_id, str(e))
         raise HTTPException(status_code=500, detail=f"导入失败: {str(e)}")
 
 @router.get("/export/all")

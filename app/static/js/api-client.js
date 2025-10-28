@@ -674,6 +674,68 @@ const ImportExportAPI = {
     }
 };
 
+// 导入会话API
+const ImportSessionAPI = {
+    // 开始导入会话
+    async startImportSession(sessionData) {
+        return await api.post('/api/import-sessions/start', sessionData);
+    },
+
+    // 获取导入会话详情
+    async getImportSession(sessionId) {
+        return await api.get(`/api/import-sessions/${sessionId}`);
+    },
+
+    // 获取用户的导入会话列表
+    async getUserImportSessions(skip = 0, limit = 20, statusFilter = null) {
+        let url = `/api/import-sessions/?skip=${skip}&limit=${limit}`;
+        if (statusFilter) {
+            url += `&status_filter=${statusFilter}`;
+        }
+        return await api.get(url);
+    },
+
+    // 更新导入会话
+    async updateImportSession(sessionId, updateData) {
+        return await api.put(`/api/import-sessions/${sessionId}`, updateData);
+    },
+
+    // 更新导入进度
+    async updateImportProgress(sessionId, progressData) {
+        return await api.post(`/api/import-sessions/${sessionId}/progress`, progressData);
+    },
+
+    // 取消导入会话
+    async cancelImportSession(sessionId, reason = '用户取消') {
+        return await api.post(`/api/import-sessions/${sessionId}/cancel`, { reason });
+    },
+
+    // 暂停导入会话
+    async pauseImportSession(sessionId) {
+        return await api.post(`/api/import-sessions/${sessionId}/pause`);
+    },
+
+    // 恢复导入会话
+    async resumeImportSession(sessionId) {
+        return await api.post(`/api/import-sessions/${sessionId}/resume`);
+    },
+
+    // 删除导入会话
+    async deleteImportSession(sessionId) {
+        return await api.delete(`/api/import-sessions/${sessionId}`);
+    },
+
+    // 获取导入统计信息
+    async getImportStatistics(days = 30) {
+        return await api.get(`/api/import-sessions/statistics/summary?days=${days}`);
+    },
+
+    // 获取活跃的导入会话
+    async getActiveSessions() {
+        return await api.get('/api/import-sessions/active/list');
+    }
+};
+
 // 通知工具 - 使用统一通知管理器
 // 如果通知管理器已加载，使用它；否则使用简化版本
 function showNotification(message, type = 'info') {
@@ -956,6 +1018,7 @@ window.CategoryAPI = CategoryAPI;
 window.DashboardAPI = DashboardAPI;
 window.AttachmentAPI = AttachmentAPI;
 window.ImportExportAPI = ImportExportAPI;
+window.ImportSessionAPI = ImportSessionAPI;
 window.SystemAPI = SystemAPI;
 window.ReportsAPI = ReportsAPI;
 window.showNotification = showNotification;

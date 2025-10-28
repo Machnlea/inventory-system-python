@@ -235,15 +235,15 @@ def create_equipment(db: Session, equipment: EquipmentCreate):
     db.refresh(db_equipment)
     return db_equipment
 
-def update_equipment(db: Session, equipment_id: int, equipment_update: EquipmentUpdate):
+def update_equipment(db: Session, equipment_id: int, equipment_update: EquipmentUpdate, preserve_internal_id: bool = False):
     from app.utils.auto_id import generate_internal_id
-    
+
     db_equipment = db.query(Equipment).filter(Equipment.id == equipment_id).first()
     if db_equipment:
         update_data = equipment_update.model_dump(exclude_unset=True)
-        
-        # 如果更新了设备名称或类别，需要重新生成内部编号
-        if "name" in update_data or "category_id" in update_data:
+
+        # 如果更新了设备名称或类别，需要重新生成内部编号（除非明确要求保留）
+        if not preserve_internal_id and ("name" in update_data or "category_id" in update_data):
             new_name = update_data.get("name", db_equipment.name)
             new_category_id = update_data.get("category_id", db_equipment.category_id)
             

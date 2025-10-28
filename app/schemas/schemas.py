@@ -599,6 +599,80 @@ class DepartmentUserLog(BaseModel):
     ip_address: Optional[str] = None
     user_agent: Optional[str] = None
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
+
+# 导入会话相关模式
+class ImportSessionBase(BaseModel):
+    filename: str
+    file_size: Optional[int] = None
+    overwrite_existing: bool = False
+    batch_size: int = 50
+    notes: Optional[str] = None
+
+class ImportSessionCreate(ImportSessionBase):
+    user_id: int
+    total_rows: int = 0
+
+class ImportSessionUpdate(BaseModel):
+    status: Optional[str] = None
+    progress: Optional[int] = None
+    total_rows: Optional[int] = None
+    processed_rows: Optional[int] = None
+    success_count: Optional[int] = None
+    update_count: Optional[int] = None
+    error_count: Optional[int] = None
+    detailed_results: Optional[List[dict]] = None
+    error_details: Optional[List[dict]] = None
+    error_message: Optional[str] = None
+    notes: Optional[str] = None
+
+class ImportSessionResponse(BaseModel):
+    id: int
+    user_id: int
+    filename: str
+    file_size: Optional[int] = None
+    status: str
+    progress: int
+    total_rows: int
+    processed_rows: int
+    success_count: int
+    update_count: int
+    error_count: int
+    detailed_results: Optional[List[dict]] = None
+    error_details: Optional[List[dict]] = None
+    overwrite_existing: bool
+    batch_size: int
+    created_at: datetime
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    notes: Optional[str] = None
+    error_message: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class ImportSessionSummary(BaseModel):
+    total_sessions: int
+    completed_sessions: int
+    failed_sessions: int
+    cancelled_sessions: int
+    success_rate: float
+    total_success_imports: int
+    total_errors: int
+    period_days: int
+
+# 导入进��更新模式
+class ImportProgressUpdate(BaseModel):
+    processed_rows: int
+    success_count: Optional[int] = None
+    update_count: Optional[int] = None
+    error_count: Optional[int] = None
+    detailed_result: Optional[dict] = None
+
+class ImportErrorDetail(BaseModel):
+    row_number: int
+    error_message: str
+    equipment_data: dict

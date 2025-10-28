@@ -22,6 +22,7 @@ from app.api.dashboard import router as dashboard_router
 from app.api.audit_logs import router as audit_logs_router
 from app.api.categories import router as categories_router
 from app.api.import_export import router as import_export_router
+from app.api.import_sessions import router as import_sessions_router
 from app.api.attachments import router as attachments_router
 from app.api.settings import router as settings_router
 from app.api.reports import router as reports_router
@@ -75,6 +76,7 @@ app.include_router(departments_router, prefix="/api/departments", tags=["部门�
 app.include_router(dashboard_router, prefix="/api/dashboard", tags=["仪表盘"])
 app.include_router(audit_logs_router, prefix="/api/audit", tags=["操作日志"])
 app.include_router(import_export_router, prefix="/api/import", tags=["数据导入导出"])
+app.include_router(import_sessions_router, prefix="/api/import-sessions", tags=["导入会话管理"])
 app.include_router(attachments_router, prefix="/api/attachments", tags=["附件管理"])
 app.include_router(settings_router, prefix="/api/settings", tags=["系统设置"])
 app.include_router(reports_router, prefix="/api/reports", tags=["统计报表"])

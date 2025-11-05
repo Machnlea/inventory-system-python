@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import and_, or_, select, cast, String
-from app.models.models import Equipment, UserEquipmentPermission, Department, EquipmentCategory
+from sqlalchemy import and_, or_, select, cast, String, func
+from app.models.models import Equipment, UserEquipmentPermission, Department, EquipmentCategory, EquipmentAttachment
 from app.schemas.schemas import EquipmentCreate, EquipmentUpdate, EquipmentFilter, EquipmentSearch
 from datetime import date, timedelta
 from typing import List, Optional
@@ -784,16 +784,245 @@ def search_equipments(db: Session, search: EquipmentSearch, user_id: Optional[in
     
     return query.offset(skip).limit(limit).all()
 
-def search_equipments_paginated(db: Session, search: EquipmentSearch, user_id: Optional[int] = None, 
+def search_equipments_paginated(db: Session, search: EquipmentSearch, user_id: Optional[int] = None,
                                is_admin: bool = False, skip: int = 0, limit: int = 100,
                                sort_field: str = "valid_until", sort_order: str = "asc"):
     """获取分页搜索结果"""
     items = search_equipments(db, search, user_id, is_admin, skip, limit, sort_field, sort_order)
     total = search_equipments_count(db, search, user_id, is_admin)
-    
+
     return {
         "items": items,
         "total": total,
+        "skip": skip,
+        "limit": limit
+    }
+
+
+def get_equipments_with_attachment_count(db: Session, skip: int = 0, limit: int = 100,
+                                       sort_field: str = "valid_until",
+                                       sort_order: str = "asc",
+                                       user_id: Optional[int] = None, is_admin: bool = False):
+    """
+    获取设备列表，包含附件数量统计
+    解决N+1查询问题，使用单次查询获取所有数据
+    """
+    # 构建附件统计子查询
+    attachment_count_subquery = db.query(
+        EquipmentAttachment.equipment_id,
+        func.count(EquipmentAttachment.id).label('attachment_count')
+    ).group_by(EquipmentAttachment.equipment_id).subquery()
+
+    # 主查询，左连接附件统计
+    query = db.query(Equipment, attachment_count_subquery.c.attachment_count).options(
+        joinedload(Equipment.department),
+        joinedload(Equipment.category)
+    ).outerjoin(
+        attachment_count_subquery,
+        Equipment.id == attachment_count_subquery.c.equipment_id
+    )
+
+    # 权限控制
+    if not is_admin and user_id:
+        user_permissions = get_user_equipment_permissions(db, user_id)
+        if user_permissions:
+            permission_conditions = []
+            for category_id, equipment_name in user_permissions:
+                permission_conditions.append(
+                    and_(
+                        Equipment.category_id == category_id,
+                        Equipment.name == equipment_name
+                    )
+                )
+            query = query.filter(or_(*permission_conditions))
+        else:
+            return {"total": 0, "items": [], "skip": skip, "limit": limit}
+
+    # 添加排序
+    if hasattr(Equipment, sort_field):
+        sort_column = getattr(Equipment, sort_field)
+        if sort_order.lower() == 'desc':
+            query = query.order_by(sort_column.desc())
+        else:
+            query = query.order_by(sort_column.asc())
+
+    # 计算总数
+    total = query.count()
+
+    # 分页并获取结果
+    query = query.offset(skip).limit(limit)
+    results = query.all()
+
+    # 构建响应数据
+    equipment_list = []
+    for equipment, attachment_count in results:
+        equipment_dict = {
+            'id': equipment.id,
+            'department_id': equipment.department_id,
+            'category_id': equipment.category_id,
+            'name': equipment.name,
+            'model': equipment.model,
+            'accuracy_level': equipment.accuracy_level,
+            'measurement_range': equipment.measurement_range,
+            'calibration_cycle': equipment.calibration_cycle,
+            'calibration_date': equipment.calibration_date,
+            'valid_until': equipment.valid_until,
+            'calibration_method': equipment.calibration_method,
+            'current_calibration_result': equipment.current_calibration_result,
+            'internal_id': equipment.internal_id,
+            'manufacturer_id': equipment.manufacturer_id,
+            'installation_location': equipment.installation_location,
+            'manufacturer': equipment.manufacturer,
+            'manufacture_date': equipment.manufacture_date,
+            'scale_value': equipment.scale_value,
+            'management_level': equipment.management_level,
+            'original_value': equipment.original_value,
+            'status': equipment.status,
+            'status_change_date': equipment.status_change_date,
+            'certificate_number': equipment.certificate_number,
+            'verification_agency': equipment.verification_agency,
+            'certificate_form': equipment.certificate_form,
+            'notes': equipment.notes,
+            'created_at': equipment.created_at,
+            'updated_at': equipment.updated_at,
+            'attachment_count': attachment_count or 0,  # 确保有默认值
+            'department': equipment.department,
+            'category': equipment.category
+        }
+        equipment_list.append(equipment_dict)
+
+    return {
+        "total": total,
+        "items": equipment_list,
+        "skip": skip,
+        "limit": limit
+    }
+
+
+def search_equipments_with_attachment_count(db: Session, search: EquipmentSearch,
+                                           user_id: Optional[int] = None, is_admin: bool = False,
+                                           skip: int = 0, limit: int = 100,
+                                           sort_field: str = "valid_until", sort_order: str = "asc"):
+    """
+    搜索设备，包含附件数量统计
+    解决N+1查询问题，使用单次查询获取所有数据
+    """
+    # 构建附件统计子查询
+    attachment_count_subquery = db.query(
+        EquipmentAttachment.equipment_id,
+        func.count(EquipmentAttachment.id).label('attachment_count')
+    ).group_by(EquipmentAttachment.equipment_id).subquery()
+
+    # 主查询，左连接附件统计
+    query = db.query(Equipment, attachment_count_subquery.c.attachment_count).options(
+        joinedload(Equipment.department),
+        joinedload(Equipment.category)
+    ).outerjoin(
+        attachment_count_subquery,
+        Equipment.id == attachment_count_subquery.c.equipment_id
+    )
+
+    # 权限控制
+    if not is_admin and user_id:
+        user_permissions = get_user_equipment_permissions(db, user_id)
+        if user_permissions:
+            permission_conditions = []
+            for category_id, equipment_name in user_permissions:
+                permission_conditions.append(
+                    and_(
+                        Equipment.category_id == category_id,
+                        Equipment.name == equipment_name
+                    )
+                )
+            query = query.filter(or_(*permission_conditions))
+        else:
+            return {"total": 0, "items": [], "skip": skip, "limit": limit}
+
+    # 构建搜索条件
+    search_conditions = []
+    if search.query:
+        search_term = f"%{search.query}%"
+        search_conditions.append(
+            or_(
+                Equipment.name.ilike(search_term),
+                Equipment.internal_id.ilike(search_term),
+                Equipment.model.ilike(search_term),
+                Equipment.accuracy_level.ilike(search_term),
+                Equipment.measurement_range.ilike(search_term),
+                Equipment.notes.ilike(search_term)
+            )
+        )
+
+    # 应用其他搜索字段
+    if search.category_id:
+        search_conditions.append(Equipment.category_id == search.category_id)
+    if search.department_id:
+        search_conditions.append(Equipment.department_id == search.department_id)
+    if search.status:
+        search_conditions.append(Equipment.status == search.status)
+    if search.management_level:
+        search_conditions.append(Equipment.management_level == search.management_level)
+
+    # 应用搜索条件
+    if search_conditions:
+        query = query.filter(and_(*search_conditions))
+
+    # 添加排序
+    if hasattr(Equipment, sort_field):
+        sort_column = getattr(Equipment, sort_field)
+        if sort_order.lower() == 'desc':
+            query = query.order_by(sort_column.desc())
+        else:
+            query = query.order_by(sort_column.asc())
+
+    # 计算总数
+    total = query.count()
+
+    # 分页并获取结果
+    query = query.offset(skip).limit(limit)
+    results = query.all()
+
+    # 构建响应数据
+    equipment_list = []
+    for equipment, attachment_count in results:
+        equipment_dict = {
+            'id': equipment.id,
+            'department_id': equipment.department_id,
+            'category_id': equipment.category_id,
+            'name': equipment.name,
+            'model': equipment.model,
+            'accuracy_level': equipment.accuracy_level,
+            'measurement_range': equipment.measurement_range,
+            'calibration_cycle': equipment.calibration_cycle,
+            'calibration_date': equipment.calibration_date,
+            'valid_until': equipment.valid_until,
+            'calibration_method': equipment.calibration_method,
+            'current_calibration_result': equipment.current_calibration_result,
+            'internal_id': equipment.internal_id,
+            'manufacturer_id': equipment.manufacturer_id,
+            'installation_location': equipment.installation_location,
+            'manufacturer': equipment.manufacturer,
+            'manufacture_date': equipment.manufacture_date,
+            'scale_value': equipment.scale_value,
+            'management_level': equipment.management_level,
+            'original_value': equipment.original_value,
+            'status': equipment.status,
+            'status_change_date': equipment.status_change_date,
+            'certificate_number': equipment.certificate_number,
+            'verification_agency': equipment.verification_agency,
+            'certificate_form': equipment.certificate_form,
+            'notes': equipment.notes,
+            'created_at': equipment.created_at,
+            'updated_at': equipment.updated_at,
+            'attachment_count': attachment_count or 0,  # 确保有默认值
+            'department': equipment.department,
+            'category': equipment.category
+        }
+        equipment_list.append(equipment_dict)
+
+    return {
+        "total": total,
+        "items": equipment_list,
         "skip": skip,
         "limit": limit
     }

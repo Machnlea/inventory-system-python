@@ -8,13 +8,19 @@ from app.crud import equipment
 from app.schemas.schemas import DashboardStats
 from app.api.auth import get_current_user
 from app.models.models import Equipment, EquipmentCategory, Department
+from app.core.cache import cached, invalidate_cache_pattern
+from app.core.cache_config import CacheConfig, CacheInvalidationRules
 
 router = APIRouter()
 
 @router.get("/stats", response_model=DashboardStats)
+@cached(
+    ttl=CacheConfig.get_cache_ttl_for_api("dashboard_stats"),
+    key_prefix=CacheConfig.get_cache_prefix_for_api("dashboard_stats")
+)
 def get_dashboard_stats(db: Session = Depends(get_db),
                        current_user = Depends(get_current_user)):
-    """获取仪表盘统计数据"""
+    """获取仪表盘统计数据 - 支持缓存"""
     
     # 设备总数
     total_equipment_count = equipment.get_equipments_count(
@@ -162,5 +168,47 @@ def get_monthly_due_equipments(db: Session = Depends(get_db),
         db, start_date=today, end_date=current_month_end,
         user_id=current_user.id, is_admin=current_user.is_admin
     )
-    
+
     return equipments
+
+@router.post("/clear-cache")
+def clear_dashboard_cache(current_user = Depends(get_current_user)):
+    """清空仪表盘相关缓存"""
+    try:
+        patterns = CacheInvalidationRules.EQUIPMENT_CHANGE_PATTERNS
+        cleared_count = 0
+
+        for pattern in patterns:
+            cleared_count += invalidate_cache_pattern(pattern)
+
+        return {
+            "success": True,
+            "message": f"已清空 {cleared_count} 个缓存项",
+            "cleared_patterns": patterns
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"清空缓存失败: {str(e)}"
+        }
+
+@router.get("/cache-stats")
+def get_cache_statistics(current_user = Depends(get_current_user)):
+    """获取缓存统计信息"""
+    try:
+        from app.core.cache import get_cache_stats
+        from app.core.cache_config import cache_metrics
+
+        redis_stats = get_cache_stats()
+        metrics_stats = cache_metrics.get_stats()
+
+        return {
+            "cache_metrics": metrics_stats,
+            "redis_info": redis_stats,
+            "cache_configurations": CacheConfig.all_cache_configs()
+        }
+    except Exception as e:
+        return {
+            "error": str(e),
+            "message": "获取缓存统计失败"
+        }

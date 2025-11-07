@@ -8,7 +8,7 @@ from app.db.database import get_db
 from app.crud import attachments as crud_attachments
 from app.schemas.schemas import EquipmentAttachment, EquipmentAttachmentCreate, EquipmentAttachmentUpdate
 from app.api.auth import get_current_user
-from app.api.audit_logs import create_audit_log
+from app.api.audit_logs import log_equipment_operation
 from app.core.logging import get_context_logger, log_file_operation
 import logging
 
@@ -16,6 +16,7 @@ router = APIRouter()
 
 # 获取日志记录器
 attachment_logger = logging.getLogger("attachment")
+
 
 # 创建上传目录
 UPLOAD_DIR = Path("data/uploads")
@@ -94,7 +95,7 @@ async def upload_equipment_attachment(
     )
     
     # 记录操作日志
-    create_audit_log(
+    log_equipment_operation(
         db=db,
         user_id=current_user.id,
         equipment_id=equipment_id,
@@ -159,7 +160,7 @@ def update_attachment(
         raise HTTPException(status_code=404, detail="附件不存在")
     
     # 记录操作日志
-    create_audit_log(
+    log_equipment_operation(
         db=db,
         user_id=current_user.id,
         equipment_id=attachment.equipment_id,
@@ -190,7 +191,7 @@ def delete_attachment(
         raise HTTPException(status_code=500, detail="删除失败")
     
     # 记录操作日志
-    create_audit_log(
+    log_equipment_operation(
         db=db,
         user_id=current_user.id,
         equipment_id=equipment_id,
@@ -220,7 +221,7 @@ def download_attachment(
     from urllib.parse import quote
     
     # 记录下载日志
-    create_audit_log(
+    log_equipment_operation(
         db=db,
         user_id=current_user.id,
         equipment_id=attachment.equipment_id,
@@ -294,7 +295,7 @@ def preview_attachment(
     )
     
     # 记录预览日志
-    create_audit_log(
+    log_equipment_operation(
         db=db,
         user_id=current_user.id,
         equipment_id=attachment.equipment_id,

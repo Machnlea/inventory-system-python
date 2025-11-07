@@ -12,6 +12,8 @@ from app.api.audit_logs import log_equipment_operation
 from app.api.auth import get_current_user
 from app.utils.auto_id import generate_internal_id
 from app.core.logging import get_context_logger, log_database_operation
+from app.core.cache import cached, invalidate_cache_pattern
+from app.core.cache_config import CacheConfig, CacheInvalidationRules
 import logging
 
 router = APIRouter()
@@ -20,13 +22,17 @@ router = APIRouter()
 equipment_logger = logging.getLogger("equipment")
 
 @router.get("/", response_model=PaginatedEquipment)
+@cached(
+    ttl=CacheConfig.get_cache_ttl_for_api("equipment_list"),
+    key_prefix=CacheConfig.get_cache_prefix_for_api("equipment_list")
+)
 def read_equipments(skip: int = 0, limit: int = 999999,
-                   sort_field: str = "valid_until", 
+                   sort_field: str = "valid_until",
                    sort_order: str = "asc",
                    db: Session = Depends(get_db),
                    current_user = Depends(get_current_user)):
     return equipment.get_equipments_paginated(
-        db, skip=skip, limit=limit, 
+        db, skip=skip, limit=limit,
         sort_field=sort_field, sort_order=sort_order,
         user_id=current_user.id, is_admin=current_user.is_admin
     )
@@ -78,6 +84,14 @@ def create_equipment(equipment_data: EquipmentCreate,
         new_data=new_data,
         request=request
     )
+
+    # 创建设备后失效相关缓存
+    try:
+        patterns = CacheInvalidationRules.EQUIPMENT_CHANGE_PATTERNS
+        for pattern in patterns:
+            invalidate_cache_pattern(pattern)
+    except Exception as e:
+        print(f"警告：清除缓存失败: {e}")
 
     return new_equipment
 
@@ -147,7 +161,15 @@ def update_equipment(equipment_id: int, equipment_update: EquipmentUpdate,
         new_data=new_data,
         request=request
     )
-    
+
+    # 更新设备后失效相关缓存
+    try:
+        patterns = CacheInvalidationRules.EQUIPMENT_CHANGE_PATTERNS
+        for pattern in patterns:
+            invalidate_cache_pattern(pattern)
+    except Exception as e:
+        print(f"警告：清除缓存失败: {e}")
+
     return updated_equipment
 
 @router.delete("/{equipment_id}")
@@ -170,15 +192,28 @@ def delete_equipment(equipment_id: int,
         action="删除",
         description=f"删除设备: {db_equipment.name} ({db_equipment.internal_id})"
     )
-    
+
     success = equipment.delete_equipment(db, equipment_id=equipment_id)
     if not success:
         raise HTTPException(status_code=404, detail="设备未找到")
+
+    # 删除设备后失效相关缓存
+    try:
+        patterns = CacheInvalidationRules.EQUIPMENT_CHANGE_PATTERNS
+        for pattern in patterns:
+            invalidate_cache_pattern(pattern)
+    except Exception as e:
+        print(f"警告：清除缓存失败: {e}")
+
     return {"message": "设备删除成功"}
 
 @router.post("/filter", response_model=PaginatedEquipment)
+@cached(
+    ttl=CacheConfig.get_cache_ttl_for_api("equipment_search"),
+    key_prefix=CacheConfig.get_cache_prefix_for_api("equipment_search")
+)
 def filter_equipments(filters: EquipmentFilter, skip: int = 0, limit: int = 999999,
-                     sort_field: str = "valid_until", 
+                     sort_field: str = "valid_until",
                      sort_order: str = "asc",
                      db: Session = Depends(get_db),
                      current_user = Depends(get_current_user)):
@@ -397,7 +432,16 @@ def batch_update_calibration(
         action="批量操作",
         description=f"批量更新检定日期，成功{success_count}台，失败{error_count}台"
     )
-    
+
+    # 批量更新后失效相关缓存
+    if success_count > 0:
+        try:
+            patterns = CacheInvalidationRules.EQUIPMENT_CHANGE_PATTERNS
+            for pattern in patterns:
+                invalidate_cache_pattern(pattern)
+        except Exception as e:
+            print(f"警告：清除缓存失败: {e}")
+
     return {
         "message": "批量更新完成",
         "success_count": success_count,
@@ -724,6 +768,10 @@ def batch_transfer_equipments(
     }
 
 @router.post("/search", response_model=PaginatedEquipment)
+@cached(
+    ttl=CacheConfig.get_cache_ttl_for_api("equipment_search"),
+    key_prefix=CacheConfig.get_cache_prefix_for_api("equipment_search")
+)
 def search_equipments(search_params: EquipmentSearch, skip: int = 0, limit: int = 999999,
                      sort_field: str = "valid_until",
                      sort_order: str = "asc",

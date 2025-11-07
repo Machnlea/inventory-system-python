@@ -5,10 +5,16 @@ from app.db.database import get_db
 from app.crud import departments
 from app.schemas.schemas import Department, DepartmentCreate, DepartmentUpdate
 from app.api.auth import get_current_admin_user, get_current_user
+from app.core.cache import cached, invalidate_cache_pattern
+from app.core.cache_config import CacheConfig, CacheInvalidationRules
 
 router = APIRouter()
 
 @router.get("/", response_model=List[Department])
+@cached(
+    ttl=CacheConfig.get_cache_ttl_for_api("departments_list"),
+    key_prefix=CacheConfig.get_cache_prefix_for_api("departments_list")
+)
 def read_departments(skip: int = 0, limit: int = 100,
                     db: Session = Depends(get_db),
                     current_user = Depends(get_current_user)):
@@ -33,7 +39,15 @@ def create_department(department: DepartmentCreate,
     except Exception as e:
         # 如果创建用户失败，记录错误但不影响部门创建
         print(f"警告：为部门 {db_department.name} 创建用户账号失败: {e}")
-    
+
+    # 创建部门后失效相关缓存
+    try:
+        patterns = CacheInvalidationRules.DEPARTMENT_CHANGE_PATTERNS
+        for pattern in patterns:
+            invalidate_cache_pattern(pattern)
+    except Exception as e:
+        print(f"警告：清除缓存失败: {e}")
+
     return db_department
 
 @router.get("/with-counts")

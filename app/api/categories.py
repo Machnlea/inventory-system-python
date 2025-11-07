@@ -6,6 +6,8 @@ from app.db.database import get_db
 from app.crud import categories
 from app.schemas.schemas import EquipmentCategory, EquipmentCategoryCreate
 from app.api.auth import get_current_admin_user, get_current_user
+from app.core.cache import cached, invalidate_cache_pattern
+from app.core.cache_config import CacheConfig, CacheInvalidationRules
 
 router = APIRouter()
 
@@ -26,6 +28,10 @@ class PredefinedNamesRequest(BaseModel):
     names: List[str]
 
 @router.get("/", response_model=List[EquipmentCategory])
+@cached(
+    ttl=CacheConfig.get_cache_ttl_for_api("categories_list"),
+    key_prefix=CacheConfig.get_cache_prefix_for_api("categories_list")
+)
 def read_categories(skip: int = 0, limit: int = 100,
                    db: Session = Depends(get_db),
                    current_user = Depends(get_current_user)):
@@ -65,9 +71,25 @@ def create_category(category: EquipmentCategoryCreate,
     db_category = categories.get_category_by_name(db, name=category.name)
     if db_category:
         raise HTTPException(status_code=400, detail="Category name already exists")
-    return categories.create_category(db=db, category=category)
+
+    # 创建类别
+    db_category = categories.create_category(db=db, category=category)
+
+    # 创建类别后失效相关缓存
+    try:
+        patterns = CacheInvalidationRules.CATEGORY_CHANGE_PATTERNS
+        for pattern in patterns:
+            invalidate_cache_pattern(pattern)
+    except Exception as e:
+        print(f"警告：清除缓存失败: {e}")
+
+    return db_category
 
 @router.get("/with-counts")
+@cached(
+    ttl=CacheConfig.get_cache_ttl_for_api("categories_with_predefined"),
+    key_prefix=CacheConfig.get_cache_prefix_for_api("categories_with_predefined")
+)
 def get_categories_with_counts(skip: int = 0, limit: int = 100,
                               db: Session = Depends(get_db),
                               current_user = Depends(get_current_user)):
@@ -154,6 +176,15 @@ def update_category(category_id: int, category: EquipmentCategoryCreate,
     db_category = categories.update_category(db, category_id=category_id, category=category)
     if db_category is None:
         raise HTTPException(status_code=404, detail="类别未找到")
+
+    # 更新类别后失效相关缓存
+    try:
+        patterns = CacheInvalidationRules.CATEGORY_CHANGE_PATTERNS
+        for pattern in patterns:
+            invalidate_cache_pattern(pattern)
+    except Exception as e:
+        print(f"警告：清除缓存失败: {e}")
+
     return db_category
 
 @router.delete("/{category_id}")
@@ -161,7 +192,16 @@ def delete_category(category_id: int,
                    db: Session = Depends(get_db),
                    current_user = Depends(get_current_admin_user)):
     success, message = categories.delete_category(db, category_id=category_id)
+
     if success:
+        # 删除类别后失效相关缓存
+        try:
+            patterns = CacheInvalidationRules.CATEGORY_CHANGE_PATTERNS
+            for pattern in patterns:
+                invalidate_cache_pattern(pattern)
+        except Exception as e:
+            print(f"警告：清除缓存失败: {e}")
+
         return {"message": message}
     else:
         raise HTTPException(status_code=400, detail=message)
@@ -204,10 +244,18 @@ def add_predefined_name(category_id: int,
         {"names": updated_json, "id": category_id}
     )
     db.commit()
-    
+
+    # 添加预定义名称后失效相关缓存
+    try:
+        patterns = CacheInvalidationRules.CATEGORY_CHANGE_PATTERNS
+        for pattern in patterns:
+            invalidate_cache_pattern(pattern)
+    except Exception as e:
+        print(f"警告：清除缓存失败: {e}")
+
     # 返回更新后的信息
     return {
-        "message": "Predefined name added successfully", 
+        "message": "Predefined name added successfully",
         "predefined_names": new_names_list,
         "name_mapping": new_mapping
     }
@@ -253,12 +301,20 @@ def remove_predefined_name(category_id: int,
             {"names": updated_json, "id": category_id}
         )
         db.commit()
-        
+
+        # 删除预定义名称后失效相关缓存
+        try:
+            patterns = CacheInvalidationRules.CATEGORY_CHANGE_PATTERNS
+            for pattern in patterns:
+                invalidate_cache_pattern(pattern)
+        except Exception as e:
+            print(f"警告：清除缓存失败: {e}")
+
         # 重新获取更新后的类别信息
         updated_category = categories.get_category(db, category_id)
-        
+
         return {
-            "message": "Predefined name removed successfully", 
+            "message": "Predefined name removed successfully",
             "category": updated_category,
             "name_mapping": new_mapping
         }
@@ -317,10 +373,18 @@ def edit_predefined_name(category_id: int,
         {"names": updated_json, "id": category_id}
     )
     db.commit()
-    
+
+    # 编辑预定义名称后失效相关缓存
+    try:
+        patterns = CacheInvalidationRules.CATEGORY_CHANGE_PATTERNS
+        for pattern in patterns:
+            invalidate_cache_pattern(pattern)
+    except Exception as e:
+        print(f"警告：清除缓存失败: {e}")
+
     # 返回更新后的信息
     return {
-        "message": "Predefined name updated successfully", 
+        "message": "Predefined name updated successfully",
         "predefined_names": new_names_list,
         "name_mapping": new_mapping
     }
@@ -335,6 +399,15 @@ def update_predefined_names(category_id: int,
         category = categories.update_predefined_names(db, category_id, request.names)
         if not category:
             raise HTTPException(status_code=404, detail="类别未找到")
+
+        # 更新预定义名称列表后失效相关缓存
+        try:
+            patterns = CacheInvalidationRules.CATEGORY_CHANGE_PATTERNS
+            for pattern in patterns:
+                invalidate_cache_pattern(pattern)
+        except Exception as e:
+            print(f"警告：清除缓存失败: {e}")
+
         return {"message": "预定义名称更新成功", "category": category}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

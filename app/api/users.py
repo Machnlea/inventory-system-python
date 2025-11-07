@@ -6,6 +6,8 @@ from app.db.database import get_db
 from app.crud import users
 from app.schemas.schemas import User, UserCreate, UserUpdate, UserCategory, UserEquipmentPermission, UserEquipmentPermissionCreate
 from app.api.auth import get_current_admin_user, get_current_user
+from app.core.cache import cached, invalidate_cache_pattern
+from app.core.cache_config import CacheConfig, CacheInvalidationRules
 from pydantic import BaseModel, Field
 import secrets
 import string
@@ -32,19 +34,35 @@ class SecurityQuestionSetup(BaseModel):
     security_answer: str = Field(..., description="安全答案", min_length=1, max_length=100)
 
 @router.get("/", response_model=List[User])
-def read_users(skip: int = 0, limit: int = 100, 
+@cached(
+    ttl=CacheConfig.get_cache_ttl_for_api("users_list"),
+    key_prefix=CacheConfig.get_cache_prefix_for_api("users_list")
+)
+def read_users(skip: int = 0, limit: int = 100,
                db: Session = Depends(get_db),
                current_user: User = Depends(get_current_admin_user)):
     return users.get_users(db, skip=skip, limit=limit)
 
 @router.post("/", response_model=User)
-def create_user(user: UserCreate, 
+def create_user(user: UserCreate,
                 db: Session = Depends(get_db),
                 current_user: User = Depends(get_current_admin_user)):
     db_user = users.get_user_by_username(db, username=user.username)
     if db_user:
         raise HTTPException(status_code=400, detail="Username already registered")
-    return users.create_user(db=db, user=user)
+
+    # 创建用户
+    new_user = users.create_user(db=db, user=user)
+
+    # 创建用户后失效相关缓存
+    try:
+        patterns = CacheInvalidationRules.USER_CHANGE_PATTERNS
+        for pattern in patterns:
+            invalidate_cache_pattern(pattern)
+    except Exception as e:
+        print(f"警告：清除缓存失败: {e}")
+
+    return new_user
 
 @router.get("/equipment-counts-all")
 def get_all_equipment_counts(db: Session = Depends(get_db),
@@ -101,6 +119,15 @@ def update_user(user_id: int, user_update: UserUpdate,
     db_user = users.update_user(db, user_id=user_id, user_update=user_update)
     if db_user is None:
         raise HTTPException(status_code=404, detail="用户未找到")
+
+    # 更新用户后失效相关缓存
+    try:
+        patterns = CacheInvalidationRules.USER_CHANGE_PATTERNS
+        for pattern in patterns:
+            invalidate_cache_pattern(pattern)
+    except Exception as e:
+        print(f"警告：清除缓存失败: {e}")
+
     return db_user
 
 @router.delete("/{user_id}")
@@ -136,7 +163,15 @@ def delete_user(user_id: int,
     success = users.delete_user(db, user_id=user_id)
     if not success:
         raise HTTPException(status_code=400, detail="删除用户失败")
-    
+
+    # 删除用户后失效相关缓存
+    try:
+        patterns = CacheInvalidationRules.USER_CHANGE_PATTERNS
+        for pattern in patterns:
+            invalidate_cache_pattern(pattern)
+    except Exception as e:
+        print(f"警告：清除缓存失败: {e}")
+
     return {"message": "用户删除成功"}
 
 @router.get("/{user_id}/categories", response_model=List[UserCategory])

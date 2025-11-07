@@ -688,9 +688,14 @@
         <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
                 <h3 class="text-lg font-semibold text-gray-900">导入设备数据</h3>
-                <button class="text-gray-400 hover:text-gray-600" onclick="closeImportModal()">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
+                <div class="flex items-center space-x-3">
+                    <button onclick="showImportHistory()" class="px-3 py-1 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700">
+                        <i class="fas fa-history mr-1"></i>导入历史
+                    </button>
+                    <button class="text-gray-400 hover:text-gray-600" onclick="closeImportModal()">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
             </div>
             <div class="p-6">
                 <div class="mb-6">
@@ -774,6 +779,14 @@
             </div>
             <div class="p-6">
                 <div class="mb-6">
+                    <!-- 导入历史查看按钮 -->
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 class="text-lg font-semibold text-gray-900">导入结果详情</h4>
+                        <button onclick="showImportHistory()" class="px-3 py-1 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700">
+                            <i class="fas fa-history mr-1"></i>查看导入历史
+                        </button>
+                    </div>
+
                     <div class="grid grid-cols-4 gap-4">
                         <div class="stats-card bg-green-50 border border-green-200 rounded-lg p-4 text-center cursor-pointer hover:bg-green-100 transition-colors"
                             data-filter="成功" onclick="filterImportResults('成功')">
@@ -5748,6 +5761,130 @@
             }
         });
 
+        // ==================== 导入历史管理 ====================
+        let currentImportSessions = [];
+        let currentSessionFilter = 'all';
+
+        // 显示导入历史
+        async function showImportHistory() {
+            document.getElementById('importHistoryModal').classList.add('show');
+            await loadImportSessions();
+        }
+
+        // 关闭导入历史模态框
+        function closeImportHistoryModal() {
+            document.getElementById('importHistoryModal').classList.remove('show');
+        }
+
+        // 加载导入会话列表
+        async function loadImportSessions() {
+            try {
+                const sessions = await ImportSessionAPI.getUserImportSessions(0, 50, currentSessionFilter === 'all' ? null : currentSessionFilter);
+                currentImportSessions = sessions;
+                renderImportSessions(sessions);
+            } catch (error) {
+                console.error('加载导入历史失败:', error);
+                document.getElementById('importSessionsList').innerHTML = `
+                    <div class="text-center py-8 text-red-500">
+                        <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
+                        <p>加载导入历史失败: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // 渲染导入会话列表
+        function renderImportSessions(sessions) {
+            const container = document.getElementById('importSessionsList');
+
+            if (sessions.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-inbox text-2xl mb-2"></i>
+                        <p>暂无导入记录</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = sessions.map(session => `
+                <div class="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex-1">
+                            <h4 class="font-semibold text-gray-900">${session.filename}</h4>
+                            <p class="text-sm text-gray-600">
+                                <i class="fas fa-clock mr-1"></i>
+                                ${new Date(session.created_at).toLocaleString('zh-CN')}
+                            </p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            ${getStatusBadge(session.status)}
+                            ${session.status === 'processing' || session.status === 'paused' ? `
+                                <button onclick="viewImportProgress(${session.id})" class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200">
+                                    <i class="fas fa-chart-line mr-1"></i>进度
+                                </button>
+                            ` : ''}
+                            ${session.status === 'completed' ? `
+                                <button onclick="viewImportResult(${session.id})" class="px-2 py-1 bg-green-100 text-green-700 rounded text-sm hover:bg-green-200">
+                                    <i class="fas fa-list mr-1"></i>结果
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-5 gap-4 text-center">
+                        <div>
+                            <div class="text-lg font-bold text-gray-900">${session.total_rows}</div>
+                            <div class="text-xs text-gray-600">总行数</div>
+                        </div>
+                        <div>
+                            <div class="text-lg font-bold text-green-600">${session.success_count}</div>
+                            <div class="text-xs text-gray-600">成功</div>
+                        </div>
+                        <div>
+                            <div class="text-lg font-bold text-blue-600">${session.updated_count}</div>
+                            <div class="text-xs text-gray-600">更新</div>
+                        </div>
+                        <div>
+                            <div class="text-lg font-bold text-red-600">${session.error_count}</div>
+                            <div class="text-xs text-gray-600">失败</div>
+                        </div>
+                        <div>
+                            <div class="text-lg font-bold text-gray-600">${session.processed_rows}</div>
+                            <div class="text-xs text-gray-600">已处理</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 筛选导入会话
+        async function filterImportSessions(status) {
+            currentSessionFilter = status;
+            await loadImportSessions();
+        }
+
+        // 查看导入进度
+        async function viewImportProgress(sessionId) {
+            try {
+                const progress = await ImportSessionAPI.getImportProgress(sessionId);
+                showNotification(`导入进度: ${progress.processed_rows}/${progress.total_rows} (${Math.round(progress.processed_rows / progress.total_rows * 100)}%)`, 'info');
+            } catch (error) {
+                showNotification('查看进度失败: ' + error.message, 'error');
+            }
+        }
+
+        // 查看导入结果
+        async function viewImportResult(sessionId) {
+            try {
+                const result = await ImportSessionAPI.getImportResult(sessionId);
+                showImportResult(result);
+                closeImportHistoryModal();
+            } catch (error) {
+                showNotification('查看结果失败: ' + error.message, 'error');
+            }
+        }
+
     </script>
     <script src="/static/js/tailwind-components.js"></script>
 
@@ -5893,6 +6030,26 @@
 
     <!-- 撤回删除通知容器 -->
     <div id="undoNotificationContainer" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
+
+    <!-- 导入历史模态框 -->
+    <div id="importHistoryModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-900">导入历史记录</h3>
+                <button onclick="closeImportHistoryModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1">
+                <div id="importHistoryContent">
+                    <div class="text-center py-8">
+                        <i class="fas fa-spinner fa-spin text-3xl text-gray-400"></i>
+                        <p class="mt-2 text-gray-500">加载中...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
 </body>
 

@@ -1384,7 +1384,7 @@
                     // 清除URL参数以避免重复刷新
                     const cleanUrl = window.location.pathname;
                     window.history.replaceState({}, document.title, cleanUrl);
-                    console.log('检测到刷新参数，将强制刷新设备数据');
+                    // console.log('检测到刷新参数，将强制刷新设备数据');
                 }
 
                 // 等待 API 客户端加载完成
@@ -1722,22 +1722,22 @@
 
                 // 确认默认状态筛选器值
                 const statusFilter = document.getElementById('status-filter');
-                console.log('状态筛选器当前值:', statusFilter.value);
-                console.log('状态筛选器是否选择了"在用":', statusFilter.value === '在用');
+                // console.log('状态筛选器当前值:', statusFilter.value);
+                // console.log('状态筛选器是否选择了"在用":', statusFilter.value === '在用');
 
                 // 获取设备数据
                 let response;
                 if (filters.query) {
                     // 如果有搜索查询，使用搜索接口
-                    console.log('使用搜索接口，传递的筛选条件:', JSON.stringify(filters, null, 2));
-                    console.log('搜索关键词:', filters.query);
-                    console.log('包含的筛选条件:', {
+                    // console.log('使用搜索接口，传递的筛选条件:', JSON.stringify(filters, null, 2));
+                    // console.log('搜索关键词:', filters.query);
+                    /* console.log('包含的筛选条件:', {
                         '部门ID': filters.department_id,
                         '类别ID': filters.category_id,
                         '状态': filters.status,
                         '开始日期': filters.next_calibration_start,
                         '结束日期': filters.next_calibration_end
-                    });
+                    }); */
                     response = await EquipmentAPI.searchEquipments(filters, {
                         skip: (currentPage - 1) * itemsPerPage,
                         limit: itemsPerPage,
@@ -1746,7 +1746,7 @@
                     });
                 } else {
                     // 否则使用筛选接口
-                    console.log('使用筛选接口');
+                    // console.log('使用筛选接口');
                     response = await EquipmentAPI.filterEquipments(filters, {
                         skip: (currentPage - 1) * itemsPerPage,
                         limit: itemsPerPage,
@@ -1758,10 +1758,10 @@
                 const { items, total } = response;
                 totalItems = total;
 
-                console.log('API响应数据:');
-                console.log('- 返回设备数量:', items.length);
-                console.log('- 总设备数量:', total);
-                console.log('- 当前页码范围:', (currentPage - 1) * itemsPerPage + 1, '-', currentPage * itemsPerPage);
+                // console.log('API响应数据:');
+                // console.log('- 返回设备数量:', items.length);
+                // console.log('- 总设备数量:', total);
+                // console.log('- 当前页码范围:', (currentPage - 1) * itemsPerPage + 1, '-', currentPage * itemsPerPage);
 
                 // 检查是否有待检设备：从当前日期到月底
                 const now = new Date();
@@ -1779,15 +1779,15 @@
                         expiryDate.getDate() >= currentDay;
                 });
 
-                console.log('本月待检设备检查:');
-                console.log('- 本月待检设备数量:', monthlyDueEquipments.length);
-                console.log('- 当前月份:', currentMonth + 1);
-                console.log('- 当前年份:', currentYear);
+                // console.log('本月待检设备检查:');
+                // console.log('- 本月待检设备数量:', monthlyDueEquipments.length);
+                // console.log('- 当前月份:', currentMonth + 1);
+                // console.log('- 当前年份:', currentYear);
 
                 if (monthlyDueEquipments.length > 0) {
-                    console.log('本月待检设备详情:');
+                    // console.log('本月待检设备详情:');
                     monthlyDueEquipments.forEach((equipment, index) => {
-                        console.log(`  ${index + 1}. ${equipment.name} - 有效期至: ${equipment.valid_until}`);
+                        // console.log(`  ${index + 1}. ${equipment.name} - 有效期至: ${equipment.valid_until}`);
                     });
                 }
 
@@ -1826,13 +1826,13 @@
             const statusFilter = document.getElementById('status-filter');
             const status = statusFilter ? statusFilter.value : '';
 
-            console.log('筛选器原始值:');
-            console.log('- 部门ID:', departmentId);
-            console.log('- 类别ID:', categoryId);
-            console.log('- 状态:', status);
-            console.log('- 搜索查询:', searchQuery);
-            console.log('- 开始日期:', startDate);
-            console.log('- 结束日期:', endDate);
+            // console.log('筛选器原始值:');
+            // console.log('- 部门ID:', departmentId);
+            // console.log('- 类别ID:', categoryId);
+            // console.log('- 状态:', status);
+            // console.log('- 搜索查询:', searchQuery);
+            // console.log('- 开始日期:', startDate);
+            // console.log('- 结束日期:', endDate);
 
             if (departmentId) filters.department_id = parseInt(departmentId);
             if (categoryId) filters.category_id = parseInt(categoryId);
@@ -1841,7 +1841,7 @@
             if (startDate) filters.next_calibration_start = startDate;
             if (endDate) filters.next_calibration_end = endDate;
 
-            console.log('构建的筛选条件:', filters);
+            // console.log('构建的筛选条件:', filters);
 
             return filters;
         }
@@ -1980,7 +1980,7 @@
             equipmentRows.forEach(row => {
                 const expiryDateStr = row.getAttribute('data-expiry-date');
                 if (!expiryDateStr) {
-                    console.log('设备行没有有效期日期:', row);
+                    // console.log('设备行没有有效期日期:', row);
                     return;
                 }
 
@@ -1996,7 +1996,7 @@
                 }
 
                 if (isNaN(expiryDate.getTime())) {
-                    console.log('无效的日期格式:', expiryDateStr);
+                    // console.log('无效的日期格式:', expiryDateStr);
                     return;
                 }
 
@@ -2013,11 +2013,11 @@
                     expiryDate.getFullYear() === currentYear &&
                     expiryDate.getDate() >= currentDay;
 
-                console.log(`设备: ${equipmentName}`);
-                console.log(`  状态: ${equipmentStatus}`);
-                console.log(`  有效期: ${expiryDate.toLocaleString()}`);
-                console.log(`  是否超期: ${isOverdue}`);
-                console.log(`  是否本月待检: ${isMonthlyDue}`);
+                // console.log(`设备: ${equipmentName}`);
+                // console.log(`  状态: ${equipmentStatus}`);
+                // console.log(`  有效期: ${expiryDate.toLocaleString()}`);
+                // console.log(`  是否超期: ${isOverdue}`);
+                // console.log(`  是否本月待检: ${isMonthlyDue}`);
 
                 // 移除现有的背景色类
                 row.classList.remove('bg-red-50', 'bg-yellow-50', 'bg-gray-50', 'bg-red-100', 'bg-yellow-100', 'bg-green-100');
@@ -2027,32 +2027,32 @@
                     // 停用或报废 - 淡灰色背景（最高优先级）
                     row.classList.add('bg-gray-50');
                     normalCount++;
-                    console.log(`  -> 标记为${equipmentStatus}（灰色背景）`);
+                    // console.log(`  -> 标记为${equipmentStatus}（灰色背景）`);
                 }
                 else if (isMonthlyDue) {
                     // 本月待检 - 淡黄色背景
                     row.classList.add('bg-yellow-50');
                     monthlyDueCount++;
-                    console.log(`  -> 标记为本月待检（黄色背景）`);
+                    // console.log(`  -> 标记为本月待检（黄色背景）`);
                 }
                 else if (isOverdue) {
                     // 超期未检 - 淡红色背景（只有在用设备才会检查超期）
                     row.classList.add('bg-red-50');
                     overdueCount++;
-                    console.log(`  -> 标记为超期（红色背景）`);
+                    // console.log(`  -> 标记为超期（红色背景）`);
                 }
                 else {
                     // 正常在用状态 - 无背景色
                     normalCount++;
-                    console.log(`  -> 正常状态（无背景色）`);
+                    // console.log(`  -> 正常状态（无背景色）`);
                 }
             });
 
-            console.log('=== 背景色统计 ===');
-            console.log(`超期设备: ${overdueCount} 台`);
-            console.log(`本月待检设备: ${monthlyDueCount} 台`);
-            console.log(`正常设备: ${normalCount} 台`);
-            console.log(`总计: ${overdueCount + monthlyDueCount + normalCount} 台`);
+            // console.log('=== 背景色统计 ===');
+            // console.log(`超期设备: ${overdueCount} 台`);
+            // console.log(`本月待检设备: ${monthlyDueCount} 台`);
+            // console.log(`正常设备: ${normalCount} 台`);
+            // console.log(`总计: ${overdueCount + monthlyDueCount + normalCount} 台`);
         }
 
         // 获取设备状态样式
@@ -2070,7 +2070,7 @@
             const totalCountElement = document.getElementById('total-equipment-count');
             if (totalCountElement) {
                 totalCountElement.textContent = filteredCount;
-                console.log(`已更新设备数量统计: ${filteredCount} 台设备`);
+                // console.log(`已更新设备数量统计: ${filteredCount} 台设备`);
             }
         }
 
@@ -2897,7 +2897,7 @@
                             })
                                 .then(response => response.json())
                                 .then(data => {
-                                    console.log('Logout response:', data);
+                                    // console.log('Logout response:', data);
                                 })
                                 .catch(error => {
                                     console.error('Logout error:', error);
@@ -3048,7 +3048,7 @@
                     endDateFilter.value = searchState.endDate;
                 }
                 
-                console.log('已恢复搜索状态:', searchState);
+                // console.log('已恢复搜索状态:', searchState);
             } catch (error) {
                 console.error('恢复搜索状态失败:', error);
                 sessionStorage.removeItem('equipment_search_state');
@@ -4195,11 +4195,11 @@
                                     }
                                 });
 
-                                console.log('获取上次外检信息响应状态:', response.status);
+                                // console.log('获取上次外检信息响应状态:', response.status);
 
                                 if (response.ok) {
                                     const lastExternalInfo = await response.json();
-                                    console.log('获取到的上次外检信息:', lastExternalInfo);
+                                    // console.log('获取到的上次外检信息:', lastExternalInfo);
 
                                     if (lastExternalInfo.success) {
                                         // 自动填充上次的外检信息（证书编号除外，因为每次都要新的）
@@ -4208,12 +4208,12 @@
 
                                         if (verificationAgencyField && lastExternalInfo.verification_agency) {
                                             verificationAgencyField.value = lastExternalInfo.verification_agency;
-                                            console.log('✅ 自动填充检定机构:', lastExternalInfo.verification_agency);
+                                            // console.log('✅ 自动填充检定机构:', lastExternalInfo.verification_agency);
                                         }
 
                                         if (certificateFormField && lastExternalInfo.certificate_form) {
                                             certificateFormField.value = lastExternalInfo.certificate_form;
-                                            console.log('✅ 自动填充证书形式:', lastExternalInfo.certificate_form);
+                                            // console.log('✅ 自动填充证书形式:', lastExternalInfo.certificate_form);
                                         }
 
                                         // 显示提示信息（包含来源）
@@ -4222,13 +4222,13 @@
                                             showNotification(`已自动填充外检信息（来源：${sourceText}）`, 'info');
                                         }
                                     } else {
-                                        console.log('该设备暂无外检信息记录:', lastExternalInfo.message);
+                                        // console.log('该设备暂无外检信息记录:', lastExternalInfo.message);
                                         // 对于没有外检信息的情况，可以提供一些默认选项
                                         const certificateFormField = document.getElementById('singleCertificateForm');
                                         if (certificateFormField && !certificateFormField.value) {
                                             // 如果设备是外检但没有证书形式，可以设置一个常见的默认值
                                             certificateFormField.value = '检定证书';
-                                            console.log('⚠️  设置默认证书形式为：检定证书');
+                                            // console.log('⚠️  设置默认证书形式为：检定证书');
                                         }
                                     }
                                 } else {
@@ -5332,18 +5332,18 @@
             }
 
             const overwrite = document.getElementById('overwriteExisting').checked;
-            console.log('上传文件参数:', {
+            /* console.log('上传文件参数:', {
                 filename: file.name,
                 overwrite: overwrite,
                 overwriteType: typeof overwrite
-            });
+            }); */
 
             try {
                 showNotification('正在导入数据，请稍候...', 'info');
                 document.getElementById('importBtn').disabled = true;
 
                 const result = await ImportExportAPI.uploadImportFile(file, overwrite);
-                console.log('导入结果:', result);
+                // console.log('导入结果:', result);
                 showImportResult(result);
                 closeImportModal();
 

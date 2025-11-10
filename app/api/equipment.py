@@ -8,7 +8,7 @@ from urllib.parse import quote
 from app.db.database import get_db
 from app.crud import equipment
 from app.schemas.schemas import Equipment, EquipmentCreate, EquipmentUpdate, EquipmentFilter, EquipmentSearch, PaginatedEquipment
-from app.api.audit_logs import log_equipment_operation
+from app.api.audit_logs import log_equipment_operation, log_system_operation
 from app.api.auth import get_current_user
 from app.utils.auto_id import generate_internal_id
 from app.core.logging import get_context_logger, log_database_operation
@@ -183,9 +183,9 @@ def delete_equipment(equipment_id: int,
     )
     if db_equipment is None:
         raise HTTPException(status_code=404, detail="设备未找到")
-    
+
     # 记录操作日志
-    create_audit_log(
+    log_equipment_operation(
         db=db,
         user_id=current_user.id,
         equipment_id=equipment_id,
@@ -293,7 +293,7 @@ def export_monthly_plan(db: Session = Depends(get_db),
     encoded_filename = quote(filename)
     
     # 记录操作日志
-    create_audit_log(
+    log_system_operation(
         db=db,
         user_id=current_user.id,
         action="月度检定计划导出",
@@ -411,7 +411,7 @@ def batch_update_calibration(
             equipment.update_equipment(db, equipment_id=equipment_id, equipment_update=equipment_update)
             
             # 记录操作日志
-            create_audit_log(
+            log_equipment_operation(
                 db=db,
                 user_id=current_user.id,
                 equipment_id=int(equipment_id),
@@ -426,7 +426,7 @@ def batch_update_calibration(
             continue
     
     # 记录总体操作日志
-    create_audit_log(
+    log_system_operation(
         db=db,
         user_id=current_user.id,
         action="批量操作",
@@ -507,7 +507,7 @@ def batch_change_status(
             equipment.update_equipment(db, equipment_id=equipment_id, equipment_update=equipment_update)
             
             # 记录操作日志
-            create_audit_log(
+            log_equipment_operation(
                 db=db,
                 user_id=current_user.id,
                 equipment_id=int(equipment_id),
@@ -522,7 +522,7 @@ def batch_change_status(
             continue
     
     # 记录总体操作日志
-    create_audit_log(
+    log_system_operation(
         db=db,
         user_id=current_user.id,
         action="批量操作",
@@ -569,7 +569,7 @@ def batch_delete_equipments(
             success = equipment.delete_equipment(db, equipment_id=equipment_id)
             if success:
                 # 记录操作日志
-                create_audit_log(
+                log_equipment_operation(
                     db=db,
                     user_id=current_user.id,
                     equipment_id=int(equipment_id),
@@ -586,7 +586,7 @@ def batch_delete_equipments(
             continue
     
     # 记录总体操作日志
-    create_audit_log(
+    log_system_operation(
         db=db,
         user_id=current_user.id,
         action="批量操作",
@@ -678,7 +678,7 @@ def batch_export_selected_equipments(
     encoded_filename = quote(filename)
     
     # 记录操作日志
-    create_audit_log(
+    log_system_operation(
         db=db,
         user_id=current_user.id,
         action="批量导出选中设备",
@@ -737,7 +737,7 @@ def batch_transfer_equipments(
             equipment.update_equipment(db, equipment_id=equipment_id, equipment_update=equipment_update)
             
             # 记录操作日志
-            create_audit_log(
+            log_equipment_operation(
                 db=db,
                 user_id=current_user.id,
                 equipment_id=int(equipment_id),
@@ -753,7 +753,7 @@ def batch_transfer_equipments(
             continue
     
     # 记录总体操作日志
-    create_audit_log(
+    log_system_operation(
         db=db,
         user_id=current_user.id,
         action="批量操作",

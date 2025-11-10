@@ -653,6 +653,7 @@ class ImportSessionResponse(BaseModel):
 
     class Config:
         from_attributes = True
+        use_enum_values = True  # 自动将枚举转换为其值
 
 class ImportSessionSummary(BaseModel):
     total_sessions: int

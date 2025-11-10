@@ -5784,7 +5784,7 @@
                 renderImportSessions(sessions);
             } catch (error) {
                 console.error('加载导入历史失败:', error);
-                document.getElementById('importSessionsList').innerHTML = `
+                document.getElementById('importHistoryContent').innerHTML = `
                     <div class="text-center py-8 text-red-500">
                         <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
                         <p>加载导入历史失败: ${error.message}</p>
@@ -5793,9 +5793,22 @@
             }
         }
 
+        // 获取状态徽章HTML
+        function getStatusBadge(status) {
+            const badges = {
+                'pending': '<span class="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs font-medium"><i class="fas fa-clock mr-1"></i>等待中</span>',
+                'processing': '<span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium"><i class="fas fa-spinner fa-spin mr-1"></i>处理中</span>',
+                'paused': '<span class="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs font-medium"><i class="fas fa-pause mr-1"></i>已暂停</span>',
+                'completed': '<span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium"><i class="fas fa-check-circle mr-1"></i>已完成</span>',
+                'failed': '<span class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium"><i class="fas fa-times-circle mr-1"></i>失败</span>',
+                'cancelled': '<span class="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs font-medium"><i class="fas fa-ban mr-1"></i>已取消</span>'
+            };
+            return badges[status] || `<span class="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs font-medium">${status}</span>`;
+        }
+
         // 渲染导入会话列表
         function renderImportSessions(sessions) {
-            const container = document.getElementById('importSessionsList');
+            const container = document.getElementById('importHistoryContent');
 
             if (sessions.length === 0) {
                 container.innerHTML = `
@@ -5842,7 +5855,7 @@
                             <div class="text-xs text-gray-600">成功</div>
                         </div>
                         <div>
-                            <div class="text-lg font-bold text-blue-600">${session.updated_count}</div>
+                            <div class="text-lg font-bold text-blue-600">${session.update_count}</div>
                             <div class="text-xs text-gray-600">更新</div>
                         </div>
                         <div>

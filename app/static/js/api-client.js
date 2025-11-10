@@ -733,6 +733,30 @@ const ImportSessionAPI = {
     // 获取活跃的导入会话
     async getActiveSessions() {
         return await api.get('/api/import-sessions/active/list');
+    },
+
+    // 获取导入进度
+    async getImportProgress(sessionId) {
+        return await api.get(`/api/import-sessions/${sessionId}/progress`);
+    },
+
+    // 获取导入结果
+    async getImportResult(sessionId) {
+        const session = await this.getImportSession(sessionId);
+        // 从会话中构建结果对象
+        return {
+            success_count: session.success_count,
+            update_count: session.update_count,
+            error_count: session.error_count,
+            detailed_results: session.detailed_results || [],
+            summary: {
+                total_rows: session.total_rows,
+                processed: session.processed_rows,
+                success_rate: session.total_rows > 0
+                    ? Math.round((session.success_count + session.update_count) / session.total_rows * 100 * 100) / 100
+                    : 0
+            }
+        };
     }
 };
 

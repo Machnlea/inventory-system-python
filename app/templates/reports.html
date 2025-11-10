@@ -6,7 +6,9 @@
     <title>统计报表 - 设备台账管理系统</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chart.js with fallback CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"
+            onerror="this.onerror=null; this.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js'"></script>
     <script src="/static/js/api-client.js"></script>
     <script src="/static/js/notification-manager.js"></script>
     <script src="/static/js/tab-session-manager.js?v=2"></script>
@@ -665,8 +667,18 @@
     
         // 创建部门统计图
         function createDepartmentStatsChart(data) {
+            // 检查 Chart.js 是否已加载
+            if (typeof Chart === 'undefined') {
+                console.warn('Chart.js 未加载，跳过图表创建');
+                const canvas = document.getElementById('departmentStatsChart');
+                if (canvas) {
+                    canvas.parentElement.innerHTML = '<div class="text-gray-500 text-center p-4">图表加载失败，请刷新页面</div>';
+                }
+                return;
+            }
+
             const ctx = document.getElementById('departmentStatsChart').getContext('2d');
-            
+
             if (chartInstances.departmentStats) {
                 chartInstances.departmentStats.destroy();
             }
@@ -742,8 +754,18 @@
 
         // 创建类别统计图
         function createCategoryStatsChart(data) {
+            // 检查 Chart.js 是否已加载
+            if (typeof Chart === 'undefined') {
+                console.warn('Chart.js 未加载，跳过图表创建');
+                const canvas = document.getElementById('categoryStatsChart');
+                if (canvas) {
+                    canvas.parentElement.innerHTML = '<div class="text-gray-500 text-center p-4">图表加载失败，请刷新页面</div>';
+                }
+                return;
+            }
+
             const ctx = document.getElementById('categoryStatsChart').getContext('2d');
-            
+
             if (chartInstances.categoryStats) {
                 chartInstances.categoryStats.destroy();
             }
@@ -859,8 +881,18 @@
 
         // 创建器具数量柱状图
         function createInstrumentQuantityChart(data) {
+            // 检查 Chart.js 是否已加载
+            if (typeof Chart === 'undefined') {
+                console.warn('Chart.js 未加载，跳过图表创建');
+                const canvas = document.getElementById('instrumentQuantityChart');
+                if (canvas) {
+                    canvas.parentElement.innerHTML = '<div class="text-gray-500 text-center p-4">图表加载失败，请刷新页面</div>';
+                }
+                return;
+            }
+
             const ctx = document.getElementById('instrumentQuantityChart').getContext('2d');
-            
+
             if (chartInstances.instrumentQuantity) {
                 chartInstances.instrumentQuantity.destroy();
             }

@@ -61,6 +61,11 @@ def get_import_session(
             detail="无权访问此导入会话"
         )
 
+    # 修复嵌套列表问题：如果 detailed_results 是嵌套列表，展平它
+    if import_session.detailed_results and isinstance(import_session.detailed_results, list):
+        if len(import_session.detailed_results) > 0 and isinstance(import_session.detailed_results[0], list):
+            import_session.detailed_results = import_session.detailed_results[0]
+
     return import_session
 
 
@@ -92,6 +97,12 @@ def get_user_import_sessions(
         sessions = import_crud.get_user_import_sessions(
             db, user_id=user_id, skip=skip, limit=limit, status=status
         )
+
+        # 修复嵌套列表问题
+        for session in sessions:
+            if session.detailed_results and isinstance(session.detailed_results, list):
+                if len(session.detailed_results) > 0 and isinstance(session.detailed_results[0], list):
+                    session.detailed_results = session.detailed_results[0]
 
         return sessions
 

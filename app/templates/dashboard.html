@@ -6,7 +6,9 @@
     <title>设备台账管理系统</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chart.js with fallback CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"
+            onerror="this.onerror=null; this.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js'"></script>
     <script src="/static/js/api-client.js"></script>
     <script src="/static/js/tab-session-manager.js"></script>
     <script src="/static/js/notification-manager.js"></script>
@@ -1060,12 +1062,27 @@
 
         // 创建图表
         function createCharts(categoryData, departmentData) {
+            // 检查 Chart.js 是否已加载
+            if (typeof Chart === 'undefined') {
+                console.warn('Chart.js 未加载，跳过图表创建');
+                // 显示提示信息
+                const categoryCanvas = document.getElementById('categoryChart');
+                const departmentCanvas = document.getElementById('departmentChart');
+                if (categoryCanvas) {
+                    categoryCanvas.parentElement.innerHTML = '<div class="text-gray-500 text-center p-4">图表加载失败，请刷新页面</div>';
+                }
+                if (departmentCanvas) {
+                    departmentCanvas.parentElement.innerHTML = '<div class="text-gray-500 text-center p-4">图表加载失败，请刷新页面</div>';
+                }
+                return;
+            }
+
             // 销毁现有图表实例
             const categoryChart = Chart.getChart('categoryChart');
             if (categoryChart) {
                 categoryChart.destroy();
             }
-            
+
             const departmentChart = Chart.getChart('departmentChart');
             if (departmentChart) {
                 departmentChart.destroy();

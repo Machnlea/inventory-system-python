@@ -287,10 +287,6 @@ def _rollback_equipment_operation(db: Session, original_log: AuditLog) -> bool:
         if not original_log.equipment_id or not original_log.old_value:
             return False
 
-        equipment = db.query(Equipment).filter(Equipment.id == original_log.equipment_id).first()
-        if not equipment:
-            return False
-
         # 解析旧值JSON
         try:
             old_data = json.loads(original_log.old_value) if original_log.old_value else {}
@@ -299,6 +295,16 @@ def _rollback_equipment_operation(db: Session, original_log: AuditLog) -> bool:
 
         if not old_data:
             return True  # 空操作也认为成功
+
+        equipment = db.query(Equipment).filter(Equipment.id == original_log.equipment_id).first()
+
+        # 如果是删除操作的回滚，需要重新创建设备
+        if not equipment and original_log.action == "删除":
+            return _restore_deleted_equipment(db, original_log.equipment_id, old_data)
+
+        # 如果设备不存在且不是删除操作，无法回滚
+        if not equipment:
+            return False
 
         # 只恢复简单的字段，避免复杂对象问题
         simple_fields = [
@@ -384,6 +390,50 @@ def _mark_calibration_history_as_rolled_back(db: Session, original_log: AuditLog
     except Exception as e:
         # 记录错误但不影响主要的回滚操作
         print(f"WARNING: 标记检定历史记录失败: {e}")
+
+
+def _restore_deleted_equipment(db: Session, equipment_id: int, equipment_data: dict) -> bool:
+    """恢复已删除的设备"""
+    try:
+        from datetime import datetime
+
+        # 创建新的设备对象，使用原来的ID
+        equipment = Equipment(id=equipment_id)
+
+        # 恢复所有字段
+        for key, value in equipment_data.items():
+            if hasattr(equipment, key):
+                # 处理日期字段
+                if key in ['calibration_date', 'manufacture_date', 'valid_until', 'status_change_date']:
+                    if value and isinstance(value, str):
+                        try:
+                            if 'T' in value:  # ISO格式
+                                value = datetime.fromisoformat(value).date()
+                            else:  # 简单日期格式
+                                value = datetime.strptime(value, '%Y-%m-%d').date()
+                        except Exception:
+                            continue  # 跳过无法解析的日期
+
+                try:
+                    setattr(equipment, key, value)
+                except Exception:
+                    continue  # 跳过设置失败的字段
+
+        # 设置创建和更新时间
+        equipment.created_at = datetime.utcnow()
+        equipment.updated_at = datetime.utcnow()
+
+        # 添加到数据库
+        db.add(equipment)
+        db.commit()
+        db.refresh(equipment)
+
+        return True
+
+    except Exception as e:
+        print(f"ERROR: 恢复已删除设备失败: {e}")
+        db.rollback()
+        return False
 
 
 def _rollback_calibration_operation(db: Session, original_log: AuditLog) -> bool:

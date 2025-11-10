@@ -184,13 +184,43 @@ def delete_equipment(equipment_id: int,
     if db_equipment is None:
         raise HTTPException(status_code=404, detail="设备未找到")
 
-    # 记录操作日志
+    # 保存设备完整数据用于回滚
+    equipment_data = {
+        'name': db_equipment.name,
+        'model': db_equipment.model,
+        'accuracy_level': db_equipment.accuracy_level,
+        'measurement_range': db_equipment.measurement_range,
+        'calibration_cycle': db_equipment.calibration_cycle,
+        'calibration_date': db_equipment.calibration_date.isoformat() if db_equipment.calibration_date else None,
+        'calibration_method': db_equipment.calibration_method,
+        'current_calibration_result': db_equipment.current_calibration_result,
+        'certificate_number': db_equipment.certificate_number,
+        'verification_agency': db_equipment.verification_agency,
+        'certificate_form': db_equipment.certificate_form,
+        'internal_id': db_equipment.internal_id,
+        'manufacturer_id': db_equipment.manufacturer_id,
+        'installation_location': db_equipment.installation_location,
+        'manufacturer': db_equipment.manufacturer,
+        'manufacture_date': db_equipment.manufacture_date.isoformat() if db_equipment.manufacture_date else None,
+        'scale_value': db_equipment.scale_value,
+        'management_level': db_equipment.management_level,
+        'original_value': db_equipment.original_value,
+        'status': db_equipment.status,
+        'status_change_date': db_equipment.status_change_date.isoformat() if db_equipment.status_change_date else None,
+        'notes': db_equipment.notes,
+        'valid_until': db_equipment.valid_until.isoformat() if db_equipment.valid_until else None,
+        'category_id': db_equipment.category_id,
+        'department_id': db_equipment.department_id
+    }
+
+    # 记录操作日志（包含完整的设备数据用于回滚）
     log_equipment_operation(
         db=db,
         user_id=current_user.id,
         equipment_id=equipment_id,
         action="删除",
-        description=f"删除设备: {db_equipment.name} ({db_equipment.internal_id})"
+        description=f"删除设备: {db_equipment.name} ({db_equipment.internal_id})",
+        old_data=equipment_data  # 保存完整数据用于回滚
     )
 
     success = equipment.delete_equipment(db, equipment_id=equipment_id)

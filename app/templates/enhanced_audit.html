@@ -577,7 +577,7 @@
                 const operationTypeClass = `operation-${log.operation_type}`;
                 const actionClass = `action-${log.action.toLowerCase().replace(/\s+/g, '-')}`;
                 const canRollback = !log.is_rollback &&
-                    ['创建', '更新', '检定', '状态变更', '更新检定信息'].includes(log.action) &&
+                    ['创建', '更新', '删除', '检定', '状态变更', '更新检定信息'].includes(log.action) &&
                     !log.rollback_log_id;
 
                 return `

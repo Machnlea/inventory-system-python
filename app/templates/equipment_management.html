@@ -1896,7 +1896,10 @@
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-left">${departmentName}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-left">${formatDate(equipment.valid_until, equipment.calibration_cycle)}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-center">
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusStyle(equipment.status)}">${equipment.status || '未知'}</span>
+                            <div class="flex flex-col items-center space-y-1">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusStyle(equipment.status)}">${equipment.status || '未知'}</span>
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getCalibrationStatusStyle(equipment.valid_until, equipment.calibration_cycle)}">${getCalibrationStatusText(equipment.valid_until, equipment.calibration_cycle)}</span>
+                            </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2 text-center">
                             <button class="equipment-action-btn text-gray-600 hover:text-gray-900 relative" title="管理附件" 
@@ -1979,6 +1982,13 @@
 
             equipmentRows.forEach(row => {
                 const expiryDateStr = row.getAttribute('data-expiry-date');
+                const calibrationCycle = row.getAttribute('data-calibration-cycle');
+                
+                // 随坏随换设备不需要背景色标记
+                if (calibrationCycle === '随坏随换') {
+                    return;
+                }
+                
                 if (!expiryDateStr) {
                     // console.log('设备行没有有效期日期:', row);
                     return;
@@ -2063,6 +2073,70 @@
                 case '报废': return 'bg-red-100 text-red-800';
                 default: return 'bg-gray-100 text-gray-800';
             }
+        }
+
+        // 获取检定状态样式
+        function getCalibrationStatusStyle(validUntil, calibrationCycle) {
+            // 随坏随换设备不显示检定状态
+            if (calibrationCycle === '随坏随换') {
+                return 'bg-gray-100 text-gray-500';
+            }
+            
+            // 如果没有有效期，显示待检
+            if (!validUntil) {
+                return 'bg-yellow-100 text-yellow-800';
+            }
+            
+            const now = new Date();
+            const expiryDate = new Date(validUntil);
+            
+            // 如果已经过期，显示红色
+            if (expiryDate < now) {
+                return 'bg-red-100 text-red-800';
+            }
+            
+            // 如果在30天内即将过期，显示黄色
+            const thirtyDaysFromNow = new Date();
+            thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+            
+            if (expiryDate <= thirtyDaysFromNow) {
+                return 'bg-yellow-100 text-yellow-800';
+            }
+            
+            // 其他情况显示绿色
+            return 'bg-green-100 text-green-800';
+        }
+
+        // 获取检定状态文本
+        function getCalibrationStatusText(validUntil, calibrationCycle) {
+            // 随坏随换设备显示特殊文本
+            if (calibrationCycle === '随坏随换') {
+                return '随坏随换';
+            }
+            
+            // 如果没有有效期，显示待检
+            if (!validUntil) {
+                return '待检';
+            }
+            
+            const now = new Date();
+            const expiryDate = new Date(validUntil);
+            
+            // 如果已经过期，显示超期
+            if (expiryDate < now) {
+                return '超期';
+            }
+            
+            // 如果在30天内即将过期，显示即将到期
+            const thirtyDaysFromNow = new Date();
+            thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+            
+            if (expiryDate <= thirtyDaysFromNow) {
+                return '即将到期';
+            }
+            
+            // 其他情况显示正常
+            return '正常';
         }
 
         // 更新过滤后的设备数量统计

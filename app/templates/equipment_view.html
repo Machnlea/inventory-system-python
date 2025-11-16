@@ -821,7 +821,25 @@
                 
                 if (currentNotes && currentNotes.trim()) {
                     notesElement.innerHTML = currentNotes.replace(/\n/g, '<br>');
-                    notesStatusElement.textContent = `最后更新: ${equipmentData.notes_updated_at ? new Date(equipmentData.notes_updated_at).toLocaleDateString('zh-CN') : '未知'}`;
+                    if (equipmentData.notes_updated_at) {
+                        try {
+                            const date = new Date(equipmentData.notes_updated_at);
+                            if (isNaN(date.getTime())) {
+                                // 如果日期无效，尝试修正可能的时间戳格式
+                                let fixedDate = new Date(equipmentData.notes_updated_at.replace(' ', 'T'));
+                                if (isNaN(fixedDate.getTime())) {
+                                    fixedDate = new Date(equipmentData.notes_updated_at + 'Z'); // 尝试添加Z标识符
+                                }
+                                notesStatusElement.textContent = `最后更新: ${fixedDate.toLocaleDateString('zh-CN')}`;
+                            } else {
+                                notesStatusElement.textContent = `最后更新: ${date.toLocaleDateString('zh-CN')}`;
+                            }
+                        } catch (e) {
+                            notesStatusElement.textContent = `最后更新: 未知格式`;
+                        }
+                    } else {
+                        notesStatusElement.textContent = '最后更新: 未知';
+                    }
                 } else {
                     notesElement.innerHTML = '<span class="text-gray-400 italic">暂无备注</span>';
                     notesStatusElement.textContent = '点击编辑备注';
@@ -1479,11 +1497,11 @@
             try {
                 showNotification('正在保存备注...', 'info');
                 
-                // 调用API保存备注 - 使用通用的设备更新端点
+                // 调用API保存备注 - 使用专门的备注更新端点
                 // 优先从sessionStorage获取token（支持多标签页独立登录）
                 const accessToken = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
-                const response = await fetch(`/api/equipment/${currentEquipmentId}`, {
-                    method: 'PUT',
+                const response = await fetch(`/api/equipment/${currentEquipmentId}/notes`, {
+                    method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${accessToken}`
@@ -1510,7 +1528,25 @@
                 
                 if (newNotes) {
                     notesElement.innerHTML = newNotes.replace(/\n/g, '<br>');
-                    notesStatusElement.textContent = `最后更新: ${new Date(result.notes_updated_at).toLocaleDateString('zh-CN')}`;
+                    if (result.notes_updated_at) {
+                        try {
+                            const date = new Date(result.notes_updated_at);
+                            if (isNaN(date.getTime())) {
+                                // 如果日期无效，尝试修正可能的时间戳格式
+                                let fixedDate = new Date(result.notes_updated_at.replace(' ', 'T'));
+                                if (isNaN(fixedDate.getTime())) {
+                                    fixedDate = new Date(result.notes_updated_at + 'Z'); // 尝试添加Z标识符
+                                }
+                                notesStatusElement.textContent = `最后更新: ${fixedDate.toLocaleDateString('zh-CN')}`;
+                            } else {
+                                notesStatusElement.textContent = `最后更新: ${date.toLocaleDateString('zh-CN')}`;
+                            }
+                        } catch (e) {
+                            notesStatusElement.textContent = `最后更新: 刚刚`;
+                        }
+                    } else {
+                        notesStatusElement.textContent = '最后更新: 刚刚';
+                    }
                 } else {
                     notesElement.innerHTML = '<span class="text-gray-400 italic">暂无备注</span>';
                     notesStatusElement.textContent = '点击编辑备注';

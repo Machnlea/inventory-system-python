@@ -916,3 +916,64 @@ def generate_internal_id_endpoint(category_id: int,
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail="生成编号失败")
+
+
+@router.patch("/{equipment_id}/notes")
+def update_equipment_notes(equipment_id: int, 
+                          notes_data: dict,
+                          db: Session = Depends(get_db),
+                          current_user = Depends(get_current_user)):
+    """更新设备备注"""
+    from app.schemas.schemas import EquipmentUpdate
+    
+    # 检查设备是否存在且用户有权限
+    db_equipment = equipment.get_equipment(
+        db, equipment_id=equipment_id,
+        user_id=current_user.id, is_admin=current_user.is_admin
+    )
+    if db_equipment is None:
+        raise HTTPException(status_code=404, detail="设备未找到")
+    
+    # 从请求数据中获取备注
+    new_notes = notes_data.get("notes", "")
+    
+    # 准备更新数据
+    equipment_update = EquipmentUpdate(notes=new_notes)
+    
+    # 保存旧数据用于日志
+    old_data = {
+        'notes': db_equipment.notes,
+        'updated_at': db_equipment.updated_at.isoformat() if db_equipment.updated_at else None
+    }
+    
+    try:
+        updated_equipment = equipment.update_equipment(
+            db, equipment_id=equipment_id, equipment_update=equipment_update
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    # 记录操作日志
+    changes = []
+    if new_notes != db_equipment.notes:
+        changes.append("备注已更新")
+    
+    description = f"更新设备备注: {db_equipment.name} ({db_equipment.internal_id})"
+    if changes:
+        description += f" - {', '.join(changes)}"
+
+    log_equipment_operation(
+        db=db,
+        user_id=current_user.id,
+        equipment_id=equipment_id,
+        action="更新备注",
+        description=description,
+        old_data=old_data,
+        new_data={'notes': new_notes, 'updated_at': updated_equipment.updated_at.isoformat() if updated_equipment.updated_at else None}
+    )
+
+    # 返回更新后的时间信息
+    return {
+        "notes": updated_equipment.notes,
+        "notes_updated_at": updated_equipment.updated_at.isoformat() if updated_equipment.updated_at else None
+    }

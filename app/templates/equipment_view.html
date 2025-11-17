@@ -1619,9 +1619,9 @@
                     </div>
                 `;
                 
-                // 调用API获取检定历史
+                // 调用API获取检定历史（包含初始检定信息）
                 const currentToken = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
-                const response = await fetch(`/api/calibration/equipment/${currentEquipmentId}/history?limit=5`, {
+                const response = await fetch(`/api/calibration/equipment/${currentEquipmentId}/history?limit=5&include_initial=true`, {
                     method: 'GET',
                     headers: {
                         'Authorization': `Bearer ${currentToken}`
@@ -1672,18 +1672,69 @@
             histories.forEach((history, index) => {
                 const isLatest = index === 0;
                 const isOldest = index === histories.length - 1;
-                const dotClass = getCalibrationStatusDotClass(history.calibration_result);
-                const resultClass = getCalibrationResultClass(history.calibration_result);
                 
-                const displayTitle = isLatest ? '最新检定' : 
-                                   isOldest && histories.length > 2 ? '首次检定' : '历史检定';
+                // 处理初始检定信息的特殊显示
+                const isInitial = history.is_initial || history.id === 0;
+                const dotClass = isInitial ? 'success' : getCalibrationStatusDotClass(history.calibration_result);
+                const resultClass = isInitial ? 'text-blue-600' : getCalibrationResultClass(history.calibration_result);
                 
-                // 检查是否已被回滚
-                const isRolledBack = history.is_rolled_back;
+                // 确定显示标题
+                let displayTitle = '';
+                if (isInitial) {
+                    displayTitle = '初始检定信息';
+                } else if (isLatest) {
+                    displayTitle = '最新检定';
+                } else if (isOldest && histories.filter(h => !h.is_initial).length > 2) {
+                    displayTitle = '首次检定';
+                } else {
+                    displayTitle = '历史检定';
+                }
+                
+                // 检查是否已被回滚（初始信息不会被回滚）
+                const isRolledBack = !isInitial && history.is_rolled_back;
                 const rollbackBadge = isRolledBack ? 
                     `<span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded-full ml-2">
                         <i class="fas fa-undo mr-1"></i>已回滚
                     </span>` : '';
+
+                // 处理日期格式
+                let calibrationDate = '';
+                let validUntilDate = '';
+                let rolledBackDate = '';
+                
+                try {
+                    if (history.calibration_date) {
+                        const date = new Date(history.calibration_date);
+                        if (!isNaN(date.getTime())) {
+                            calibrationDate = date.toLocaleDateString('zh-CN');
+                        } else {
+                            calibrationDate = history.calibration_date;
+                        }
+                    }
+                    
+                    if (history.valid_until) {
+                        const date = new Date(history.valid_until);
+                        if (!isNaN(date.getTime())) {
+                            validUntilDate = date.toLocaleDateString('zh-CN');
+                        } else {
+                            validUntilDate = history.valid_until;
+                        }
+                    }
+                    
+                    if (history.rolled_back_at) {
+                        const date = new Date(history.rolled_back_at);
+                        if (!isNaN(date.getTime())) {
+                            rolledBackDate = date.toLocaleString('zh-CN');
+                        } else {
+                            rolledBackDate = history.rolled_back_at;
+                        }
+                    }
+                } catch (e) {
+                    console.error('日期格式化错误:', e);
+                    calibrationDate = history.calibration_date || '';
+                    validUntilDate = history.valid_until || '';
+                    rolledBackDate = history.rolled_back_at || '';
+                }
 
                 timelineHtml += `
                     <div class="timeline-item ${isRolledBack ? 'opacity-75' : ''}">
@@ -1693,18 +1744,21 @@
                                 <div class="font-medium text-gray-900">
                                     ${displayTitle}
                                     ${rollbackBadge}
+                                    ${isInitial ? `<span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full ml-2">
+                                        <i class="fas fa-download mr-1"></i>导入
+                                    </span>` : ''}
                                 </div>
-                                <div class="text-sm text-gray-600">${formatDate(history.calibration_date)}</div>
-                                ${history.valid_until ? `<div class="text-xs text-gray-500">有效期至: ${formatDate(history.valid_until)}</div>` : ''}
-                                ${isRolledBack && history.rolled_back_at ? 
+                                <div class="text-sm text-gray-600">${calibrationDate}</div>
+                                ${validUntilDate ? `<div class="text-xs text-gray-500">有效期至: ${validUntilDate}</div>` : ''}
+                                ${isRolledBack && rolledBackDate ? 
                                     `<div class="text-xs text-orange-600 mt-1">
                                         <i class="fas fa-info-circle mr-1"></i>
-                                        回滚时间: ${formatDateTime(history.rolled_back_at)}
+                                        回滚时间: ${rolledBackDate}
                                     </div>` : ''}
                             </div>
                             <div class="text-right">
-                                <div class="text-sm font-medium ${resultClass} ${isRolledBack ? 'line-through' : ''}">${history.calibration_result}</div>
-                                <div class="text-xs text-gray-500">${history.calibration_method}</div>
+                                <div class="text-sm font-medium ${resultClass} ${isRolledBack ? 'line-through' : ''}">${history.calibration_result || '未知'}</div>
+                                <div class="text-xs text-gray-500">${history.calibration_method || '未知'}</div>
                                 ${history.certificate_number ? `<div class="text-xs text-gray-400">证书: ${history.certificate_number}</div>` : ''}
                                 ${history.certificate_form ? `<div class="text-xs text-gray-400">形式: ${history.certificate_form}</div>` : ''}
                             </div>
@@ -1724,9 +1778,11 @@
             
             container.innerHTML = timelineHtml;
             
-            // 异步加载每个检定历史记录的附件
+            // 异步加载每个检定历史记录的附件（跳过初始记录）
             histories.forEach(async (history) => {
-                await loadCalibrationAttachments(history.id, currentEquipmentId);
+                if (!history.is_initial && history.id !== 0) {
+                    await loadCalibrationAttachments(history.id, currentEquipmentId);
+                }
             });
         }
         
@@ -1886,9 +1942,9 @@
             try {
                 showNotification('正在加载完整检定历史...', 'info');
                 
-                // 获取完整的检定历史记录
+                // 获取完整的检定历史记录（包含初始检定信息）
                 const currentToken = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
-                const response = await fetch(`/api/calibration/equipment/${currentEquipmentId}/history`, {
+                const response = await fetch(`/api/calibration/equipment/${currentEquipmentId}/history?include_initial=true`, {
                     method: 'GET',
                     headers: {
                         'Authorization': `Bearer ${currentToken}`
@@ -1934,10 +1990,12 @@
                     });
                 }
                 
-                // 加载模态框中的附件
+                // 加载模态框中的附件（跳过初始记录）
                 setTimeout(() => {
                     allHistories.forEach(async (history) => {
-                        await loadModalCalibrationAttachments(history.id, currentEquipmentId);
+                        if (!history.is_initial && history.id !== 0) {
+                            await loadModalCalibrationAttachments(history.id, currentEquipmentId);
+                        }
                     });
                 }, 100);
                 
@@ -1972,7 +2030,7 @@
                     <div class="flex justify-between items-center">
                         <h4 class="text-lg font-medium text-gray-900">检定历史记录 (${histories.length} 条)</h4>
                         <div class="text-sm text-gray-500">
-                            最近更新: ${formatDateTime(histories[0]?.created_at)}
+                            最近更新: ${histories[0]?.created_at ? formatDateTime(histories[0]?.created_at) : 'N/A'}
                         </div>
                     </div>
                     
@@ -1995,61 +2053,70 @@
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
                                 ${histories.map(history => `
-                                    <tr class="hover:bg-gray-50 ${history.is_rolled_back ? 'bg-orange-50' : ''}">
+                                    <tr class="hover:bg-gray-50 ${history.is_rolled_back ? 'bg-orange-50' : ''} ${history.is_initial ? 'bg-blue-50' : ''}">
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 ${history.is_rolled_back ? 'line-through text-gray-500' : ''}">
                                             ${formatDate(history.calibration_date)}
+                                            ${history.is_initial ? '<span class="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">导入</span>' : ''}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 ${history.is_rolled_back ? 'line-through text-gray-500' : ''}">
                                             ${formatDate(history.valid_until)}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${history.calibration_method === '内检' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'} ${history.is_rolled_back ? 'opacity-60' : ''}">
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${history.calibration_method === '内检' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'} ${history.is_rolled_back ? 'opacity-60' : ''} ${history.is_initial ? 'opacity-75' : ''}">
                                                 ${history.calibration_method}
                                             </span>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${history.calibration_result === '合格' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} ${history.is_rolled_back ? 'opacity-60 line-through' : ''}">
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${history.calibration_result === '合格' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} ${history.is_rolled_back ? 'opacity-60 line-through' : ''} ${history.is_initial ? 'opacity-75' : ''}">
                                                 ${history.calibration_result}
                                             </span>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            ${history.is_rolled_back ? 
-                                                `<div class="flex flex-col">
-                                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800 mb-1">
-                                                        <i class="fas fa-undo mr-1"></i>已回滚
-                                                    </span>
-                                                    ${history.rolled_back_at ? 
-                                                        `<span class="text-xs text-gray-500">${formatDateTime(history.rolled_back_at)}</span>` : ''
-                                                    }
-                                                    ${history.rollback_reason ? 
-                                                        `<span class="text-xs text-orange-600 mt-1" title="${history.rollback_reason}">
-                                                            <i class="fas fa-info-circle mr-1"></i>原因
-                                                        </span>` : ''
-                                                    }
-                                                </div>` : 
-                                                `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                                    <i class="fas fa-check mr-1"></i>有效
-                                                </span>`
+                                            ${history.is_initial ? 
+                                                `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                                    <i class="fas fa-info-circle mr-1"></i>初始信息
+                                                </span>` : 
+                                                (history.is_rolled_back ? 
+                                                    `<div class="flex flex-col">
+                                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800 mb-1">
+                                                            <i class="fas fa-undo mr-1"></i>已回滚
+                                                        </span>
+                                                        ${history.rolled_back_at ? 
+                                                            `<span class="text-xs text-gray-500">${formatDateTime(history.rolled_back_at)}</span>` : ''
+                                                        }
+                                                        ${history.rollback_reason ? 
+                                                            `<span class="text-xs text-orange-600 mt-1" title="${history.rollback_reason}">
+                                                                <i class="fas fa-info-circle mr-1"></i>原因
+                                                            </span>` : ''
+                                                        }
+                                                    </div>` : 
+                                                    `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                                        <i class="fas fa-check mr-1"></i>有效
+                                                    </span>`
+                                                )
                                             }
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 ${history.is_rolled_back ? 'line-through text-gray-500' : ''}">
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 ${history.is_rolled_back ? 'line-through text-gray-500' : ''} ${history.is_initial ? 'opacity-75' : ''}">
                                             ${history.certificate_number || '-'}
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 ${history.is_rolled_back ? 'line-through text-gray-500' : ''}">
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 ${history.is_rolled_back ? 'line-through text-gray-500' : ''} ${history.is_initial ? 'opacity-75' : ''}">
                                             ${history.certificate_form || '-'}
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 ${history.is_rolled_back ? 'line-through text-gray-500' : ''}">
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 ${history.is_rolled_back ? 'line-through text-gray-500' : ''} ${history.is_initial ? 'opacity-75' : ''}">
                                             ${history.verification_agency || '-'}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            <div id="modal-attachments-${history.id}" class="flex flex-wrap gap-1">
-                                                <span class="text-gray-400 text-xs">加载中...</span>
-                                            </div>
+                                            ${history.is_initial ? 
+                                                '<span class="text-gray-400 text-xs">-</span>' : 
+                                                `<div id="modal-attachments-${history.id}" class="flex flex-wrap gap-1">
+                                                    <span class="text-gray-400 text-xs">加载中...</span>
+                                                </div>`
+                                            }
                                         </td>
                                         <td class="px-6 py-4 text-sm text-gray-900 max-w-xs">
                                             <div class="space-y-1">
                                                 ${history.notes ? 
-                                                    `<div class="truncate ${history.is_rolled_back ? 'line-through text-gray-500' : ''}" title="${history.notes}">
+                                                    `<div class="truncate ${history.is_rolled_back ? 'line-through text-gray-500' : ''} ${history.is_initial ? 'opacity-75' : ''}" title="${history.notes}">
                                                         ${history.notes}
                                                     </div>` : 
                                                     '<span class="text-gray-400">-</span>'
@@ -2063,7 +2130,10 @@
                                             </div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            ${formatDateTime(history.created_at)}
+                                            ${history.is_initial ? 
+                                                formatDate(history.created_at) : 
+                                                formatDateTime(history.created_at)
+                                            }
                                         </td>
                                     </tr>
                                 `).join('')}

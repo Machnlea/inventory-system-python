@@ -564,6 +564,7 @@ async def get_equipment_calibration_history(
     equipment_id: int,
     skip: int = 0,
     limit: int = 100,
+    include_initial: bool = True,  # 是否包含设备初始检定信息
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -573,6 +574,7 @@ async def get_equipment_calibration_history(
     - **equipment_id**: 设备ID
     - **skip**: 跳过记录数
     - **limit**: 限制记录数
+    - **include_initial**: 是否包含设备初始检定信息
     """
     
     # 验证设备存在
@@ -588,8 +590,49 @@ async def get_equipment_calibration_history(
         db, equipment_id, skip, limit
     )
     
+    # 如果需要包含初始检定信息且设备有检定信息
+    initial_history = []
+    if include_initial and equipment.calibration_date:
+        # 创建一个模拟的初始检定历史记录
+        initial_history = [{
+            "id": 0,  # 使用0表示初始记录
+            "equipment_id": equipment.id,
+            "calibration_date": equipment.calibration_date,
+            "valid_until": equipment.valid_until,
+            "calibration_method": equipment.calibration_method,
+            "calibration_result": equipment.current_calibration_result or "未知",
+            "certificate_number": equipment.certificate_number,
+            "certificate_form": equipment.certificate_form,
+            "verification_agency": equipment.verification_agency,
+            "notes": f"导入初始信息 - {equipment.calibration_method}检定",
+            "created_at": equipment.created_at,
+            "created_by": None,  # 初始信息没有明确创建者
+            "is_rolled_back": False,
+            "rolled_back_at": None,
+            "rolled_back_by": None,
+            "rollback_reason": None,
+            # 设备信息
+            "equipment_name": equipment.name,
+            "equipment_internal_id": equipment.internal_id,
+            "equipment_model": equipment.model,
+            "department_name": equipment.department.name if equipment.department else None,
+            "category_name": equipment.category.name if equipment.category else None,
+            # 创建者信息
+            "creator_username": "系统导入",
+            # 回滚操作者信息
+            "rolled_back_by_username": None,
+            # 添加标识表示这是初始信息
+            "is_initial": True
+        }]
+    
     # 组装详细信息
     result = []
+    
+    # 首先添加初始检定信息（如果有）
+    for init_hist in initial_history:
+        result.append(CalibrationHistoryWithDetails(**init_hist))
+    
+    # 然后添加历史记录
     for history in histories:
         # 手动构建响应数据，避免序列化问题
         history_data = {
@@ -618,7 +661,8 @@ async def get_equipment_calibration_history(
             # 创建者信息
             "creator_username": history.creator.username if history.creator else None,
             # 回滚操作者信息
-            "rolled_back_by_username": history.rollback_user.username if getattr(history, 'rollback_user', None) else None
+            "rolled_back_by_username": history.rollback_user.username if getattr(history, 'rollback_user', None) else None,
+            "is_initial": False
         }
         
         result.append(CalibrationHistoryWithDetails(**history_data))
